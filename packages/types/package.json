@@ -1,0 +1,15 @@
+{
+  "name": "@xovira/types",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./socket": "./socket-events.ts",
+    "./socket-events": "./socket-events.ts",
+    "./billing": "./billing.ts",
+    "./webhook": "./webhook.ts"
+  }
+}

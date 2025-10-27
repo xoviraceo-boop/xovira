@@ -1,0 +1,75 @@
+here create a public proposal card
+
+
+
+with interest button and send request button 
+
+and display how many interests on the card  
+
+add send request button 
+
+when click request open a modal with title, message and send button
+
+upon clicking send send the request to the owner/publisher of the proposal and show the notifications in notificcations dashboard
+
+
+from notification modal annd from the notification list when user click the item flag to watched and notify the senderr
+
+
+depends on the proposal type either as offer or propose 
+
+
+add request/[id]/page.tsx and request/page.tsx show list of request items and add filter functionality as well
+
+from notification modal annd from the notification list when user click the item flag to watched and notify the senderr
+
+there will be actions regarding the request 
+
+suspend
+
+accept
+
+decline
+
+when click open modal with feedback and proceed button upon clking the button perform action
+
+
+
+and depend on whether the proposal is offer or propose the action should reflex that 
+
+
+for example if user write a proposal for seeking or offering partnership
+
+
+So:
+
+Seeking = “I need a partner.”
+
+Offering = “I can be your partner.”
+
+
+in case seeking the action button for example when others send request to this user when accepted this user is part of the project 
+
+
+
+in case of offering when other send request to this proposal the requester must send the project along and there will be link generated from the id 
+
+
+when user click the link open the project page with action 
+
+
+there will be actions regarding the request 
+
+suspend
+
+accept
+
+decline
+
+upon accept they can be partner of this project 
+
+
+
+
+
+

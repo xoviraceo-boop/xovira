@@ -18,8 +18,6 @@ RUN pnpm -w install --frozen-lockfile --filter ./apps/backend/socket-server...
 FROM base AS builder
 WORKDIR /app
 COPY . .
-COPY --from=deps /root/.pnpm-store /root/.pnpm-store
-RUN pnpm config set store-dir /root/.pnpm-store
 RUN pnpm -w install --frozen-lockfile --filter ./apps/backend/socket-server...
 RUN pnpm -w --filter ./apps/backend/socket-server... run build
 

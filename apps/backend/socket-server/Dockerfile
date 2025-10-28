@@ -35,4 +35,4 @@ EXPOSE 3001
 ENV PORT=3001
 
 # ✅ Use start script that registers tsconfig-paths
-CMD ["pnpm", "start"]
+CMD ["node", "-r", "tsconfig-paths/register", "dist/index.js"]

@@ -1,6 +1,6 @@
 "use client";
 import Shell from "@/components/layout/Shell";
-import { MarketplaceHeader as Header, MarketplaceContent as Content } from "@/features/marketplace/views";
+import { Header, Content } from "@/features/marketplace/views/shared";
 import PublicTeamCard from "@/entities/teams/components/PublicTeamCard";
 import CardSkeleton from "@/components/ui/card.skeleton";
 import { usePrefetchedTeams } from "@/features/marketplace/hooks/usePrefetchedTeams";

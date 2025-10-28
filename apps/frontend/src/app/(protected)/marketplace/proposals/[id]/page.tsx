@@ -3,7 +3,7 @@ import Shell from "@/components/layout/Shell";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import ProposalView from '@/entities/proposals/views/ProposalView';
+import ProposalView from '@/features/marketplace/views/proposal/ProposalView';
 import Button from "@/components/ui/button";
 
 export default function ProposalDetailPage() {

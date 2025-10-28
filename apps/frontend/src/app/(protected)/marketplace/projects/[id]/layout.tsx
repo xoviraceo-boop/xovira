@@ -12,7 +12,7 @@ import Shell from '@/components/layout/Shell';
 import SyncWarningBanner from '@/components/ui/sync-warning-banner';
 import TopBar from '@/components/navigation/TopBar';
 import StatusBadge from '@/components/ui/status-badge';
-import { normalizeForComparison, deepEqual } from '@/utils/utilities';
+import { normalizeForComparison, deepEqual } from '@/utils/utilities/syncUtils';
 
 const METADATA_FIELDS = ['id', 'createdAt', 'updatedAt', 'cloudSyncedAt', 'ownerId'] as const;
 

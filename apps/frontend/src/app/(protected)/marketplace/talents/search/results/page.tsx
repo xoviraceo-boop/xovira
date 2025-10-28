@@ -1,9 +1,9 @@
 "use client";
 import Shell from "@/components/layout/Shell";
-import { Header, Content } from "@/features/marketplace/views";
-import PublicUserCard from "@/entities/users/components/PublicUserCard";
+import { Header, Content } from "@/features/marketplace/views/shared";
+import PublicProfileCard from "@/entities/users/components/PublicProfileCard";
 import CardSkeleton from "@/components/ui/card.skeleton";
-import ProfileFiltersSidebar from "@/features/marketplace/components/FilterSidebar";
+import ProfileFiltersSidebar from "@/features/marketplace/components/ProfileFilterSidebar";
 import { X } from "lucide-react";
 import { usePrefetchedProposals } from "@/features/marketplace/hooks/usePrefetchedProposals";
 import React, { useEffect, useState, useCallback } from "react";
@@ -213,7 +213,7 @@ export default function SearchResultPage() {
                       <CardSkeleton key={i} />
                     ))
                   : (data?.items || []).map((it: any) => (
-                      <PublicUserCard
+                      <PublicProfileCard
                         key={it.id}
                         item={it}
                         onInterest={() => {}}

@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import TeamForm from '@/entities/teams/components/TeamForm';
-import TeamView from "@/entities/teams/views/TeamView";
+import TeamView from "@/features/dashboard/views/team/TeamView";
 import Button from "@/components/ui/button";
 import { useSession } from "next-auth/react";
 

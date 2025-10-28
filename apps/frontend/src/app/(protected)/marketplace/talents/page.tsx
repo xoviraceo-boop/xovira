@@ -1,6 +1,6 @@
 "use client";
 import Shell from "@/components/layout/Shell";
-import { MarketplaceHeader, MarketplaceContent } from "@/features/marketplace/views";
+import { Header, Content } from "@/features/marketplace/views/shared";
 import PublicProposalCard from "@/entities/proposals/components/PublicProposalCard";
 import CardSkeleton from "@/components/ui/card.skeleton";
 import { usePrefetchedProposals } from "@/features/marketplace/hooks/usePrefetchedProposals";
@@ -28,14 +28,14 @@ export default function MarketplacePage() {
     <Shell>
       <div className="grid grid-cols-1 gap-4">
         <div className="space-y-4">
-          <MarketplaceHeader
+          <Header
             searchValue={query}
             onSearchChange={setQuery}
             onSearchSubmit={handleSearchSubmit}
             navigateTo={"/marketplace/talents/search/results"}
           />
 
-          <MarketplaceContent
+          <Content
             resultCount={data?.total ?? 0}
             sortBy={sortBy}
             sortOptions={SORT_OPTIONS}
@@ -57,7 +57,7 @@ export default function MarketplacePage() {
                     />
                   ))}
             </div>
-          </MarketplaceContent>
+          </Content>
         </div>
       </div>
     </Shell>

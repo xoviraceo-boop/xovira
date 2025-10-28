@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc";
 import ProjectForm from '@/entities/projects/components/ProjectForm';
-import ProjectView from '@/entities/projects/views/ProjectView';
+import ProjectView from '@/features/marketplace/views/project/ProjectView';
 import PageHeader from '@/entities/shared/components/PageHeader';
 import ProjectActions from '@/entities/projects/components/ProjectActions';
 import { useToast } from "@/hooks/useToast";

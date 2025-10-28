@@ -3,7 +3,7 @@ import Shell from "@/components/layout/Shell";
 import { Header, Content } from "@/features/marketplace/views/shared";
 import PublicTeamCard from "@/entities/teams/components/PublicTeamCard";
 import CardSkeleton from "@/components/ui/card.skeleton";
-import TeamFiltersSidebar from "@/features/marketplace/components/TeamFiltersSidebar";
+import TeamFiltersSidebar from "@/features/marketplace/components/TeamFilterSidebar";
 import { X } from "lucide-react";
 import { usePrefetchedTeams } from "@/features/marketplace/hooks/usePrefetchedTeams";
 import React, { useEffect, useState, useCallback } from "react";

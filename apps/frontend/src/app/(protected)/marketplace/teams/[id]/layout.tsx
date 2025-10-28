@@ -10,7 +10,7 @@ import Shell from '@/components/layout/Shell';
 import Button from '@/components/ui/button';
 import SyncWarningBanner from '@/components/ui/sync-warning-banner';
 import BackButton from '@/components/navigation/BackButton';
-import { normalizeForComparison, deepEqual } from '@/utils/utilities';
+import { normalizeForComparison, deepEqual } from '@/utils/utilities/syncUtils';
 
 const METADATA_FIELDS = ['id', 'createdAt', 'updatedAt', 'cloudSyncedAt', 'ownerId'] as const;
 

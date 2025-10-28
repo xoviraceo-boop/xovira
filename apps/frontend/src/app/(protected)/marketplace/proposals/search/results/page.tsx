@@ -1,7 +1,7 @@
 
 "use client";
 import Shell from "@/components/layout/Shell";
-import { Header, Content } from "@/features/marketplace/views";
+import { Header, Content } from "@/features/marketplace/views/shared";
 import PublicProposalCard from "@/entities/proposals/components/PublicProposalCard";
 import CardSkeleton from "@/components/ui/card.skeleton";
 import ProposalFilterSidebar from "@/features/marketplace/components/ProposalFilterSidebar";

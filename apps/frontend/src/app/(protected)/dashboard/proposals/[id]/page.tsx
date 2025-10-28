@@ -4,7 +4,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import ProposalForm from '@/entities/proposals/components/ProposalForm';
-import ProposalView from '@/entities/proposals/views/ProposalView';
+import ProposalView from '@/features/dashboard/views/proposal/ProposalView';
 import Button from "@/components/ui/button";
 
 export default function ProposalDetailPage() {

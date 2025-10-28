@@ -9,7 +9,7 @@ import { trpc } from '@/lib/trpc';
 import Shell from '@/components/layout/Shell';
 import SyncWarningBanner from '@/components/ui/sync-warning-banner';
 import BackButton from '@/components/navigation/BackButton';
-import { normalizeForComparison, deepEqual } from '@/utils/utilities';
+import { normalizeForComparison, deepEqual } from '@/utils/utilities/syncUtils';
 
 interface NewProposalLayoutProps {
   children: React.ReactNode;

@@ -113,6 +113,8 @@ export default function SubscriptionPaymentCard({ plan, onError }: SubscriptionP
             event={{ type: "BILLING.PAYMENT.SUBSCRIPTION" }}
             createAction={async (data, actions) => {
               const paypalPlanId = plan.paypalPlanId ?? plan.metadata?.paypalPlanId;
+              const planId = plan.id;
+              const userId = session?.user?.id;
               if (!paypalPlanId) {
                 throw new Error('Missing PayPal plan ID');
               }
@@ -121,7 +123,7 @@ export default function SubscriptionPaymentCard({ plan, onError }: SubscriptionP
               }
               const payload = {
                 plan_id: paypalPlanId,
-                custom_id: JSON.stringify({ session.user.id, plan.id })
+                custom_id: JSON.stringify({ userId, planId })
               };
 
               return paypalService?.createSubscription

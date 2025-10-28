@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { motion } from "framer-motion";
-import EntangledStringEffect from "./EntangledStringEffect
+import EntangledStringEffect from "./EntangledStringEffect";
 
 export const TransitionSection = () => {
   return (

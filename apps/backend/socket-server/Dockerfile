@@ -3,7 +3,7 @@ RUN apk add --no-cache libc6-compat
 RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 
-# Dependencies layer (monorepo-aware)
+# Dependencies layer
 FROM base AS deps
 WORKDIR /app
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
@@ -20,6 +20,16 @@ RUN pnpm -w install --frozen-lockfile --filter ./apps/backend/socket-server...
 WORKDIR /app/apps/backend/socket-server
 RUN pnpm run build
 
+# Fix ESM imports by adding .js extensions to relative imports
+RUN find dist -type f -name "*.js" | while read file; do \
+    sed -i -E \
+      -e "s|from '(\\./[^']+)'|from '\\1.js'|g" \
+      -e "s|from \"(\\./[^\"]+)\"|from \"\\1.js\"|g" \
+      -e "s|from '(\\.\\./[^']+)'|from '\\1.js'|g" \
+      -e "s|from \"(\\.\\./[^\"]+)\"|from \"\\1.js\"|g" \
+      "$file"; \
+    done
+
 # Runtime layer
 FROM node:20-alpine AS runner
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 socketio
@@ -34,9 +44,4 @@ USER socketio
 EXPOSE 3001
 ENV PORT=3001
 
-RUN ls -la /app/apps/backend/socket-server/dist/lib/
-
 CMD ["node", "dist/index.js"]
-
-
-

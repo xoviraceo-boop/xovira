@@ -1,66 +1,80 @@
 import { NextRequest } from "next/server";
-import { auth } from '@/lib/auth';
+import { SubscriptionManager } from "@/features/billing/utils/subscriptionManager";
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await auth();
-    const user = session?.user;
-    if (!user) {
-      return new Response(JSON.stringify({ error: "User not authenticated" }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+    const { userId, subscriptionId, reason } = await req.json();
+    if (!userId) {
+      return jsonError("User not authenticated", 401);
     }
-    const { subscriptionId, reason } = await req.json();
     if (!subscriptionId) {
-      return new Response(JSON.stringify({ error: "Missing subscriptionID in request body" }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return jsonError("Missing subscriptionId in request body", 400);
     }
-    const paypalApiUrl = 'https://api.paypal.com/v1/billing/subscriptions/' + subscriptionId + '/cancel';
+    const paypalApiUrl = `https://api.paypal.com/v1/billing/subscriptions/${subscriptionId}/cancel`;
     const accessToken = await getPayPalAccessToken();
     const response = await fetch(paypalApiUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
       },
-      body: JSON.stringify({ reason: reason || 'User requested cancellation' })
+      body: JSON.stringify({
+        reason: reason || "User requested cancellation",
+      }),
     });
-    if (!response.ok) {
-      const errorResponse = await response.json();
-      throw new Error(errorResponse.error_description || "Failed to cancel subscription");
+    const resultText = await response.text();
+    let resultJson: any;
+    try {
+      resultJson = JSON.parse(resultText);
+    } catch {
+      resultJson = { raw: resultText };
     }
-    const responseData = await response.json();
-    return new Response(JSON.stringify(responseData), {
+    if (!response.ok) {
+      console.error("❌ PayPal cancel failed:", resultJson);
+      const errorMsg =
+        resultJson?.error_description ||
+        resultJson?.message ||
+        "PayPal cancellation failed";
+      return jsonError(errorMsg, response.status);
+    }
+    try {
+      await SubscriptionManager.cancel(userId, { subscriptionId });
+    } catch (subErr) {
+      console.error("⚠️ Failed to update local subscription:", subErr);
+    }
+    return new Response(JSON.stringify(resultJson), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { "Content-Type": "application/json" },
     });
-  } catch (error) {
-    console.error("Error cancelling subscription:", error);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+  } catch (error: any) {
+    console.error("🔥 Unexpected error in PayPal cancellation:", error);
+    return jsonError(error.message || "Internal server error", 500);
   }
 }
 
 async function getPayPalAccessToken() {
   const clientId = process.env.PAYPAL_CLIENT_ID;
   const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
-  const tokenUrl = 'https://api.paypal.com/v1/oauth2/token';
-  const response = await fetch(tokenUrl, {
-    method: 'POST',
+  const tokenUrl = "https://api.paypal.com/v1/oauth2/token";
+  const res = await fetch(tokenUrl, {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'Authorization': `Basic ${Buffer.from(clientId + ':' + clientSecret).toString('base64')}`
+      "Content-Type": "application/x-www-form-urlencoded",
+      Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
     },
-    body: 'grant_type=client_credentials'
+    body: "grant_type=client_credentials",
   });
-  if (!response.ok) {
-    throw new Error('Failed to retrieve PayPal access token');
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Failed to retrieve PayPal access token: ${err}`);
   }
-  const responseData = await response.json();
-  return responseData.access_token;
+  const data = await res.json();
+  return data.access_token;
+}
+
+function jsonError(message: string, status = 500) {
+  return new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
 }

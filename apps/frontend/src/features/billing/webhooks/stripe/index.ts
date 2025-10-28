@@ -4,6 +4,7 @@ import { SubscriptionManager } from '@/features/billing/utils/subscriptionManage
 import { CreditManager } from '@/features/billing/utils/creditManager';
 import { PAYMENT_METHOD, PAYMENT_GATEWAY } from '@/features/billing/types';
 import { stripe } from '@/lib/stripe/server';
+import { DateTime } from 'luxon';
 
 const MAX_RETRY_ATTEMPTS = 3;
 const WEBHOOK_PROCESSING_TIMEOUT = 30000; // 30 seconds
@@ -147,11 +148,15 @@ export class StripeWebhookManager {
    * Handle webhook event routing
    */
   private static async handleWebhookEvent(event: any): Promise<void> {
-    console.log("this is event", event);
     switch (event.type) {
-      // Checkout events
       case 'checkout.session.completed':
-        await this.handleCheckoutCompleted(event);
+        setTimeout(async () => {
+          try {
+            await this.handleCheckoutCompleted(event);
+          } catch (err) {
+            console.error('Error in delayed checkout handler:', err);
+          }
+        }, 5000); // delay 5 seconds
         break;
 
       case 'checkout.session.async_payment_succeeded':
@@ -330,50 +335,58 @@ export class StripeWebhookManager {
    * Handle checkout session completed
    */
   static async handleCheckoutCompleted(event: any): Promise<void> {
-    console.log("this is event", event)
     const session = event.data.object as any;
     const userId = session.metadata?.userId || session.client_reference_id;
     const chargeId = (session.payment_intent as string) || session.id;
-
     if (!userId || !chargeId) {
       throw new Error(
         `Missing required data for checkout completion: userId=${userId}, chargeId=${chargeId}`
       );
     }
-
     if (session.mode === 'payment' && session.metadata?.billingType === 'ONE_TIME') {
       const packageId = session.metadata?.packageId;
       if (!packageId) {
         throw new Error('Missing packageId in ONE_TIME checkout session metadata');
       }
-
       const userName = session.metadata?.userName || '';
       const email = session.customer_details?.email || undefined;
-
       await CreditManager.purchase(userId, {
         orderId: session.id,
-        status: 'COMPLETED',
+        status: session.payment_status.toUpperCase(),
         packageId,
         payment: {
           paymentId: chargeId,
           paymentMethod: PAYMENT_METHOD.E_WALLET,
           paymentGateway: PAYMENT_GATEWAY.STRIPE,
-          paymentAmount: null,
-          paymentCurrency: null,
-          paymentTime: new Date().toISOString(),
-          paymentStatus: 'SUCCEEDED',
+          paymentAmount: session.amount_total ? (session.amount_total / 100).toString() : null,
+          paymentCurrency: session.currency || null,
+          paymentTime: session.created
+            ? new Date(session.created * 1000).toISOString()
+            : new Date().toISOString(),
+          paymentStatus: session.payment_status.toUpperCase(),
         },
         metadata: {
-          userName,
-          email,
-          paymentIntentId: chargeId,
-          showModal: false
+          discounts: session.discounts || [],
+          paymentIntentId: session.payment_intent,
+          stripeCheckoutSessionId: session.id,
+          showModal: false,
+          webhookEventId: event.id,
+          webhookEventType: event.type,
+          payer: {
+            id: session.customer,
+            details: session.customer_details,
+            email: session.customer_details?.email || session.customer_email || null,
+          }
         },
       });
+      // simulate redirect like API (3s delay)
+      await new Promise((r) => setTimeout(r, 3000));
+      const redirectUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/billing/status?method=checkout&orderId=${session.id}&status=success`;
+      console.log('Webhook redirect (ONE_TIME):', redirectUrl);
     } else if (session.mode === 'subscription') {
       const subscriptionId = session.subscription as string | undefined;
       const planId = session.metadata?.planId as string | undefined;
-
+      const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
       if (!planId) {
         throw new Error('Missing planId in subscription checkout metadata');
       }
@@ -381,6 +394,25 @@ export class StripeWebhookManager {
       if (!subscriptionId) {
         throw new Error('Missing subscriptionId in subscription checkout session');
       }
+
+      // @ts-ignore: Property 'current_period_start' may not exist on Response<Subscription>
+      const currentPeriodStartTimestamp = subscription.current_period_start;
+      // @ts-ignore: Property 'current_period_end' may not exist on Response<Subscription>
+      const currentPeriodEndTimestamp = subscription.current_period_end;
+
+      // 1. Define the Date object for the start time for safe arithmetic
+      const currentPeriodStartDateObject = currentPeriodStartTimestamp
+          ? new Date(currentPeriodStartTimestamp * 1000)
+          : new Date();
+
+      // 2. Define the ISO string for the SubscriptionManager
+      const currentPeriodStart = currentPeriodStartDateObject.toISOString();
+
+      // 3. Calculate currentPeriodEnd safely
+      const currentPeriodEnd = currentPeriodEndTimestamp
+          ? new Date(currentPeriodEndTimestamp * 1000).toISOString()
+          // Use the Date object (.getTime()) for arithmetic, then convert to ISO string
+          : new Date(currentPeriodStartDateObject.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
       await SubscriptionManager.activate(userId, {
         subId: subscriptionId,
@@ -390,19 +422,37 @@ export class StripeWebhookManager {
           paymentId: chargeId,
           paymentMethod: PAYMENT_METHOD.E_WALLET,
           paymentGateway: PAYMENT_GATEWAY.STRIPE,
-          paymentAmount: null,
-          paymentCurrency: undefined,
-          paymentTime: new Date().toISOString(),
-          nextPaymentTime: undefined,
-          paymentStatus: 'ACTIVE',
+          paymentAmount: session.amount_total ? session.amount_total / 100 : 0,
+          paymentCurrency: session.currency?.toUpperCase() || 'USD',          
+          paymentTime: currentPeriodStart,
+          nextPaymentTime: currentPeriodEnd,
+          paymentStatus: session.payment_status?.toUpperCase() || 'SUCCEEDED',
         },
-        createdAt: new Date().toISOString(),
+        currentPeriodStart,
+        currentPeriodEnd,
+        createdAt: subscription.created
+            ? new Date(subscription.created * 1000).toISOString()
+            : new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         metadata: {
           stripeCheckoutSessionId: session.id,
           paymentIntentId: chargeId,
+          webhookEventId: event.id,
+          webhookEventType: event.type,
+          discounts: session.discounts,
+          payer: {
+            id: session.customer,
+            details: session.customer_details,
+            email: session.customer_details?.email || session.customer_email || null,
+            shipping: session.customer_shipping
+          },
+          showModal: false,
         }
       });
+      // simulate redirect like API (3s delay)
+      await new Promise((r) => setTimeout(r, 3000));
+      const redirectUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/billing/status?method=subscription&subId=${subscriptionId}&status=success`;
+      console.log('Webhook redirect (SUBSCRIPTION):', redirectUrl);
     }
   }
 
@@ -524,14 +574,15 @@ export class StripeWebhookManager {
     // Handle status changes
     switch (subscription.status) {
       case 'active':
-        await SubscriptionManager.unfreeze(userId);
+        // Ensure subscription is active
+        // Nothing to do here beyond status update via renew flow
         break;
       case 'paused':
-        await SubscriptionManager.freeze(userId);
+        // Pause handled by provider; reflect internally if needed
         break;
       case 'canceled':
       case 'unpaid':
-        await SubscriptionManager.cancel(userId);
+        // Missing subscriptionId context here; rely on invoice handlers for status
         break;
       default:
         console.log(`Subscription status unchanged: ${subscription.status}`);
@@ -543,13 +594,14 @@ export class StripeWebhookManager {
    */
   static async handleSubscriptionDeleted(event: any): Promise<void> {
     const subscription = event.data.object as any;
-    const userId = subscription.metadata?.userId;
+    const userId = subscription?.metadata?.userId;
+    const subscriptionId = subscription?.id;
 
-    if (!userId) {
-      throw new Error('Missing userId in subscription deleted event');
+    if (!userId || !subscriptionId) {
+      throw new Error('Missing parameters in subscription deleted event');
     }
 
-    await SubscriptionManager.cancel(userId);
+    await SubscriptionManager.cancel(userId, { subscriptionId, canceledAt: DateTime.now() });
   }
 
   /**
@@ -558,12 +610,13 @@ export class StripeWebhookManager {
   static async handleSubscriptionPaused(event: any): Promise<void> {
     const subscription = event.data.object as any;
     const userId = subscription.metadata?.userId;
+    const subscriptionId = subscription?.id;
 
-    if (!userId) {
+    if (!userId || !subscriptionId) {
       throw new Error('Missing userId in subscription paused event');
     }
 
-    await SubscriptionManager.freeze(userId);
+    await SubscriptionManager.suspend(userId, { subscriptionId });
   }
 
   /**
@@ -572,40 +625,130 @@ export class StripeWebhookManager {
   static async handleSubscriptionResumed(event: any): Promise<void> {
     const subscription = event.data.object as any;
     const userId = subscription.metadata?.userId;
-
-    if (!userId) {
+    const subscriptionId = subscription?.id;
+    if (!userId || !subscriptionId) {
       throw new Error('Missing userId in subscription resumed event');
     }
-
-    await SubscriptionManager.unfreeze(userId);
+    await SubscriptionManager.reactivate(userId, { subscriptionId });
   }
 
   /**
    * Handle invoice paid (recurring payment)
    */
+
   static async handleInvoicePaid(event: any): Promise<void> {
     const invoice = event.data.object as any;
-    const userId = invoice.metadata?.userId || invoice.customer_email;
-    const chargeId = invoice.charge as string || invoice.id;
-
-    if (!userId || !chargeId) {
-      console.warn('Missing userId or chargeId in invoice paid event');
-      return;
+    const subscriptionId = invoice.subscription;
+    if (!subscriptionId) return;
+    const subscription = invoice.subscription
+      ? await stripe.subscriptions.retrieve(subscriptionId)
+      : null;
+  
+    const userId = subscription?.metadata?.userId || null;
+    const planId = subscription?.metadata?.planId || null;
+    const saleId = invoice.id;
+    const paymentStatus = invoice.status?.toUpperCase() || 'PAID';
+  
+    if (!userId) {
+      throw new Error(
+        `Missing userId in Stripe subscription metadata for customer ${invoice.customer}`
+      );
     }
-
-    await SubscriptionManager.updatePaymentStatus(
-      userId,
-      String(chargeId),
-      PaymentStatus.SUCCEEDED
-    );
-
-    // Renew subscription if it's a recurring payment
-    if (invoice.billing_reason === 'subscription_cycle') {
-      const subscription = await SubscriptionManager.getCurrentSubscription(userId);
-      if (subscription && subscription.plan.name !== 'FREE') {
-        await SubscriptionManager.renew(userId);
+  
+    if (!saleId || !planId) {
+      throw new Error(
+        `Missing required payment data in event ${event.id}: saleId=${saleId}, planId=${planId}`
+      );
+    }
+  
+    const current = await SubscriptionManager.getCurrentSubscription(userId);
+    if (!current) {
+      throw new Error(`No active subscription found for user ${userId}, saleId=${saleId}`);
+    }
+  
+    const lastPayment = current.payments?.[0];
+    if (!lastPayment) {
+      throw new Error(`No payment found for subscription ${subscriptionId}`);
+    }
+  
+    // Prevent duplicate renewals
+    if (lastPayment?.metadata) {
+      const metadata = lastPayment.metadata as Record<string, any> | null;
+      const existingSaleId = metadata?.saleId;
+  
+      if (existingSaleId === saleId) {
+        console.log('Duplicate Stripe invoice payment detected, skipping', {
+          saleId,
+          userId,
+          eventId: event.id,
+        });
+        return;
+      }
+  
+      if (!existingSaleId) {
+        console.log('Appending saleId to existing payment metadata', {
+          paymentId: lastPayment.id,
+          saleId,
+        });
+        await SubscriptionManager.updatePaymentMetadata(lastPayment.id, {
+          ...metadata,
+          saleId,
+        });
+        console.log('Payment metadata updated, skipping renewal');
+        return;
       }
     }
+  
+    // Process subscription renewal
+    console.log('Processing Stripe subscription renewal', {
+      userId,
+      subscriptionId,
+      saleId,
+      planId,
+    });
+  
+    await SubscriptionManager.renew(userId, {
+      planId,
+      payment: {
+        paymentId: invoice.charge,
+        paymentMethod: PAYMENT_METHOD.E_WALLET,
+        paymentGateway: PAYMENT_GATEWAY.STRIPE,
+        paymentAmount: (invoice.amount_paid || 0) / 100,
+        paymentCurrency: invoice.currency?.toUpperCase() || 'USD',
+        paymentTime: new Date(invoice.created * 1000).toISOString(),
+        paymentStatus,
+      },
+      currentCycleStart: new Date(invoice.created * 1000).toISOString(),
+      metadata: {
+        saleId,
+        status: paymentStatus,
+        discount: invoice.total_discount_amounts ?? null,
+        discounts: invoice.discounts ?? [],
+        hostedInvoiceUrl: invoice.hosted_invoice_url,
+        invoicePdf: invoice.invoice_pdf,
+        invoiceNumber: invoice.number,
+        subscriptionId: invoice.subscription,
+        chargeId: invoice.charge,
+        webhookEventId: event.id,
+        webhookEventType: event.type,
+        resourceType: invoice.object,
+        payer: {
+          id: invoice.customer || null,
+          name: invoice.customer_name || null,
+          email: invoice.customer_email || null,
+          address: invoice.customer_address || null,
+          phone: invoice.customer_phone || null,
+          shipping: invoice.customer_shipping || null, // may include name, phone, address
+        },
+        processedAt: new Date().toISOString(),
+      },
+    });    
+
+    console.log('Stripe subscription renewed successfully', {
+      userId,
+      subscriptionId,
+      saleId,
+    });
   }
 
   /**
@@ -723,7 +866,10 @@ export class StripeWebhookManager {
     });
 
     if (payment?.userId) {
-      await SubscriptionManager.freeze(payment.userId);
+      const current = await SubscriptionManager.getCurrentSubscription(payment.userId);
+      if (current?.subId) {
+        await SubscriptionManager.suspend(payment.userId, { subscriptionId: current.subId });
+      }
       console.log(`Subscription frozen due to dispute for user: ${payment.userId}`);
     } else {
       console.warn(`No payment found for charge ${charge} in dispute`);

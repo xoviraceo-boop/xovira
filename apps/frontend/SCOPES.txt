@@ -17,3 +17,10 @@ for project
 collective rating of investors
 collective rating of members
 collective rating of all stake holders 
+
+call handleCycleTransition when user login and when user enter billing and usage page might call in the trpc
+
+also on create projects, teams, proposals, send requests in trpc
+
+there should be a check when there are more items than the allowed max  items let's say if users subscribe to pro plan and create 20 projects/teams/proposals then downgrade to free then block publish edit update functionality 
+so make sure to update codes accordingly

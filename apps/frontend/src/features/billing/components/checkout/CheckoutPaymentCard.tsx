@@ -62,11 +62,12 @@ export default function CheckoutPaymentCard({ pkg, onError }: CheckoutPaymentCar
           
           <StripeButton
             event={{ type: "BILLING.PAYMENT.ORDER" }}
-            createParams={() => ({
+            params={{
+              userId: session?.user?.id,
               priceId: pkg.metadata?.stripePriceId,
               quantity: 1,
               packageId: pkg.id
-            })}
+            }}
             onError={handleStripeError}
             buttonText="Purchase with Stripe"
             className="w-full"

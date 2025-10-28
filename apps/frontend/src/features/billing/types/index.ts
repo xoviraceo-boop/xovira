@@ -51,6 +51,7 @@ export type SubscribeInput = {
 export interface RenewInput {
   planId: string;
   payment: {
+    paymentId?: string | null;
     paymentMethod: PaymentMethod;
     paymentGateway: PaymentGateway;
     paymentAmount: string | number;
@@ -58,6 +59,8 @@ export interface RenewInput {
     paymentTime: string;
     paymentStatus: PaymentStatus;
   };
+  currentCycleStart: string;
+  currentCycleEnd?: string;
   metadata: Record<string, any>;
 }
 

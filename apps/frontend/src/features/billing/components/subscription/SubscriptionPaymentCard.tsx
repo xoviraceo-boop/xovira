@@ -121,7 +121,7 @@ export default function SubscriptionPaymentCard({ plan, onError }: SubscriptionP
               }
               const payload = {
                 plan_id: paypalPlanId,
-                custom_id: session.user.id,
+                custom_id: JSON.stringify({ session.user.id, plan.id })
               };
 
               return paypalService?.createSubscription

@@ -2,7 +2,7 @@ import {
   PrismaClient, 
   Prisma, 
   SubscriptionStatus, 
-  PackageStatus, 
+  PurchaseStatus, 
   Usage, 
   Payment, 
   PaymentStatus, 
@@ -344,7 +344,7 @@ export class UsageManager {
     const activePackages = await tx.creditPurchase.findMany({
       where: {
         userId,
-        status: PackageStatus.ACTIVE,
+        status: PurchaseStatus.ACTIVE,
         OR: [
           { expiresAt: null },
           { expiresAt: { gt: new Date() } }
@@ -440,7 +440,7 @@ export class UsageManager {
     const packages = await tx.creditPurchase.findMany({
       where: {
         userId,
-        status: PackageStatus.ACTIVE,
+        status: PurchaseStatus.ACTIVE,
         id: { not: excludeId },
         OR: [
           { expiresAt: null },
@@ -484,7 +484,7 @@ export class UsageManager {
         },
         creditPurchases: {
           where: { 
-            status: PackageStatus.ACTIVE,
+            status: PurchaseStatus.ACTIVE,
             OR: [
               { expiresAt: null },
               { expiresAt: { gt: new Date() } }
@@ -687,6 +687,8 @@ export class UsageManager {
     await prisma.usage.updateMany({
       where: { subscriptionId: subscription.id },
       data: {
+        maxCredits: feature.maxCredits,
+        remainingCredits: feature.maxCredits,
         maxRequests: feature.maxRequests,
         remainingRequests: feature.maxRequests,
         updatedAt: new Date()
@@ -773,7 +775,7 @@ export class UsageManager {
     await prisma.creditPurchase.update({
       where: { id: purchase.id },
       data: { 
-        status: PackageStatus.EXPIRED
+        status: PurchaseStatus.EXPIRED
       }
     });
 
@@ -782,14 +784,13 @@ export class UsageManager {
       packageName: purchase.package.name,
       activePackagesCount: activePackages.length
     };
-
     
-      await this.createNotification({
-        userId,
-        type: NotificationType.PACKAGE_EXPIRED,
-        title: config.title,
-        content: config.generateMessage(usageData),
-      });
+    await this.createNotification({
+      userId,
+      type: NotificationType.PACKAGE_EXPIRED,
+      title: config.title,
+      content: config.generateMessage(usageData),
+    });
       
   }
 

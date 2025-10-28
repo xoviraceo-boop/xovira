@@ -7,9 +7,11 @@ import { Card } from "@/components/ui/card";
 import Button from "@/components/ui/button";
 import { useCallback, useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useSession } from "next-auth/react";
 
 export default function BillingPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const { data: currentPlan } = trpc.billing.currentPlan.useQuery();
   const payments = trpc.billing.payments.useQuery({ page: 1, pageSize: 10 });
   const purchases = trpc.billing.creditPurchases.useQuery({ page: 1, pageSize: 10 });
@@ -61,7 +63,7 @@ export default function BillingPage() {
       await fetch('/api/stripe/cancel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscriptionId: currentPlan?.subId }),
+        body: JSON.stringify({ subscriptionId: currentPlan?.subId, userId: session?.user?.id, cancelReason }),
       });
       
       // Refetch data to update UI
@@ -79,6 +81,18 @@ export default function BillingPage() {
   };
 
   const quota = summary.data?.quota || summary.data;
+
+  if (!session?.user?.id) {
+    return (
+      <Shell>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <p className="text-muted-foreground">
+            Please sign in to purchase packages.
+          </p>
+        </div>
+      </Shell>
+    );
+  }
 
   return (
     <Shell>

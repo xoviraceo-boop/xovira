@@ -2,6 +2,7 @@ import { z } from "zod";
 import { protectedProcedure, router } from "@/trpc/init";
 import { prisma } from "@/lib/prisma";
 import { UsageManager } from "@/features/usage/utils/usageManager";
+import { LimitGuard } from "@/features/usage/utils/limitGuard";
 
 export const proposalRouter = router({
 	list: protectedProcedure
@@ -21,8 +22,9 @@ export const proposalRouter = router({
 			pageSize: z.number().int().min(1).max(50).optional().default(12),
 			scope: z.enum(["all","owned","saved","interested"]).optional().default("owned")
 		}))
-		.query(async ({ ctx, input }) => {
+        .query(async ({ ctx, input }) => {
 			const userId = ctx.session!.user!.id;
+            await LimitGuard.ensureCycle(userId);
 			const where: any = { };
 			// Scope handling for dashboard contexts
 			if (input.scope === "owned") {
@@ -602,7 +604,8 @@ export const proposalRouter = router({
 		  teamId: z.string().optional(),
 	    })
 	  )
-	  .mutation(async ({ ctx, input }) => {
+  .mutation(async ({ ctx, input }) => {
+    await LimitGuard.ensureWithinCreateLimit(ctx.session!.user!.id, 'PROPOSAL');
 	    const baseData = {
 	      userId: ctx.session!.user!.id,
 	      title: input.title,
@@ -653,7 +656,8 @@ export const proposalRouter = router({
 				status: z.enum(["DRAFT","PUBLISHED","ARCHIVED"]).optional(),
 			})
 		)
-		.mutation(async ({ ctx, input }) => {
+        .mutation(async ({ ctx, input }) => {
+            await LimitGuard.ensureCanModify(ctx.session!.user!.id, 'PROPOSAL');
 			const { id, ...updateData } = input;
 			const baseData: any = {
 				category: updateData.category ? String(updateData.category).toUpperCase() : undefined,
@@ -714,7 +718,8 @@ export const proposalRouter = router({
 				attachments: z.any().optional()
 			})
 		)
-		.mutation(async ({ ctx, input }) => {
+        .mutation(async ({ ctx, input }) => {
+            await LimitGuard.ensureCanModify(ctx.session!.user!.id, 'PROPOSAL');
 			const { id, ...updateData } = input;
 			// Prevent demoting a published proposal back to draft
 			const existing = await prisma.proposal.findFirst({ where: { id, userId: ctx.session!.user!.id }, select: { status: true } });
@@ -1394,7 +1399,8 @@ export const proposalRouter = router({
 			intent: z.enum(["SEEKING","OFFERING"]).optional(),
 			roleApplied: z.enum(["INVESTOR","MENTOR","TEAM","COFOUNDER","PARTNER","CUSTOMER"]).optional(),
 		}))
-		.mutation(async ({ ctx, input }) => {
+        .mutation(async ({ ctx, input }) => {
+            await LimitGuard.ensureWithinCreateLimit(ctx.session!.user!.id, 'REQUEST');
 			const senderId = ctx.session!.user!.id;
 			// Load proposal to validate rules
 			const proposal = await prisma.proposal.findUnique({ where: { id: input.proposalId } });

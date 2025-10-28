@@ -56,7 +56,7 @@ export class SubscriptionManager {
         where: { 
           userId,
           status: {
-            in: [SubscriptionStatus.ACTIVE]
+            in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.ON_HOLD]
           }
         },
         include: {
@@ -155,20 +155,15 @@ export class SubscriptionManager {
     }
     const plan = await PlanManager.getPlan(data.planId);
     if (!plan) throw new Error('Invalid subscription plan');
-  
     const paymentTime = DateTime.fromISO(String(data.payment.paymentTime ?? DateTime.now().toISO()));
     const nextPaymentTime = DateTime.fromISO(String(data.payment.nextPaymentTime ?? paymentTime.plus({ months: 1 }).toISO()));
-  
     const currentPeriodStart = data.currentCycleStart ?? paymentTime;
     const currentPeriodEnd = data.currentCycleEnd ?? nextPaymentTime;
-  
     const paymentStatus = this.getPaymentStatus(data.status);
     const subscriptionStatus = this.getSubscriptionStatus(data.status);
-  
     if (paymentStatus !== PaymentStatus.SUCCEEDED) {
       throw new Error('Payment was not successful. Please try again or contact support.');
     }
-  
     const created = await prisma.$transaction(async (tx) => {
       await tx.subscription.updateMany({
         where: {
@@ -237,7 +232,7 @@ export class SubscriptionManager {
         });
       }
       return subscription;
-    });
+    }, { timeout: this.TRANSACTION_TIMEOUT, maxWait: this.MAX_WAIT, isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   
     return created;
   }  
@@ -279,10 +274,8 @@ export class SubscriptionManager {
     if (current.plan.paypalPlanId && current.plan.paypalPlanId !== planId) {
       throw new Error('Plan ID mismatch - cannot renew with different plan');
     }
-    const paymentTime = DateTime.fromISO(payment.paymentTime);
-    const currentPeriodStart = paymentTime;
+    const currentPeriodStart = DateTime.fromISO(params.currentCycleStart);
     const currentPeriodEnd = currentPeriodStart.plus({ months: 1 });
-  
     return prisma.$transaction(
       async (tx) => {
         const updatedSubscription = await tx.subscription.update({ 
@@ -318,12 +311,11 @@ export class SubscriptionManager {
             content: `Your subscription has been renewed. New billing period: ${currentPeriodStart.toFormat('MMM dd, yyyy')} to ${currentPeriodEnd.toFormat('MMM dd, yyyy')}.`
           }
         });
-  
         return { subscription: updatedSubscription, payment: newPayment };
       },
       { 
-        maxWait: 5000, 
-        timeout: 10000,
+        maxWait: this.MAX_WAIT, 
+        timeout: this.TRANSACTION_TIMEOUT,
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable 
       }
     );
@@ -331,12 +323,12 @@ export class SubscriptionManager {
 
   static async activate(
     userId: string,
-    details: {
+    params: {
       status: string;
       planId: string;
       subId: string;
       planName?: string;
-      payment?: SubscribeInput['payment'];
+      payment: SubscribeInput['payment'];
       createdAt?: string;
       updatedAt?: string;
       metadata?: Record<string, any>;
@@ -345,68 +337,82 @@ export class SubscriptionManager {
     }
   ) {
     if (!userId) throw new Error('User not found');
-    
-    const isPayPal = details.payment?.paymentGateway === PAYMENT_GATEWAY.PAYPAL;
-    const isStripe = details.payment?.paymentGateway === PAYMENT_GATEWAY.STRIPE;
-    
-    let targetPlanId: string | null = null;
-    
-    if (isPayPal && details.planId) {
-      const plan = await prisma.plan.findUnique({
-        where: { paypalPlanId: details.planId },
-        select: { id: true },
-      });
-      targetPlanId = plan?.id ?? null;
-    }
-    
-    if (isStripe && details.planId) {
-      targetPlanId = details.planId ?? null;
-    }
-    
-    if (!targetPlanId) {
+    if (!params.planId) {
       throw new Error('Target plan could not be resolved for activation');
     }
-    
-    if (!details.payment) {
+    if (!params.payment) {
       throw new Error('Payment details are required for activation');
     }
-    
     return prisma.$transaction(async (tx) => {
-      const current = await this.getCurrentSubscription(userId, tx);
-      
-      // Compare with the resolved internal plan ID, not the gateway-specific ID
-      if (current && current.plan?.id === targetPlanId) {
-        throw new Error('User is already subscribed to this plan');
-      }
-      
+      const duplicate = await tx.subscription.findFirst({ where: { subId: params.subId } });
+      if (duplicate) return duplicate;
+      const current = await this.getCurrentSubscription(userId);
       const created = await SubscriptionManager.subscribe({
         userId,
-        subId: details.subId,
-        planId: targetPlanId,
-        status: details.status,
-        payment: details.payment,
-        metadata: details.metadata,
-        currentCycleStart: DateTime.fromISO(String(details.currentPeriodStart)),
-        currentCycleEnd: DateTime.fromISO(String(details.currentPeriodEnd)),
-        createdAt: details.createdAt,
-        updatedAt: details.updatedAt,
-      }, tx);
-
+        subId: params.subId,
+        planId: params.planId,
+        status: params.status,
+        payment: params.payment,
+        metadata: params.metadata,
+        currentCycleStart: DateTime.fromISO(String(params.currentPeriodStart)),
+        currentCycleEnd: DateTime.fromISO(String(params.currentPeriodEnd)),
+        createdAt: params.createdAt,
+        updatedAt: params.updatedAt,
+      });
       return created;
+    }, { timeout: this.TRANSACTION_TIMEOUT, maxWait: this.MAX_WAIT, isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  static async suspend(userId: string, params: { subscriptionId: string }) {
+    const subscription = await prisma.subscription.findFirst({
+      where: { subId: params.subscriptionId, userId },
+      include: { payments: true, plan: true },
     });
+    if (!subscription) {
+      throw new Error(`Subscription not found for ID ${params.subscriptionId}`);
+    }
+    const updated = await prisma.subscription.update({
+      where: { id: subscription.id },
+      data: { status: SubscriptionStatus.PAUSED },
+      include: { payments: true, plan: true },
+    });
+    return updated;
   }
 
-  static async freeze(userId: string) {
-    const current = await this.getCurrentSubscription(userId);
-    if (!current) throw new Error('No subscription found to freeze');
-    return prisma.subscription.update({ where: { id: current.id }, data: { status: SubscriptionStatus.PAUSED }, include: { payments: true, plan: true } });
+
+  static async reactivate(userId: string, params: { subscriptionId: string }) {
+    const subscription = await prisma.subscription.findFirst({
+      where: { subId: params.subscriptionId, userId },
+      include: { payments: true, plan: true },
+    });
+    if (!subscription) {
+      throw new Error(`Subscription not found for ID ${params.subscriptionId}`);
+    }
+    const updated = await prisma.subscription.update({
+      where: { id: subscription.id },
+      data: { status: SubscriptionStatus.ACTIVE },
+      include: { payments: true, plan: true },
+    });
+    return updated;
   }
 
-  static async unfreeze(userId: string) {
-    const current = await this.getCurrentSubscription(userId);
-    if (!current) throw new Error('No subscription found to unfreeze');
-    return prisma.subscription.update({ where: { id: current.id }, data: { status: SubscriptionStatus.ACTIVE }, include: { payments: true, plan: true } });
+
+  static async expire(userId: string, params: { subscriptionId: string }) {
+    const subscription = await prisma.subscription.findFirst({
+      where: { subId: params.subscriptionId, userId },
+      include: { payments: true, plan: true },
+    });
+    if (!subscription) {
+      throw new Error(`Subscription not found for ID ${params.subscriptionId}`);
+    }
+    const updated = await prisma.subscription.update({
+      where: { id: subscription.id },
+      data: { status: SubscriptionStatus.EXPIRED },
+      include: { payments: true, plan: true },
+    });
+    return updated;
   }
+
 
   static async reset(userId: string) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -421,19 +427,55 @@ export class SubscriptionManager {
     return this.createDefaultSubscription(userId);
   }
 
-  static async cancel(userId: string) {
-    const current = await this.getCurrentSubscription(userId);
-    if (!current) throw new Error('No subscription found to cancel');
-    await prisma.$transaction(
-      async (tx) => {
-        await tx.payment.updateMany({ where: { subscriptionId: current.id, status: PaymentStatus.PENDING }, data: { status: PaymentStatus.CANCELED } });
-        await tx.subscription.update({ where: { id: current.id }, data: { status: SubscriptionStatus.CANCELED, currentPeriodEnd: new Date() } });
-      },
-      { maxWait: this.MAX_WAIT, isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: this.TRANSACTION_TIMEOUT }
-    );
-    return this.reset(userId);
-  }
-
+  static async cancel(userId: string, params: { subscriptionId: string, reason?: string, canceledAt: DateTime }) {
+    const subscription = await prisma.subscription.findFirst({
+      where: { subId: params.subscriptionId, userId },
+      include: { payments: true, plan: true },
+    });
+    if (!subscription) {
+      throw new Error(`Subscription not found for ID ${params.subscriptionId}`);
+    }
+    const now = DateTime.now().toUTC();
+    const canceledAt = subscription.canceledAt ? DateTime.fromJSDate(subscription.canceledAt).toUTC() : now;
+    const currentPeriodEnd = DateTime.fromJSDate(subscription.currentPeriodEnd).toUTC();
+    const isEarlyCancel = now < currentPeriodEnd;
+    await prisma.$transaction(async (tx) => {
+      await tx.payment.updateMany({
+        where: { subscriptionId: subscription.id, status: PaymentStatus.PENDING },
+        data: { 
+          status: PaymentStatus.CANCELED
+        },
+      });
+      if (isEarlyCancel) {
+        await tx.subscription.update({
+          where: { id: subscription.id },
+          data: {
+            status: SubscriptionStatus.ON_HOLD,
+            cancelAtPeriodEnd: true,
+          },
+        });
+      } else {
+        await tx.subscription.update({
+          where: { id: subscription.id },
+          data: {
+            status: SubscriptionStatus.CANCELED,
+            currentPeriodEnd: new Date(),
+          },
+        });
+      }
+    });
+  
+    if (!isEarlyCancel) {
+      await this.reset(userId);
+    }
+    return {
+      message: isEarlyCancel
+        ? 'Subscription will be canceled at the end of the current billing period'
+        : 'Subscription canceled immediately',
+      effectiveDate: currentPeriodEnd.toISO(),
+    };
+  }  
+  
   static async updatePaymentStatus(userId: string, chargeId: string, status: PaymentStatus): Promise<void> {
     const current = await this.getCurrentSubscription(userId);
     if (!current) throw new Error('No active subscription found');
@@ -492,23 +534,31 @@ export class SubscriptionManager {
     const cycle = await this.checkAndManageCycle(userId);
     const subscription = await this.getCurrentSubscription(userId);
     if (!subscription) throw new Error('No active subscription found');
+    const now = DateTime.now().toUTC();
     if (cycle.isExpired) {
       await UsageManager.resetUsageCounts(subscription as any, userId);
+      // FREE plan: just reset period
       if (subscription.plan.name === 'FREE') {
-        const currentPeriodStart = DateTime.now().startOf('day');
+        const currentPeriodStart = now.startOf('day');
         const currentPeriodEnd = currentPeriodStart.plus({ months: 1 });
-        await this.updateCycleDates(userId, currentPeriodStart.toJSDate(), currentPeriodEnd.toJSDate());
+        await this.updateCycleDates(
+          userId,
+          currentPeriodStart.toJSDate(),
+          currentPeriodEnd.toJSDate()
+        );
         return;
       }
-      const lastPayment = subscription.payments[subscription.payments.length - 1];
-      if (lastPayment?.status === PaymentStatus.SUCCEEDED) {
-        await this.renew(userId);
+      // 🔹 If it was ON_HOLD (user canceled mid-cycle), now fully cancel
+      if (subscription.status === SubscriptionStatus.ON_HOLD) {
+        await prisma.subscription.update({
+          where: { id: subscription.id },
+          data: { status: SubscriptionStatus.CANCELED },
+        });
+        await this.reset(userId);
+        return;
       }
     }
-    if (cycle.isExpired && subscription.status !== SubscriptionStatus.EXPIRED) {
-      await prisma.subscription.update({ where: { id: subscription.id }, data: { status: SubscriptionStatus.EXPIRED } });
-    }
-  }
+  }  
 
   static async updateCycleDates(userId: string, newCurrentPeriodStart?: Date, newCurrentPeriodEnd?: Date): Promise<void> {
     const subscription = await this.getCurrentSubscription(userId);

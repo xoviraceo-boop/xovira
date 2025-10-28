@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe/server';
 import { SubscriptionManager } from '@/features/billing/utils';
-import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
-    const { subscriptionId } = await request.json();
+    const { userId, subscriptionId } = await request.json();
 
+    if (!userId) {
+      return new Response(JSON.stringify({ error: "User not authenticated" }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
     if (!subscriptionId) {
       return NextResponse.json(
         { error: 'Missing subscription ID' },
@@ -17,33 +23,7 @@ export async function POST(request: NextRequest) {
     // Cancel the subscription in Stripe
     const canceledSubscription = await stripe.subscriptions.cancel(subscriptionId);
 
-    // Update the subscription in our database
-    await SubscriptionManager.updateSubscriptionMetadata(subscriptionId, {
-      showModal: false,
-      eventType: 'subscription_cancelled',
-      subscriptionId: subscriptionId,
-      cancelledAt: new Date().toISOString(),
-      stripeStatus: canceledSubscription.status,
-    });
-
-    // Create webhook queue entry
-    try {
-      await prisma.webhookQueue.create({
-        data: {
-          topic: 'customer.subscription.deleted',
-          userId: 'system',
-          payload: {
-            id: `evt_${Date.now()}`,
-            type: 'customer.subscription.deleted',
-            data: { object: canceledSubscription }
-          } as any,
-          status: 'processed',
-          processedAt: new Date()
-        }
-      });
-    } catch (e) {
-      console.warn('Failed to create webhook queue for Stripe cancel route:', e);
-    }
+    await SubscriptionManager.cancel(userId);
 
     return NextResponse.json({
       success: true,

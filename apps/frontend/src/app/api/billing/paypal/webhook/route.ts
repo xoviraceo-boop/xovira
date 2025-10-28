@@ -1,46 +1,68 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PaypalWebhookManager } from '@/features/billing/webhooks/paypal';
-import { CreditManager } from '@/features/billing/utils/creditManager';
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.text();
-    const event = JSON.parse(body);
-
-    // Verify webhook signature
+    const rawBody = await req.text();
+    let event;
+    try {
+      event = JSON.parse(rawBody);
+    } catch {
+      console.error('❌ Invalid JSON in webhook body');
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+    }
     const headers: Record<string, string> = {};
-    req.headers.forEach((value, key) => {
-      headers[key] = value;
-    });
-
-    const webhookId = process.env.PAYPAL_WEBHOOK_ID!;
+    req.headers.forEach((value, key) => (headers[key] = value));
+    const webhookId = process.env.PAYPAL_WEBHOOK_ID;
+    if (!webhookId) {
+      console.error('❌ PAYPAL_WEBHOOK_ID is not configured');
+      return NextResponse.json(
+        { error: 'Server misconfiguration' },
+        { status: 500 }
+      );
+    }
     const isValid = await PaypalWebhookManager.verifyWebhookSignature(
       webhookId,
       headers,
-      body
+      rawBody
     );
-
     if (!isValid) {
-      console.error('Invalid PayPal webhook signature');
+      console.error('❌ Invalid PayPal webhook signature');
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    }
+    console.log(`✅ PayPal Webhook Received: ${event.event_type}`);
+    const permittedEvents: string[] = [
+      'BILLING.SUBSCRIPTION.CREATED',
+      'BILLING.SUBSCRIPTION.ACTIVATED',
+      'BILLING.SUBSCRIPTION.UPDATED',
+      'BILLING.SUBSCRIPTION.SUSPENDED',
+      'BILLING.SUBSCRIPTION.CANCELLED',
+      'BILLING.SUBSCRIPTION.EXPIRED',
+      'PAYMENT.SALE.COMPLETED',
+      'PAYMENT.SALE.DENIED',
+      'PAYMENT.SALE.REFUNDED',
+    ];
+    if (!permittedEvents.includes(event.event_type)) {
+      console.log(`⚠️ Unhandled PayPal event: ${event.event_type}`);
+      return NextResponse.json({ message: 'Event ignored' }, { status: 200 });
+    }
+    try {
+      await PaypalWebhookManager.queueWebhook(event);
+      await PaypalWebhookManager.processWebhook(event);
+      console.log(`✅ PayPal Webhook processed: ${event.event_type}`);
+    } catch (err) {
+      console.error(`🔥 Error processing PayPal event: ${event.event_type}`, err);
       return NextResponse.json(
-        { error: 'Invalid signature' },
-        { status: 401 }
+        { error: 'Webhook processing failed' },
+        { status: 500 }
       );
     }
-
-    // Queue webhook for async processing
-    await PaypalWebhookManager.queueWebhook(event);
-
-    // Process immediately (or you can use a background job)
-    await PaypalWebhookManager.processWebhook(event);
-
-    return NextResponse.json({ received: true });
+    return NextResponse.json({ success: true }, { status: 200 });
   } catch (error: any) {
-    console.error('PayPal webhook error:', error);
+    console.error('💥 Unexpected PayPal webhook error:', error);
     return NextResponse.json(
-      { error: error.message },
+      { error: error?.message || 'Internal server error' },
       { status: 500 }
     );
   }
 }
-

@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { protectedProcedure, router } from "@/trpc/init";
 import { prisma } from "@/lib/prisma";
+import { LimitGuard } from "@/features/usage/utils/limitGuard";
+import { SubscriptionManager } from "@/features/billing/utils/subscriptionManager";
 
 const baseUserSelect = {
   id: true,
@@ -33,6 +35,8 @@ const baseUserSelect = {
 export const userRouter = router({
   me: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session!.user!.id;
+    // Trigger cycle transition check on login/profile fetch
+    await LimitGuard.ensureCycle(userId);
     const user = await prisma.user.findUnique({ where: { id: userId }, select: baseUserSelect });
     return user;
   }),

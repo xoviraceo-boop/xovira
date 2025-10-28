@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe/server';
 import { CreditManager } from '@/features/billing/utils/creditManager';
 import { PAYMENT_METHOD, PAYMENT_GATEWAY } from '@/features/billing/types';
-import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,7 +15,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Retrieve the session from Stripe
     const session = await stripe.checkout.sessions.retrieve(sessionId as string);
     
     if (!session) {
@@ -25,10 +23,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Extract metadata
     const userId = session.metadata?.userId;
     const packageId = session.metadata?.packageId;
-    const userName = session.metadata?.userName;
 
     if (!userId || !packageId) {
       return NextResponse.redirect(
@@ -36,48 +32,43 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check if session is completed
     if (session.payment_status === 'paid' && session.status === 'complete') {
-      // Process credit purchase using CreditManager
+      console.log("this is session", session);
+      // Idempotency: avoid processing if order already exists
+      const exists = await CreditManager.checkOrderExists(session.id);
+      if (exists) {
+        return NextResponse.redirect(
+          `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/billing/status?method=checkout&orderId=${session.id}&status=success`
+        );
+      }
+
       await CreditManager.purchase(userId, {
         orderId: session.id,
-        status: session.payment_status,
+        status: session.payment_status.toUpperCase(),
         packageId,
         payment: {
           paymentId: session.payment_intent as string,
-          paymentMethod: PAYMENT_METHOD.CREDIT_CARD,
+          paymentMethod: PAYMENT_METHOD.E_WALLET,
           paymentGateway: PAYMENT_GATEWAY.STRIPE,
           paymentAmount: session.amount_total ? (session.amount_total / 100).toString() : null,
           paymentCurrency: session.currency || null,
-          paymentTime: new Date().toISOString(),
-          paymentStatus: session.payment_status,
+          paymentTime: session.created
+            ? new Date(session.created * 1000).toISOString()
+            : new Date().toISOString(),
+          paymentStatus: session.payment_status.toUpperCase(),
         },
         metadata: {
           showModal: false,
-          stripeCustomerId: session.customer as string,
-          stripeSessionId: session.id,
+          discounts: session.discounts || [],
+          paymentIntentId: session.payment_intent,
+          stripeCheckoutSessionId: session.id,
+          payer: {
+            id: session.customer,
+            details: session.customer_details,
+            email: session.customer_details?.email || session.customer_email || null,
+          }
         },
       });
-
-      // Create webhook queue entry
-      try {
-        await prisma.webhookQueue.create({
-          data: {
-            topic: 'BILLING.PAYMENT.ORDER',
-            userId: userId,
-            payload: {
-              id: session.id,
-              event_type: 'BILLING.PAYMENT.ORDER',
-              resource_type: 'order',
-              resource: session
-            } as any,
-            status: 'processed',
-            processedAt: new Date()
-          }
-        });
-      } catch (e) {
-        console.warn('Failed to create webhook queue for Stripe checkout callback:', e);
-      }
 
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/billing/status?method=checkout&orderId=${session.id}&status=success`

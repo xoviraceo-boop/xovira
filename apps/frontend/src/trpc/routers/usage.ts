@@ -1,10 +1,12 @@
 import { z } from "zod";
 import { protectedProcedure, router } from "@/trpc/init";
 import { prisma } from "@/lib/prisma";
+import { LimitGuard } from "@/features/usage/utils/limitGuard";
 
 export const usageRouter = router({
   summary: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session!.user!.id;
+    await LimitGuard.ensureCycle(userId);
     const quota = await prisma.userQuota.findUnique({ where: { userId } });
     return quota;
   }),

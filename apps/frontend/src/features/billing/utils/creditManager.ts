@@ -95,6 +95,7 @@ export class CreditManager {
   private static getPaymentStatus(status: string): PaymentStatus {
     switch (status) {
       case 'COMPLETED':
+      case 'PAID':
       case 'ACTIVE':
         return PaymentStatus.SUCCEEDED;
       case 'PENDING':
@@ -116,6 +117,7 @@ export class CreditManager {
   private static getPurchaseStatus(status: string): PurchaseStatus {
     switch (status) {
       case 'COMPLETED':
+      case 'PAID':
       case 'ACTIVE':
         return PurchaseStatus.ACTIVE;
       case 'PENDING':
@@ -153,6 +155,10 @@ export class CreditManager {
               currency: purchase.currency,
               bonusCredits: purchase.bonusCredits
             },
+            billingAdjustments: {
+              promotions: [],
+              discounts: []
+            },
             usage: usageDetails,
             payment: purchase.payment ? {
               id: purchase.payment.id,
@@ -171,7 +177,7 @@ export class CreditManager {
 
       return {
         totalActivePackages: packageDetails?.length ?? 0,
-        package: packageDetails,
+        packages: packageDetails,
         totalCreditsAvailable: packageDetails.reduce((sum, pkg) => 
           sum + pkg.usage.remainingCredits, 0),
       };
@@ -221,6 +227,19 @@ export class CreditManager {
       if (!userId) throw new Error(this.Errors.USER_NOT_FOUND);
   
       const { packageId, orderId, status, payment, metadata } = details;
+
+      // Idempotency: skip if purchase with same orderId exists
+      if (orderId) {
+        const existing = await prisma.creditPurchase.findFirst({
+          where: { orderId },
+          include: this.purchaseInclude
+        });
+        if (existing) {
+          // Try to fetch payment record related to this purchase
+          const existingPayment = existing.payment || await prisma.payment.findFirst({ where: { purchaseId: existing.id } });
+          return { creditPurchase: existing as any, payment: existingPayment as any };
+        }
+      }
   
       // ✅ Validate package
       const creditPackage = await this.getPackageById(packageId);
@@ -393,7 +412,7 @@ export class CreditManager {
     return await prisma.creditPurchase.findMany({
       where: {
         userId: user.id,
-        status: PackageStatus.ACTIVE,
+        status: PurchaseStatus.ACTIVE,
         OR: [
           { expiresAt: null },
           { expiresAt: { gt: new Date() } }
@@ -434,7 +453,7 @@ export class CreditManager {
 
     const where: Prisma.CreditPurchaseWhereInput = {
       userId: user.id,
-      status: PackageStatus.EXPIRED,
+      status: PurchaseStatus.CANCELLED,
       ...(startDate && {
         purchasedAt: {
           gte: startDate
@@ -547,10 +566,10 @@ export class CreditManager {
       });
 
       if (payment.purchase) {
-        const newStatus = status === PaymentStatus.SUCCEEDED ? PackageStatus.ACTIVE :
-                         status === PaymentStatus.CANCELED ? PackageStatus.CANCELLED :
-                         status === PaymentStatus.FAILED ? PackageStatus.FROZEN :
-                         PackageStatus.PAST_DUE;
+        const newStatus = status === PaymentStatus.SUCCEEDED ? PurchaseStatus.ACTIVE :
+                         status === PaymentStatus.CANCELED ? PurchaseStatus.CANCELLED :
+                         status === PaymentStatus.FAILED ? PurchaseStatus.FROZEN :
+                         PurchaseStatus.EXPIRED;
 
         await tx.creditPurchase.update({
           where: { id: payment.purchase.id },
@@ -598,7 +617,7 @@ export class CreditManager {
     const activePackages = await prisma.creditPurchase.findMany({
       where: {
         userId: user.id,
-        status: PackageStatus.ACTIVE
+        status: PurchaseStatus.ACTIVE
       },
       include: {
         usage: true
@@ -619,7 +638,7 @@ export class CreditManager {
         await tx.creditPurchase.update({
             where: { id: pkg.id },
           data: { 
-            status: PackageStatus.EXPIRED
+            status: PurchaseStatus.CANCELLED
           }
           });
         }
@@ -640,7 +659,7 @@ export class CreditManager {
     return await prisma.creditPurchase.findFirst({
       where: {
         userId: user.id,
-        status: PackageStatus.ACTIVE,
+        status: PurchaseStatus.ACTIVE,
         OR: [
           { expiresAt: null },
           { expiresAt: { gt: new Date() } }

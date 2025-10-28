@@ -2297,6 +2297,7 @@ enum SubscriptionStatus {
   CANCELED
   UNPAID
   PAUSED
+  SUSPENDED
   EXPIRED
   ON_HOLD
 }

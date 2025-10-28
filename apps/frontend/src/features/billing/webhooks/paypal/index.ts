@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { PaymentStatus, SubscriptionStatus } from '@xovira/database/src/generated/prisma';
 import { SubscriptionManager } from '@/features/billing/utils/subscriptionManager';
 import { CreditManager } from '@/features/billing/utils/creditManager';
-import crypto from 'crypto';
+import { DateTime } from 'luxon';
 import { PAYMENT_METHOD, PAYMENT_GATEWAY } from '../../types';
 
 interface PayPalWebhookEvent {
@@ -192,7 +192,13 @@ export class PaypalWebhookManager {
     switch (event.event_type) {
       // Subscription lifecycle events
       case 'BILLING.SUBSCRIPTION.ACTIVATED':
-        await this.handleSubscriptionActivated(event);
+        setTimeout(async () => {
+          try {
+            await this.handleSubscriptionActivated(event);
+          } catch (err) {
+            console.error('Error in delayed checkout handler:', err);
+          }
+        }, 5000); // delay 5 seconds
         break;
 
       case 'BILLING.SUBSCRIPTION.UPDATED':
@@ -217,7 +223,13 @@ export class PaypalWebhookManager {
 
       // Order events (one-time payments)
       case 'CHECKOUT.ORDER.APPROVED':
-        await this.handlePaymentCaptured(event);
+        setTimeout(async () => {
+          try {
+            await this.handlePaymentCaptured(event);
+          } catch (err) {
+            console.error('Error in delayed checkout handler:', err);
+          }
+        }, 5000);
         break;
 
       case 'CHECKOUT.ORDER.COMPLETED':
@@ -234,11 +246,11 @@ export class PaypalWebhookManager {
         break;
 
       case 'PAYMENT.SALE.REFUNDED':
-        await this.handlePaymentRefunded(event);
+        //await this.handlePaymentRefunded(event);
         break;
 
       case 'PAYMENT.SALE.REVERSED':
-        await this.handlePaymentReversed(event);
+        //await this.handlePaymentReversed(event);
         break;
 
       case 'PAYMENT.CAPTURE.COMPLETED':
@@ -247,11 +259,11 @@ export class PaypalWebhookManager {
         break;
 
       case 'PAYMENT.CAPTURE.DENIED':
-        await this.handlePaymentDenied(event);
+        //await this.handlePaymentDenied(event);
         break;
 
       case 'PAYMENT.CAPTURE.REFUNDED':
-        await this.handlePaymentRefunded(event);
+        //await this.handlePaymentRefunded(event);
         break;
 
       default:
@@ -314,7 +326,6 @@ export class PaypalWebhookManager {
     try {
       const { topic, objectId } = this.getDedupKey(event);
       if (!topic || !objectId) return false;
-
       const existing = await prisma.webhookQueue.findFirst({
         where: {
           topic,
@@ -325,7 +336,6 @@ export class PaypalWebhookManager {
           } as any
         }
       });
-
       return Boolean(existing);
     } catch (err) {
       console.warn('PayPal webhook duplicate check failed, proceeding:', err);
@@ -336,14 +346,31 @@ export class PaypalWebhookManager {
   /**
    * Extract userId from event
    */
-  private static extractUserId(event: PayPalWebhookEvent): string | null {
-    return (
-      event.resource?.custom_id ||
-      event.resource?.custom ||
-      event.resource?.subscriber?.payer_id ||
-      event.resource?.payer?.payer_id ||
-      null
-    );
+   private static extractUserId(event: PayPalWebhookEvent): string | null {
+    try {
+      const raw = event.resource?.custom_id || event.resource?.custom;
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      const { userId } = parsed;
+      return userId ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+    /**
+   * Extract userId from event
+   */
+   private static extractPlanId(event: PayPalWebhookEvent): string | null {
+    try {
+      const raw = event.resource?.custom_id || event.resource?.custom;
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      const { planId } = parsed;
+      return planId ?? null;
+    } catch {
+      return null;
+    }
   }
 
   /**
@@ -351,20 +378,17 @@ export class PaypalWebhookManager {
    */
   static async handleSubscriptionActivated(event: PayPalWebhookEvent): Promise<void> {
     const userId = this.extractUserId(event);
+    const planId = this.extractPlanId(event);
     const resource = event.resource;
     const subId = resource?.id;
-    const planId = resource?.plan_id;
-
     if (!userId || !subId || !planId) {
       throw new Error(
         `Missing required data for subscription activation: userId=${userId}, subId=${subId}, planId=${planId}`
       );
     }
-
     const billingInfo = resource.billing_info ?? {};
     const lastPayment = billingInfo.last_payment ?? {};
     const nextBillingTime = billingInfo.next_billing_time ?? null;
-
     await SubscriptionManager.activate(userId, {
       subId,
       status: resource.status,
@@ -394,6 +418,10 @@ export class PaypalWebhookManager {
         showModal: false
       },
     });
+    // simulate redirect like API (3s delay)
+    await new Promise((r) => setTimeout(r, 3000));
+    const redirectUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/billing/status?method=subscription&subId=${subId}&status=success`;
+    console.log('Webhook redirect (PayPal SUBSCRIPTION):', redirectUrl);
   }
 
   /**
@@ -404,7 +432,6 @@ export class PaypalWebhookManager {
     if (!userId) {
       throw new Error('Missing userId in subscription update event');
     }
-
     console.log('Subscription updated:', event.resource?.id);
     // TODO: Implement subscription update logic if needed
   }
@@ -414,11 +441,11 @@ export class PaypalWebhookManager {
    */
   static async handleSubscriptionCancelled(event: PayPalWebhookEvent): Promise<void> {
     const userId = this.extractUserId(event);
-    if (!userId) {
-      throw new Error('Missing userId in subscription cancellation event');
+    const subscriptionId = event.resource?.id;
+    if (!userId || !subscriptionId) {
+      throw new Error('Missing parameters in subscription suspension event');
     }
-
-    await SubscriptionManager.cancel(userId);
+    await SubscriptionManager.cancel(userId, { subscriptionId, canceledAt: DateTime.now() });
   }
 
   /**
@@ -426,11 +453,11 @@ export class PaypalWebhookManager {
    */
   static async handleSubscriptionSuspended(event: PayPalWebhookEvent): Promise<void> {
     const userId = this.extractUserId(event);
-    if (!userId) {
-      throw new Error('Missing userId in subscription suspension event');
+    const subscriptionId = event.resource?.id;
+    if (!userId || !subscriptionId) {
+      throw new Error('Missing parameters in subscription suspension event');
     }
-
-    await SubscriptionManager.freeze(userId);
+    await SubscriptionManager.suspend(userId, { subscriptionId });
   }
 
   /**
@@ -438,20 +465,11 @@ export class PaypalWebhookManager {
    */
   static async handleSubscriptionExpired(event: PayPalWebhookEvent): Promise<void> {
     const userId = this.extractUserId(event);
-    if (!userId) {
-      throw new Error('Missing userId in subscription expiration event');
+    const subscriptionId = event.resource?.id;
+    if (!userId || !subscriptionId) {
+      throw new Error('Missing parameters in subscription suspension event');
     }
-
-    const subscription = await SubscriptionManager.getCurrentSubscription(userId);
-    if (subscription) {
-      await prisma.subscription.update({
-        where: { id: subscription.id },
-        data: {
-          status: SubscriptionStatus.EXPIRED,
-          currentPeriodEnd: new Date()
-        }
-      });
-    }
+    await SubscriptionManager.expire(userId, { subscriptionId });
   }
 
   /**
@@ -459,11 +477,11 @@ export class PaypalWebhookManager {
    */
   static async handleSubscriptionReactivated(event: PayPalWebhookEvent): Promise<void> {
     const userId = this.extractUserId(event);
-    if (!userId) {
-      throw new Error('Missing userId in subscription reactivation event');
+    const subscriptionId = event.resource?.id;
+    if (!userId || !subscriptionId) {
+      throw new Error('Missing parameters in subscription suspension event');
     }
-
-    await SubscriptionManager.unfreeze(userId);
+    await SubscriptionManager.reactivate(userId, { subscriptionId });
   }
 
   /**
@@ -474,34 +492,26 @@ export class PaypalWebhookManager {
     const saleId = event.resource?.id;
     const planId = event.resource?.billing_agreement_id;
     const paymentStatus = event.resource?.state?.toUpperCase() || 'COMPLETED';
-
     if (!userId) {
       throw new Error(`Missing userId in payment completed event: ${event.id}`);
     }
-
     if (!saleId || !planId) {
       throw new Error(
         `Missing required payment data in event ${event.id}: saleId=${saleId}, planId=${planId}`
       );
     }
-
     const current = await SubscriptionManager.getCurrentSubscription(userId);
     if (!current) {
       throw new Error(`No active subscription found for user ${userId}, saleId=${saleId}`);
     }
-
     const subscriptionId = current.id;
     const lastPayment = current.payments?.[0];
-
     if (!lastPayment) {
       throw new Error(`No payment found for subscription ${subscriptionId}`);
     }
-
-    // Check if this is a duplicate payment
     if (lastPayment?.metadata) {
       const metadata = lastPayment.metadata as Record<string, any> | null;
       const existingSaleId = metadata?.saleId;
-
       if (existingSaleId === saleId) {
         console.log('Duplicate payment webhook event detected, skipping', {
           saleId,
@@ -510,8 +520,6 @@ export class PaypalWebhookManager {
         });
         return;
       }
-
-      // If metadata exists but no saleId, update it
       if (!existingSaleId) {
         console.log('Appending saleId to existing payment metadata', {
           paymentId: lastPayment.id,
@@ -528,25 +536,23 @@ export class PaypalWebhookManager {
         return;
       }
     }
-
-    // Process renewal for new payment
     console.log('Processing subscription renewal', {
       userId,
       subscriptionId,
       saleId,
       planId
     });
-
     await SubscriptionManager.renew(userId, {
       planId,
       payment: {
-        paymentMethod: 'E_WALLET',
-        paymentGateway: 'PAYPAL',
+        paymentMethod: PAYMENT_METHOD.E_WALLET,
+        paymentGateway: PAYMENT_GATEWAY.PAYPAL,
         paymentAmount: event.resource?.amount?.total || '0',
         paymentCurrency: event.resource?.amount?.currency || 'USD',
         paymentTime: event.resource?.create_time || event.create_time,
         paymentStatus: paymentStatus,
       },
+      currentCycleStart: event.resource?.create_time || event.create_time,
       metadata: {
         saleId,
         status: paymentStatus,
@@ -578,23 +584,19 @@ export class PaypalWebhookManager {
     const purchaseUnit = event.resource?.purchase_units?.[0];
     const userId = purchaseUnit?.custom_id;
     const orderId = event.resource?.id;
-
     if (!userId || !orderId) {
       throw new Error(
         `Missing required data for payment capture: userId=${userId}, orderId=${orderId}`
       );
     }
-
     const packageId = purchaseUnit?.reference_id;
     if (!packageId) {
       throw new Error('No packageId found in PayPal capture webhook');
     }
-
     const payer = event.resource?.payer;
     const payment = event.resource?.payments?.captures?.[0] || {};
     const paymentTime = payment?.create_time || event.resource?.create_time;
     const paymentStatus = payment?.status || event.resource?.status;
-
     await CreditManager.purchase(userId, {
       packageId,
       orderId,
@@ -617,6 +619,9 @@ export class PaypalWebhookManager {
         showModal: false
       },
     });
+    await new Promise((r) => setTimeout(r, 3000));
+    const redirectUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/billing/status?method=checkout&orderId=${orderId}&status=success`;
+    console.log('Webhook redirect (PayPal CHECKOUT):', redirectUrl);
   }
 
   /**
@@ -625,13 +630,11 @@ export class PaypalWebhookManager {
   static async handlePaymentDenied(event: PayPalWebhookEvent): Promise<void> {
     const userId = this.extractUserId(event);
     const chargeId = event.resource?.id;
-
     if (!userId || !chargeId) {
       throw new Error(
         `Missing required data for payment denial: userId=${userId}, chargeId=${chargeId}`
       );
     }
-
     await SubscriptionManager.updatePaymentStatus(userId, String(chargeId), PaymentStatus.FAILED);
   }
 
@@ -641,13 +644,11 @@ export class PaypalWebhookManager {
   static async handlePaymentRefunded(event: PayPalWebhookEvent): Promise<void> {
     const userId = this.extractUserId(event);
     const chargeId = event.resource?.sale_id || event.resource?.id;
-
     if (!userId || !chargeId) {
       throw new Error(
         `Missing required data for payment refund: userId=${userId}, chargeId=${chargeId}`
       );
     }
-
     await SubscriptionManager.updatePaymentStatus(userId, String(chargeId), PaymentStatus.REFUNDED);
   }
 
@@ -663,11 +664,11 @@ export class PaypalWebhookManager {
         `Missing required data for payment reversal: userId=${userId}, chargeId=${chargeId}`
       );
     }
-
     await SubscriptionManager.updatePaymentStatus(userId, String(chargeId), PaymentStatus.FAILED);
-
-    // Suspend subscription due to chargeback
-    await SubscriptionManager.freeze(userId);
+    const current = await SubscriptionManager.getCurrentSubscription(userId);
+    if (current?.subId) {
+      await SubscriptionManager.suspend(userId, { subscriptionId: current.subId });
+    }
   }
 
   /**

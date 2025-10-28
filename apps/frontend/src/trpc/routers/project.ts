@@ -2,6 +2,7 @@ import { z } from "zod";
 import { protectedProcedure, router } from "@/trpc/init";
 import { prisma } from "@/lib/prisma";
 import { UsageManager } from "@/features/usage/utils/usageManager";
+import { LimitGuard } from "@/features/usage/utils/limitGuard";
 
 export const projectRouter = router({
     list: protectedProcedure
@@ -17,6 +18,7 @@ export const projectRouter = router({
         }))
         .query(async ({ ctx, input }) => {
             const userId = ctx.session!.user!.id;
+            await LimitGuard.ensureCycle(userId);
             const where: any = {};
 
             // Scope
@@ -137,7 +139,8 @@ export const projectRouter = router({
 	      status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional()
 	    })
 	  )
-	  .mutation(async ({ ctx, input }) => {
+      .mutation(async ({ ctx, input }) => {
+        await LimitGuard.ensureWithinCreateLimit(ctx.session!.user!.id, 'PROJECT');
 	    const baseData: any = {
 	      ownerId: ctx.session!.user!.id,
 	      name: input.name,
@@ -187,7 +190,8 @@ export const projectRouter = router({
 				isPublic: z.boolean().optional(),
 			})
 		)
-		.mutation(async ({ ctx, input }) => {
+      .mutation(async ({ ctx, input }) => {
+        await LimitGuard.ensureCanModify(ctx.session!.user!.id, 'PROJECT');
 			const { id, ...updateData } = input;
 
 			const updated = await prisma.project.update({ 
@@ -220,7 +224,8 @@ export const projectRouter = router({
 				isPublic: z.boolean().optional(),
 			})
 		)
-		.mutation(async ({ ctx, input }) => {
+      .mutation(async ({ ctx, input }) => {
+        await LimitGuard.ensureCanModify(ctx.session!.user!.id, 'PROJECT');
 			const { id, ...updateData } = input;
 			const baseData: any = {
 				...updateData,

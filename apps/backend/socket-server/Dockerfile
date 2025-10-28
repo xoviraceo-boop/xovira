@@ -34,4 +34,9 @@ USER socketio
 EXPOSE 3001
 ENV PORT=3001
 
+RUN ls -la /app/apps/backend/socket-server/dist/lib/
+
 CMD ["node", "dist/index.js"]
+
+
+

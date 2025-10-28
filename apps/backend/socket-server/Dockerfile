@@ -19,7 +19,8 @@ FROM base AS builder
 WORKDIR /app
 COPY . .
 RUN pnpm -w install --frozen-lockfile --filter ./apps/backend/socket-server...
-RUN pnpm -w --filter ./apps/backend/socket-server... run build
+WORKDIR /app/apps/backend/socket-server
+RUN pnpm run build
 
 # Runtime layer
 FROM node:20-alpine AS runner

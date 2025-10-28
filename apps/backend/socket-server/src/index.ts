@@ -1,15 +1,15 @@
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
-import env from './config/env.js';
+import env from './config/env';
 import { redis, redisPub, redisSub } from '@/lib/redis';
-import { authMiddleware } from './middleware/auth.js';
-import { registerPostHandlers } from './handlers/postHandlers.js';
-import { registerCommentHandlers } from './handlers/commentHandlers.js';
-import { registerFeedHandlers } from './handlers/feedHandlers.js';
-import { registerTypingHandlers } from './handlers/typingHandlers.js';
-import { registerNotificationHandlers } from './handlers/notificationHandlers.js';
-import { PresenceService } from './services/presenceService.js';
+import { authMiddleware } from './middleware/auth';
+import { registerPostHandlers } from './handlers/postHandlers';
+import { registerCommentHandlers } from './handlers/commentHandlers';
+import { registerFeedHandlers } from './handlers/feedHandlers';
+import { registerTypingHandlers } from './handlers/typingHandlers';
+import { registerNotificationHandlers } from './handlers/notificationHandlers';
+import { PresenceService } from './services/presenceService';
 import type {
   ServerToClientEvents,
   ClientToServerEvents,

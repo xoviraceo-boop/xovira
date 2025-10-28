@@ -10,7 +10,7 @@ export const CTASection = () => {
     const parentDiv = parentDivRef.current;
     const blob = blobRef.current;
 
-    const onMouseMove = (e) => {
+    const onMouseMove = (e: MouseEvent) => {
       if (parentDiv && blob) {
         const rect = parentDiv.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -92,3 +92,4 @@ export const CTASection = () => {
     </section>
   );
 };
+

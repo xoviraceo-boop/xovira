@@ -17,10 +17,11 @@ build/
 out/
 .next/
 .cache/
-.cursor/
 turbo/
 .vite/
 coverage/
+
+.cursor
 
 # Turborepo cache
 .turbo/

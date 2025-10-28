@@ -1,6 +1,5 @@
 import { PayPalButtonsComponentProps } from "@paypal/react-paypal-js";
-import { PaymentGateway } from '@xovira/types';
-import { subscribe, purchase } from '@/actions/billing';
+import { PaymentGateway } from '@xovira/database/src/generated/prisma/client';
 import { CreditManager } from "../utils";
 
 interface IBillingState {

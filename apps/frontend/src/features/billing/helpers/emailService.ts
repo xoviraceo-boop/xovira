@@ -1,6 +1,6 @@
 import emailService from "@/utils/email/emailService";
 import { BillingEmailTemplates } from "./emailTemplates";
-import { SubscriptionStatus, NotificationType } from "@xovira/types";
+import { SubscriptionStatus, NotificationType } from "@xovira/database/src/generated/prisma/client";
 import { EmailTemplate, BillingEmailData } from "@/utils/email/types";
 import { EmailServiceError } from "@/utils/email/emailService";
 

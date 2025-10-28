@@ -6,7 +6,7 @@ import { trpc } from '@/lib/trpc';
 import { useSocket } from '@/components/providers/SocketProvider';
 import { useEffect, useRef, useCallback } from 'react';
 import { useToast } from '@/hooks/useToast';
-import type { Post } from '@/entities/shared/types';
+import type { Post } from '@xovira/database/src/generated/prisma/client';
 
 type CreatePostData = { content: string; attachments?: any[]; };
 

@@ -15,7 +15,6 @@ import {
 } from '@xovira/database/src/generated/prisma';
 import { DateTime } from 'luxon';
 import { prisma } from '@/lib/prisma';
-import { BillingOperationsService } from './billingOperationsService';
 import { PurchaseDetails, ExpiredPackageFilters, PurchaseInput } from '../types';
 
 export class CreditManager {

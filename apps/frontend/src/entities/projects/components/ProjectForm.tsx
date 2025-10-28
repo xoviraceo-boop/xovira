@@ -9,7 +9,7 @@ import { projectFields } from "../constants";
 import { useEntityForm } from "@/entities/shared/hooks/useEntityForm";
 import { useEntityMutations } from "@/entities/shared/hooks/useEntityMutations";
 import { FormActions } from "@/entities/shared/components/FormActions";
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 
 interface ProjectFormProps {
   projectId: string;

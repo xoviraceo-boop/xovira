@@ -5,7 +5,8 @@ import { trpc } from '@/lib/trpc';
 import { useSocket } from '@/components/providers/SocketProvider';
 import { useEffect, useRef, useCallback } from 'react';
 import { useToast } from '@/hooks/useToast';
-import type { Comment, CreateCommentData } from '@/entities/shared/types';
+import type { CreateCommentData } from '@xovira/types/socket-events';
+import type { PostComment } from '@xovira/database/src/generated/prisma/client';
 
 export function useComments(postId: string) {
   const { socket, isConnected, waitForConnection } = useSocket();
@@ -58,7 +59,7 @@ export function useComments(postId: string) {
 
     queryClient.setQueryData(queryKey, (old: any) => {
       if (!old) return old;
-      const items = (old?.items ?? []) as Comment[];
+      const items = (old?.items ?? []) as PostComment[];
       
       // Prevent duplicates
       if (items.some(c => c.id === data.comment.id)) return old;
@@ -70,7 +71,7 @@ export function useComments(postId: string) {
   const handleCommentUpdated = useCallback((data: any) => {
     queryClient.setQueryData(queryKey, (old: any) => {
       if (!old) return old;
-      const items = (old?.items ?? []) as Comment[];
+      const items = (old?.items ?? []) as PostComment[];
       const newItems = items.map((comment) => 
         comment.id === data.commentId 
           ? { ...comment, content: data.content, isEdited: data.isEdited } 
@@ -85,7 +86,7 @@ export function useComments(postId: string) {
 
     queryClient.setQueryData(queryKey, (old: any) => {
       if (!old) return old;
-      const items = (old?.items ?? []) as Comment[];
+      const items = (old?.items ?? []) as PostComment[];
       const newItems = items.filter((comment) => comment.id !== data.commentId);
       return { ...old, items: newItems };
     });
@@ -94,7 +95,7 @@ export function useComments(postId: string) {
   const handleCommentVoted = useCallback((data: any) => {
     queryClient.setQueryData(queryKey, (old: any) => {
       if (!old) return old;
-      const items = (old?.items ?? []) as Comment[];
+      const items = (old?.items ?? []) as PostComment[];
       const newItems = items.map((comment) => 
         comment.id === data.commentId 
           ? { ...comment, upvotes: data.upvotes, downvotes: data.downvotes } 

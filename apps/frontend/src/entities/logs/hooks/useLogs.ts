@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { trpc } from '@/lib/trpc';
 import { useSocket } from '@/components/providers/SocketProvider';
 import { useEffect, useRef, useCallback } from 'react';
-import type { ActivityLog } from '@/entities/shared/types';
+import type { ActivityLog } from '@xovira/database/src/generated/prisma/client';
 
 interface UseActivityLogsParams {
   projectId?: string;

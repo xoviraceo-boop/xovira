@@ -1,4 +1,6 @@
-import { SubscriptionPlan, Service, PromotionUnit } from '@prisma/client';
+import { PlanType, PromotionUnit } from '@xovira/database/src/generated/prisma/client';
+import { EmailTemplate } from '@/utils/email/types';
+import { EmailTheme } from '@/utils/email/types';
 
 interface BillingTemplateContent {
   subject: string;

@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "start": "node -r tsconfig-paths/register dist/index.js",
+    "build": "tsc && tsc-alias -p tsconfig.json",
+    "start": "node dist/index.js",
     "clean": "rm -rf dist node_modules",
     "type-check": "tsc --noEmit"
   },
@@ -27,6 +27,7 @@
     "@types/cors": "^2.8.17",
     "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^20.10.6",
+    "tsc-alias": "^1.8.8",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3"
   }

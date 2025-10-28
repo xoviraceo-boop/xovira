@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Upload, X } from "lucide-react";
-import { storageUtils } from "@/utils/storageUtils";
+import { storageUtils } from "@/utils/storage/storageUtils";
 import { useToast } from "@/hooks/useToast";
 
 interface UploadedFile {

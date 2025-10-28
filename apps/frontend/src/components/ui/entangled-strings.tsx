@@ -1,39 +1,56 @@
 import { cn } from "@/lib/utils";
-import { motion, useAnimation } from "framer-motion";
+import { motion, MotionValue, useMotionValueEvent, useAnimation, type Transition } from "framer-motion";
 import React, { useEffect } from "react";
 
-const transition = {
-  duration: 10,
-  ease: "linear",
-  repeat: Infinity,
-  repeatType: "mirror",
-};
-
-export const EntangledStrings = ({
-  pathLengths,
-  paths,
-  filterPaths,
-  colors,
-  title,
-  description,
-  className,
-}: {
-  pathLengths: number[];
+interface EntangledStringsProps {
+  pathLengths: Array<number | MotionValue<number>>;
   paths: string[];
   filterPaths: string[];
   colors: string[];
   title?: string;
   description?: string;
   className?: string;
+}
+
+const transition: Transition = {
+  duration: 10,
+  ease: "linear",
+  repeat: Infinity,
+  repeatType: "mirror",
+};
+
+export const EntangledStrings: React.FC<EntangledStringsProps> = ({
+  pathLengths,
+  paths,
+  filterPaths,
+  colors,
+  className,
 }) => {
   const controls = useAnimation();
 
+  // Helper to unwrap MotionValue or number
+  const getValue = (val: number | MotionValue<number>) =>
+    typeof val === "number" ? val : val.get();
+
+  // Animate on mount
   useEffect(() => {
     controls.start((i) => ({
-      pathLength: pathLengths[i],
+      pathLength: getValue(pathLengths[i]),
       transition: transition,
     }));
-  }, [pathLengths]);
+  }, [controls, pathLengths]);
+
+  // Listen to MotionValue changes (for scroll-linked animation)
+  pathLengths.forEach((val, i) => {
+    if (typeof val !== "number") {
+      useMotionValueEvent(val, "change", (latest) => {
+        controls.start({
+          pathLength: latest,
+          transition: { duration: 0.1, ease: "linear" },
+        });
+      });
+    }
+  });
 
   return (
     <div className={cn("relative h-full", className)}>
@@ -51,15 +68,12 @@ export const EntangledStrings = ({
             stroke={colors[index]}
             strokeWidth="2"
             fill="none"
-            initial={{
-              pathLength: 0,
-            }}
-            animate={{
-              pathLength: [0, 1, 0],
-            }}
-            transition={transition}
+            initial={{ pathLength: 0 }}
+            animate={controls} // uses the controls updated by MotionValue
+            custom={index} // index used to control each path separately
           />
         ))}
+
         {filterPaths.map((filterPath, index) => (
           <path
             key={index}
@@ -71,6 +85,7 @@ export const EntangledStrings = ({
             filter="url(#blurMe)"
           />
         ))}
+
         <defs>
           <filter id="blurMe">
             <feGaussianBlur in="SourceGraphic" stdDeviation="5" />

@@ -1,7 +1,5 @@
 version: '3.8'
 
-CMD ["pnpm", "run"]
-
 services:
   postgres:
     image: postgres:16-alpine

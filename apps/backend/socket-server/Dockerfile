@@ -1,39 +1,40 @@
 FROM node:20-alpine AS base
-
-# Install dependencies only when needed
-FROM base AS deps
 RUN apk add --no-cache libc6-compat
+RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
-RUN npm ci
+# Dependencies layer (monorepo-aware). Expect Docker context to be the repo root.
+FROM base AS deps
+WORKDIR /app
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+# Bring in workspace package manifests for proper resolution
+COPY packages ./packages
+COPY apps/backend/socket-server/package.json ./apps/backend/socket-server/package.json
+# Pre-fetch store to leverage caching, then install only what this app needs
+RUN pnpm -w fetch
+RUN pnpm -w install --frozen-lockfile --filter ./apps/backend/socket-server...
 
-# Rebuild the source code only when needed
+# Build layer
 FROM base AS builder
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+COPY --from=deps /root/.pnpm-store /root/.pnpm-store
+RUN pnpm config set store-dir /root/.pnpm-store
+RUN pnpm -w install --frozen-lockfile --filter ./apps/backend/socket-server...
+RUN pnpm -w --filter ./apps/backend/socket-server... run build
 
+# Runtime layer
+FROM node:20-alpine AS runner
+RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 socketio
 ENV NODE_ENV=production
-RUN npm run build
-
-# Production image, copy all the files and run the app
-FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV=production
-
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 socketio
-
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
+# Copy only the built app and its workspace (to keep symlinks valid)
+COPY --from=builder /app /app
+WORKDIR /app/apps/backend/socket-server
 
 USER socketio
-
 EXPOSE 3001
-
 ENV PORT=3001
 
 CMD ["node", "dist/index.js"]

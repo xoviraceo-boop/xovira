@@ -109,7 +109,7 @@ export default function CheckoutPage() {
       <div className="space-y-8">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Button onClick={handleBack} variant="outline" size="sm">
+          <Button onClick={handleBack} variant="outline">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -181,3 +181,5 @@ export default function CheckoutPage() {
     </Shell>
   );
 }
+
+

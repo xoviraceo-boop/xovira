@@ -17,7 +17,7 @@ export const proposalRouter = router({
 			urgency: z.enum(["LOW","MEDIUM","HIGH","URGENT"]).optional(),
 			minFunding: z.number().optional(),
 			maxFunding: z.number().optional(),
-			sortBy: z.enum(["relevance","latest"]).optional().default("latest"),
+			sortBy: z.string().optional(),
 			page: z.number().int().min(1).optional().default(1),
 			pageSize: z.number().int().min(1).max(50).optional().default(12),
 			scope: z.enum(["all","owned","saved","interested"]).optional().default("owned")

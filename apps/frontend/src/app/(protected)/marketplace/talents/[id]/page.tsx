@@ -22,6 +22,12 @@ export default function ProposalDetailPage() {
     }
   }, [proposal, isLoading, error, router]);
 
+  // Initialize edit mode from query param
+  useEffect(() => {
+    const shouldEdit = search?.get('edit') === '1';
+    if (shouldEdit) setEditing(true);
+  }, [search]);
+  
   if (isLoading) {
     return (
       <Shell>
@@ -35,12 +41,6 @@ export default function ProposalDetailPage() {
   if (!proposal) {
     return null; // Will redirect via useEffect
   }
-
-  // Initialize edit mode from query param
-  useEffect(() => {
-    const shouldEdit = search?.get('edit') === '1';
-    if (shouldEdit) setEditing(true);
-  }, [search]);
 
   return (
     <Shell>
@@ -61,3 +61,4 @@ export default function ProposalDetailPage() {
     </Shell>
   );
 }
+

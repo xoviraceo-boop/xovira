@@ -41,16 +41,27 @@ export const EntangledStrings: React.FC<EntangledStringsProps> = ({
   }, [controls, pathLengths]);
 
   // Listen to MotionValue changes (for scroll-linked animation)
-  pathLengths.forEach((val, i) => {
-    if (typeof val !== "number") {
-      useMotionValueEvent(val, "change", (latest) => {
-        controls.start({
-          pathLength: latest,
-          transition: { duration: 0.1, ease: "linear" },
+  // FIXED: Move the hook listeners into a useEffect
+  useEffect(() => {
+    const unsubscribers: Array<() => void> = [];
+
+    pathLengths.forEach((val, i) => {
+      if (typeof val !== "number") {
+        const unsubscribe = val.on("change", (latest) => {
+          controls.start({
+            pathLength: latest,
+            transition: { duration: 0.1, ease: "linear" },
+          });
         });
-      });
-    }
-  });
+        unsubscribers.push(unsubscribe);
+      }
+    });
+
+    // Cleanup subscriptions
+    return () => {
+      unsubscribers.forEach((unsubscribe) => unsubscribe());
+    };
+  }, [pathLengths, controls]);
 
   return (
     <div className={cn("relative h-full", className)}>
@@ -69,8 +80,8 @@ export const EntangledStrings: React.FC<EntangledStringsProps> = ({
             strokeWidth="2"
             fill="none"
             initial={{ pathLength: 0 }}
-            animate={controls} // uses the controls updated by MotionValue
-            custom={index} // index used to control each path separately
+            animate={controls}
+            custom={index}
           />
         ))}
 

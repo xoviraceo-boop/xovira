@@ -3,12 +3,11 @@ import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 
 export type ProposalScope = "all" | "owned" | "saved" | "interested";
-export type ProposalSort = "relevance" | "latest";
 
 export function useProposalList() {
   const [page, setPage] = useState(1);
   const pageSize = 12;
-  const [sortBy, setSortBy] = useState<ProposalSort>("latest");
+  const [sortBy, setSortBy] = useState<string>("latest");
   const [query, setQuery] = useState("");
   const [scope, setScope] = useState<ProposalScope>("owned");
   const [filters, setFilters] = useState<{

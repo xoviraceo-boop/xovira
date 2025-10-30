@@ -30,7 +30,6 @@ export function usePrefetchedProjects(options: UsePrefetchedProjectsOptions) {
 
   const { data, isLoading, isFetching } = trpc.project.getPublicProjects.useQuery(listInput as any, {
     staleTime: 30_000,
-    keepPreviousData: true,
   });
 
   useEffect(() => {

@@ -1,5 +1,4 @@
 import { notFound, redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { useSession } from "next-auth/react";
 import { CommentSection } from "@/entities/comments/components/CommentSection";
@@ -11,14 +10,13 @@ export default async function DiscussionPage({ params }: { params: { postId: str
   const post = await prisma.post.findUnique({ where: { id: discussionId }, select: { id: true, projectId: true } });
   if (!post?.projectId) notFound();
 
-  const userId = session.user.id;
   const canView = await prisma.project.findFirst({
     where: {
       id: post.projectId,
       OR: [
-        { ownerId: userId },
-        { members: { some: { userId, isBlocked: false, canViewProject: true } } },
-        { teams: { some: { team: { members: { some: { userId } } } } } },
+        { ownerId: session?.user?.id },
+        { members: { some: { userId: session?.user?.id, isBlocked: false, canViewProject: true } } },
+        { teams: { some: { team: { members: { some: { userId: session?.user?.id } } } } } },
       ],
     },
     select: { id: true },

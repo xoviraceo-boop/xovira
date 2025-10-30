@@ -88,7 +88,6 @@ export function useActivityLogs(params: UseActivityLogsParams) {
   return {
     logs: logsResp?.items || [],
     isLoading,
-    totalCount: logsResp?.totalCount || 0,
-    hasMore: logsResp?.hasMore || false,
+    total: logsResp?.total || 0,
   };
 }

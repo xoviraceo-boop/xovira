@@ -1,6 +1,6 @@
-import nodemailer, { Transporter } from 'nodemailer';
+import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
-import { EmailTheme, EmailTemplate, EmailConfig, EmailResponse, Attachment } from './types';
+import { EmailTheme, EmailTemplate, EmailConfig, EmailResponse, Attachment, BillingEmailData } from './types';
 
 dotenv.config();
 
@@ -13,7 +13,7 @@ export class EmailServiceError extends Error {
 
 export class EmailService {
   private static instances: Map<string, EmailService> = new Map();
-  private transporter: Transporter;
+  private transporter: unknown;
   private defaultFrom: string;
   private theme: EmailTheme;
   private templateCache: Map<string, EmailTemplate> = new Map();
@@ -197,3 +197,4 @@ export const emailService = EmailService.getInstance(
 );
 
 export default emailService;
+

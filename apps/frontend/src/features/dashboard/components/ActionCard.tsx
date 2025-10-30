@@ -7,7 +7,7 @@ interface ActionCardProps {
   description: string;
   href: string;
   buttonText: string;
-  variant?: "default" | "outline";
+  variant?: "primary" | "outline";
 }
 
 export default function ActionCard({ 
@@ -15,7 +15,7 @@ export default function ActionCard({
   description, 
   href, 
   buttonText, 
-  variant = "default" 
+  variant = "primary" 
 }: ActionCardProps) {
   return (
     <Card>

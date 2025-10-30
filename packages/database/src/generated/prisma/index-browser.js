@@ -172,6 +172,13 @@ exports.Prisma.UserScalarFieldEnum = {
   lastActiveAt: 'lastActiveAt'
 };
 
+exports.Prisma.UserLikeScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  targetUserId: 'targetUserId',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.FounderProfileScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
@@ -424,6 +431,13 @@ exports.Prisma.TeamScalarFieldEnum = {
   isRemote: 'isRemote',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
+};
+
+exports.Prisma.TeamLikeScalarFieldEnum = {
+  id: 'id',
+  teamId: 'teamId',
+  userId: 'userId',
+  createdAt: 'createdAt'
 };
 
 exports.Prisma.TeamMemberScalarFieldEnum = {
@@ -1860,6 +1874,7 @@ exports.SubscriptionStatus = exports.$Enums.SubscriptionStatus = {
   CANCELED: 'CANCELED',
   UNPAID: 'UNPAID',
   PAUSED: 'PAUSED',
+  SUSPENDED: 'SUSPENDED',
   EXPIRED: 'EXPIRED',
   ON_HOLD: 'ON_HOLD'
 };
@@ -1976,6 +1991,7 @@ exports.Prisma.ModelName = {
   Account: 'Account',
   Session: 'Session',
   User: 'User',
+  UserLike: 'UserLike',
   FounderProfile: 'FounderProfile',
   InvestorProfile: 'InvestorProfile',
   MemberProfile: 'MemberProfile',
@@ -1990,6 +2006,7 @@ exports.Prisma.ModelName = {
   PostShare: 'PostShare',
   ActivityLog: 'ActivityLog',
   Team: 'Team',
+  TeamLike: 'TeamLike',
   TeamMember: 'TeamMember',
   ProjectTeam: 'ProjectTeam',
   Investment: 'Investment',

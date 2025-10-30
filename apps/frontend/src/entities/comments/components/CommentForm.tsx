@@ -298,7 +298,6 @@ export function CommentForm({
           <Button
             type="button"
             variant="ghost"
-            size="sm"
             onClick={insertHashtag}
             title="Add hashtag"
             className="h-8 px-2.5 hover:bg-blue-50 hover:text-blue-600 transition-colors"
@@ -309,7 +308,6 @@ export function CommentForm({
           <Button
             type="button"
             variant="ghost"
-            size="sm"
             onClick={insertMention}
             title="Mention user"
             className="h-8 px-2.5 hover:bg-purple-50 hover:text-purple-600 transition-colors"
@@ -322,7 +320,6 @@ export function CommentForm({
               <Button
                 type="button"
                 variant="ghost"
-                size="sm"
                 title="Add emoji"
                 className="h-8 px-2.5 hover:bg-yellow-50 hover:text-yellow-600 transition-colors"
               >
@@ -355,7 +352,6 @@ export function CommentForm({
           <Button
             type="button"
             variant="ghost"
-            size="sm"
             onClick={() => fileInputRef.current?.click()}
             title="Upload image"
             className="h-8 px-2.5 hover:bg-green-50 hover:text-green-600 transition-colors"
@@ -381,7 +377,6 @@ export function CommentForm({
               <Button 
                 type="button" 
                 variant="ghost" 
-                size="sm" 
                 onClick={onCancel}
                 className="hover:bg-slate-100"
               >
@@ -390,7 +385,6 @@ export function CommentForm({
             )}
             <Button 
               type="submit" 
-              size="sm" 
               disabled={!content.trim()}
               className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300"
             >

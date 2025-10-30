@@ -34,7 +34,7 @@ export default function PublicTeamCard({ team }: { team: any }) {
   const handleInterest = async () => {
     if (!currentUser?.id) return;
     await toggleInterestMutation.mutateAsync({ teamId: team.id });
-    setIsInterested((v) => !v);
+    setIsInterested((v: boolean) => !v);
   };
 
   const handleView = useCallback(() => {
@@ -49,8 +49,8 @@ export default function PublicTeamCard({ team }: { team: any }) {
 
   return (
     <>
+      <div ref={cardRef}>
       <Card
-        ref={cardRef}
         className="group relative overflow-hidden border-0 bg-gradient-to-br from-cyan-50/30 via-white to-cyan-50/20 shadow-lg hover:shadow-2xl transition-all duration-500 rounded-2xl sm:rounded-3xl"
       >
         <div
@@ -174,6 +174,7 @@ export default function PublicTeamCard({ team }: { team: any }) {
           </CardContent>
         </div>
       </Card>
+      </div>
 
       {showRequestModal && (
         <RequestModal

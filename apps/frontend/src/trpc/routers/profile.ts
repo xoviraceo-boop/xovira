@@ -15,7 +15,6 @@ export const profileRouter = router({
         avatar: true,
         bio: true,
         website: true,
-        linkedin: false, // not in User; kept for future extension
         userType: true,
         memberProfile: true,
         founderProfile: true,
@@ -43,7 +42,7 @@ export const profileRouter = router({
           memberProfile: true,
           founderProfile: true,
           investorProfile: true,
-          likes: { select: { userId: true } },
+          likesReceived: true,
         },
       });
     }),
@@ -93,7 +92,7 @@ export const profileRouter = router({
             bio: true,
             userType: true,
             memberProfile: true,
-            likes: true,
+            likesReceived: true,
           },
         }),
       ]);

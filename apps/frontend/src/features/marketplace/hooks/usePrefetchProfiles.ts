@@ -29,8 +29,7 @@ export function usePrefetchedProfiles(options: UsePrefetchedProfilesOptions) {
   );
 
   const { data, isLoading, isFetching } = trpc.profile.getPublicProfiles.useQuery(listInput as any, {
-    staleTime: 30_000,
-    keepPreviousData: true,
+    staleTime: 30_000
   });
 
   useEffect(() => {

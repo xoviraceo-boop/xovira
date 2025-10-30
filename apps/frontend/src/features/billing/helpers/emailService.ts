@@ -1,11 +1,22 @@
 import emailService from "@/utils/email/emailService";
 import { BillingEmailTemplates } from "./emailTemplates";
 import { SubscriptionStatus, NotificationType } from "@xovira/database/src/generated/prisma/client";
-import { EmailTemplate, BillingEmailData } from "@/utils/email/types";
+import { EmailTemplate, BillingEmailData, EmailTheme } from "@/utils/email/types";
 import { EmailServiceError } from "@/utils/email/emailService";
 
 export class BillingEmailService {
-  private theme?: string;
+  private theme: EmailTheme;
+
+  private constructor(theme?: Partial<EmailTheme>) {
+    this.theme = {
+      brandColor: '#346df1',
+      buttonText: '#ffffff',
+      backgroundColor: '#f9f9f9',
+      textColor: '#444444',
+      headerColor: '#000000',
+      ...theme
+    };
+  }
 
   public async sendSubscriptionActivated(to: string, data: BillingEmailData): Promise<any> {
     this.validateEmailData(data, ["shopName", "planName"]);
@@ -43,7 +54,7 @@ export class BillingEmailService {
   public async sendSubscriptionPastDue(to: string, data: BillingEmailData): Promise<any> {
     this.validateEmailData(data, ["shopName", "planName", "amount", "currency"]);
     try {
-      const template = BillingEmailTemplates.getSubscriptionPastDueTemplate(data, this.theme);
+      const template = BillingEmailTemplates.getSubscriptionFrozenTemplate(data, this.theme);
       return await emailService.sendNodemailerEmail(to, template.subject, template.html);
     } catch (error) {
       if (error instanceof EmailServiceError) throw error;
@@ -76,7 +87,7 @@ export class BillingEmailService {
   public async sendTrialEnding(to: string, data: BillingEmailData): Promise<any> {
     this.validateEmailData(data, ["shopName", "planName", "trialEndDate"]);
     try {
-      const template = BillingEmailTemplates.getTrialEndingTemplate(data, this.theme);
+      const template = BillingEmailTemplates.getSubscriptionTrialEndingTemplate(data, this.theme);
       return await emailService.sendNodemailerEmail(to, template.subject, template.html);
     } catch (error) {
       if (error instanceof EmailServiceError) throw error;
@@ -91,35 +102,8 @@ export class BillingEmailService {
       case SubscriptionStatus.ACTIVE:
         emailTemplate = BillingEmailTemplates.getSubscriptionActivatedTemplate(data, this.theme);
         break;
-      case SubscriptionStatus.TRIAL:
-        emailTemplate = BillingEmailTemplates.getSubscriptionTrialActivatedTemplate(data, this.theme);
-        break;
-      case SubscriptionStatus.PRORATE_CANCELED:
-        emailTemplate = BillingEmailTemplates.getSubscriptionProrateCancelledTemplate(data, this.theme);
-        break;
-      case SubscriptionStatus.RENEWING:
-        emailTemplate = BillingEmailTemplates.getSubscriptionRenewingTemplate(data, this.theme);
-        break;
-      case SubscriptionStatus.DECLINED:
-        emailTemplate = BillingEmailTemplates.getSubscriptionDeclinedTemplate(data, this.theme);
-        break;
-      case SubscriptionStatus.EXPIRED:
-        emailTemplate = BillingEmailTemplates.getSubscriptionExpiredTemplate(data, this.theme);
-        break;
-      case SubscriptionStatus.PENDING:
-        emailTemplate = BillingEmailTemplates.getSubscriptionPendingTemplate(data, this.theme);
-        break;
       case SubscriptionStatus.ON_HOLD:
         emailTemplate = BillingEmailTemplates.getSubscriptionOnholdTemplate(data, this.theme);
-        break;
-      case SubscriptionStatus.FROZEN:
-        emailTemplate = BillingEmailTemplates.getSubscriptionFrozenTemplate(data, this.theme);
-        break;
-      case SubscriptionStatus.TRIAL_ENDING:
-        emailTemplate = BillingEmailTemplates.getSubscriptionTrialEndingTemplate(data, this.theme);
-        break;
-      case SubscriptionStatus.TRIAL_ENDED:
-        emailTemplate = BillingEmailTemplates.getSubscriptionTrialEndedActivationTemplate(data, this.theme);
         break;
       default:
         console.warn(`Unexpected subscription status in sendSubscriptionEmail: ${status}`);

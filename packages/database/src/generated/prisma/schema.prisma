@@ -91,6 +91,7 @@ model User {
   proposalComments     ProposalComment[]
   proposalLikes        ProposalLike[]
   proposals            Proposal[]
+  teamLikes            TeamLike[]
   receivedRequests     Request[]             @relation("RequestReceiver")
   sentRequests         Request[]             @relation("RequestSender")
   givenReviews         Review[]              @relation("ReviewGiver")
@@ -103,6 +104,8 @@ model User {
   interests            UserInterest[]
   settings             UserSettings?
   skills               UserSkill[]
+  likesGiven           UserLike[]            @relation("UserLikesGiven")
+  likesReceived        UserLike[]            @relation("UserLikesReceived")
   verificationRequests VerificationRequest[]
 
   transfersFrom       ProjectOwnershipTransfer[] @relation("TransferFrom")
@@ -122,6 +125,20 @@ model User {
   quota  UserQuota?
 
   @@map("users")
+}
+
+model UserLike {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  targetUserId String   @map("target_user_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user       User @relation("UserLikesGiven", fields: [userId], references: [id], onDelete: Cascade)
+  targetUser User @relation("UserLikesReceived", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, targetUserId])
+  @@index([targetUserId])
+  @@map("user_likes")
 }
 
 model FounderProfile {
@@ -507,8 +524,22 @@ model Team {
   reviews      Review[]
   members      TeamMember[]  @relation("TeamMemberTeam")
   owner        User          @relation("TeamOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  likes        TeamLike[]
 
   @@map("teams")
+}
+
+model TeamLike {
+  id        String   @id @default(cuid())
+  teamId    String   @map("team_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([userId])
+  @@map("team_likes")
 }
 
 model TeamMember {
@@ -2280,6 +2311,7 @@ enum SubscriptionStatus {
   CANCELED
   UNPAID
   PAUSED
+  SUSPENDED
   EXPIRED
   ON_HOLD
 }

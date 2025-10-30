@@ -25,10 +25,11 @@ interface PublicProposalCardProps {
     bookmarks: number;
     user?: {
       id: string;
-      name: string;
+      name: string | null;
       email: string;
     };
     likes?: Array<{ userId: string }>;
+    intent: string;
   };
 }
 
@@ -130,7 +131,6 @@ export default function PublicProposalCard({
   return (
     <>
       <Card 
-        ref={cardRef}
         className="group relative overflow-hidden border-0 bg-gradient-to-br from-cyan-50/30 via-white to-cyan-50/20 shadow-lg hover:shadow-2xl transition-all duration-500 rounded-2xl sm:rounded-3xl"
       >
         {/* Cyan accent gradient border effect */}
@@ -375,10 +375,10 @@ export default function PublicProposalCard({
           proposalId={proposal.id}
           proposalTitle={proposal.title}
           proposalOwnerId={proposal.user?.id || ''}
-          proposalIntent={proposal.intent}
-          proposalType={proposal.category}
-          projectId={proposal.projectId}
-          teamId={proposal.teamId}
+          proposalIntent={(proposal.intent === "SEEKING" || proposal.intent === "OFFERING") ? proposal.intent : "OFFERING"}
+          proposalType={(["INVESTMENT","MENTORSHIP","TEAM","COFOUNDER","PARTNERSHIP","CUSTOMER","PROJECT"] as const).includes(proposal.category as any) ? proposal.category as any : "PROJECT"}
+          projectId={proposal.projectId || ''}
+          teamId={proposal.teamId || ''}
           onClose={() => setShowRequestModal(false)}
         />
       )}

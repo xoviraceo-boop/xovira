@@ -7,12 +7,12 @@ import { ArrowBigUp, ArrowBigDown, MessageCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useComments } from '../hooks/useComments';
 import { CommentForm } from './CommentForm';
-import type { Comment } from '@/entities/shared/types';
+import type { PostComment } from '@xovira/database/src/generated/prisma/client';
 import { cn } from '@/lib/utils';
 
 interface CommentItemProps {
-  comment: Comment;
-  replies: Comment[];
+  comment: PostComment;
+  replies: PostComment[];
   onReply: (commentId: string) => void;
   replyingTo: string | null;
   setReplyingTo: (id: string | null) => void;
@@ -65,14 +65,14 @@ export function CommentItem({
     <div className={cn('flex gap-3', depth > 0 && 'ml-8')}>
       {/* Avatar */}
       <Avatar className="h-8 w-8">
-        <AvatarImage src={comment.user.avatar} />
-        <AvatarFallback>{comment.user.name?.[0]}</AvatarFallback>
+        <AvatarImage src={''} />
+        <AvatarFallback>?</AvatarFallback>
       </Avatar>
 
       <div className="flex-1 space-y-2">
         {/* Comment Header */}
         <div className="flex items-center gap-2">
-          <span className="font-semibold text-sm">{comment.user.name}</span>
+          <span className="font-semibold text-sm">User {comment.userId.slice(0, 4)}</span>
           <span className="text-xs text-muted-foreground">
             {formatDistanceToNow(new Date(comment.createdAt), {
               addSuffix: true,
@@ -91,7 +91,6 @@ export function CommentItem({
           {/* Upvote */}
           <Button
             variant="ghost"
-            size="sm"
             className={cn(
               'h-7 px-2',
               userVote === 'UPVOTE' && 'text-orange-500'
@@ -110,7 +109,6 @@ export function CommentItem({
           {/* Downvote */}
           <Button
             variant="ghost"
-            size="sm"
             className={cn(
               'h-7 px-2',
               userVote === 'DOWNVOTE' && 'text-blue-500'
@@ -130,7 +128,6 @@ export function CommentItem({
           {depth < maxDepth && (
             <Button
               variant="ghost"
-              size="sm"
               className="h-7 px-2"
               onClick={() => onReply(comment.id)}
             >
@@ -143,7 +140,6 @@ export function CommentItem({
           {replies.length > 0 && (
             <Button
               variant="ghost"
-              size="sm"
               className="h-7 px-2 text-xs"
               onClick={() => setShowReplies(!showReplies)}
             >
@@ -160,7 +156,7 @@ export function CommentItem({
               postId={comment.postId}
               onSubmit={handleReplySubmit}
               onCancel={() => setReplyingTo(null)}
-              placeholder={`Reply to ${comment.user.name}...`}
+              placeholder={`Reply to user...`}
               autoFocus
             />
           </div>

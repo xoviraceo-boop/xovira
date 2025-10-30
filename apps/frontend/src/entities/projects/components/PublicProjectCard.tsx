@@ -36,7 +36,7 @@ export default function PublicProjectCard({ project }: { project: any }) {
   const handleInterest = async () => {
     if (!currentUser?.id) return;
     await toggleInterestMutation.mutateAsync({ projectId: project.id });
-    setIsInterested((v) => !v);
+    setIsInterested((v: boolean) => !v);
   };
 
   const handleView = useCallback(() => {
@@ -52,7 +52,8 @@ export default function PublicProjectCard({ project }: { project: any }) {
 
   return (
     <>
-      <Card ref={cardRef} className="group relative overflow-hidden border-0 bg-gradient-to-br from-cyan-50/30 via-white to-cyan-50/20 shadow-lg hover:shadow-2xl transition-all duration-500 rounded-2xl sm:rounded-3xl">
+      <div ref={cardRef}>
+      <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-cyan-50/30 via-white to-cyan-50/20 shadow-lg hover:shadow-2xl transition-all duration-500 rounded-2xl sm:rounded-3xl">
         <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-cyan-500 to-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl sm:rounded-3xl" style={{ padding: '2px' }}>
           <div className="h-full w-full bg-white rounded-2xl sm:rounded-3xl" />
         </div>
@@ -138,6 +139,7 @@ export default function PublicProjectCard({ project }: { project: any }) {
           </CardContent>
         </div>
       </Card>
+      </div>
 
       {showRequestModal && (
         <RequestModal

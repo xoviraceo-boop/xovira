@@ -38,7 +38,6 @@ export function usePrefetchedProposals(options: UsePrefetchedProposalsOptions) {
 
   const { data, isLoading, isFetching } = trpc.proposal.getPublicProposals.useQuery(listInput, {
     staleTime: 30_000,
-    keepPreviousData: true, // Smooth transitions between pages
   });
 
   // Prefetch adjacent pages for instant navigation

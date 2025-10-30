@@ -38,7 +38,7 @@ export default function ProjectActions({
       <div className="hidden lg:flex items-center gap-2">
         {/* Edit/View Toggle */}
         <Button
-          variant={isEditing ? "outline" : "secondary"}
+          variant={isEditing ? "outline" : "primary"}
           onClick={onToggleEdit}
           className="gap-2"
         >
@@ -57,7 +57,7 @@ export default function ProjectActions({
 
         {/* Publish/Unpublish Toggle */}
         <Button
-          variant={isPublished ? "outline" : "default"}
+          variant={isPublished ? "outline" : "primary"}
           onClick={onTogglePublish}
           disabled={isPublishing}
           className="gap-2 min-w-[100px] lg:min-w-[120px]"
@@ -117,7 +117,6 @@ export default function ProjectActions({
           <DropdownMenuTrigger asChild>
             <Button 
               variant="outline" 
-              size="icon"
               className="h-9 w-9"
             >
               <MoreVertical className="h-4 w-4" />

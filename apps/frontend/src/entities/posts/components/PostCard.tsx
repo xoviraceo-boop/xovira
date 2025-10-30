@@ -40,13 +40,13 @@ export function PostCard({ post, feedType, feedId }: PostCardProps) {
       {/* Header */}
       <div className="flex items-start gap-4 mb-4">
         <Avatar>
-          <AvatarImage src={post.user.avatar} />
-          <AvatarFallback>{post.user.name?.[0]}</AvatarFallback>
+          <AvatarImage src={''} />
+          <AvatarFallback>?</AvatarFallback>
         </Avatar>
 
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold">{post.user.name}</h3>
+            <h3 className="font-semibold">User</h3>
             <span className="text-sm text-muted-foreground">
               {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
             </span>
@@ -63,9 +63,8 @@ export function PostCard({ post, feedType, feedId }: PostCardProps) {
       <div className="flex items-center gap-6 pt-4 border-t">
         <Button
           variant="ghost"
-          size="sm"
           onClick={handleLike}
-          className={isLiked ? 'text-red-500' : ''}
+          className={isLiked ? 'text-red-500 text-sm p-2' : 'text-sm p-2'}
         >
           <Heart className={`mr-2 h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
           {post.likeCount}
@@ -73,14 +72,14 @@ export function PostCard({ post, feedType, feedId }: PostCardProps) {
 
         <Button
           variant="ghost"
-          size="sm"
           onClick={() => setShowComments(!showComments)}
+          className="text-sm p-2"
         >
           <MessageCircle className="mr-2 h-4 w-4" />
           {post.commentCount}
         </Button>
 
-        <Button variant="ghost" size="sm">
+        <Button variant="ghost" className="text-sm p-2">
           <Share2 className="mr-2 h-4 w-4" />
           Share
         </Button>

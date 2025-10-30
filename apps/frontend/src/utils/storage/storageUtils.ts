@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/useToast";
 
 export interface UploadOptions {

@@ -18,15 +18,5 @@ export interface BaseProposal {
     metadata?: Record<string, unknown>;
 }
 
-// Re-export types from schema for consistency
-export type {
-	InvestorProposal,
-	MentorProposal,
-	TeamProposal,
-	CofounderProposal,
-	PartnerProposal,
-	CustomerProposal,
-	Proposal
-} from '@/schemas/proposal.schema';
 
 

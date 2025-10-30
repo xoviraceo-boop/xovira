@@ -1,5 +1,5 @@
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const nodemailer = require("nodemailer");
+import * as nodemailer from 'nodemailer';
 
 type Theme = { brandColor?: string; buttonText?: string };
 

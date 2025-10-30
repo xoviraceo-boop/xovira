@@ -395,9 +395,9 @@ export class StripeWebhookManager {
         throw new Error('Missing subscriptionId in subscription checkout session');
       }
 
-      // @ts-ignore: Property 'current_period_start' may not exist on Response<Subscription>
+      // @ts-expect-error: Property 'current_period_start' may not exist on Response<Subscription>
       const currentPeriodStartTimestamp = subscription.current_period_start;
-      // @ts-ignore: Property 'current_period_end' may not exist on Response<Subscription>
+      // @ts-expect-error: Property 'current_period_end' may not exist on Response<Subscription>
       const currentPeriodEndTimestamp = subscription.current_period_end;
 
       // 1. Define the Date object for the start time for safe arithmetic

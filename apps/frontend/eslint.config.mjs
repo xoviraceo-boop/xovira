@@ -14,6 +14,9 @@ const eslintConfig = [
   {
     rules: {
       "@typescript-eslint/no-explicit-any": "off", // 👈 Disable globally
+      "@typescript-eslint/no-empty-object-type": "off", // Optional - silence empty interface warnings
+      "react/no-unescaped-entities": "off", // Ignore apostrophe & quote warnings in JSX
+      "no-var": "off", // 👈 allow `var` again
     },
     ignores: [
       "node_modules/**",

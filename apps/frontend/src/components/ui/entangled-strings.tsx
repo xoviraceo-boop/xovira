@@ -98,7 +98,7 @@ export const EntangledStrings: React.FC<EntangledStringsProps> = ({
         ))}
 
         <defs>
-          <filter id="blurMe">
+          <filter id="blurMe" x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur in="SourceGraphic" stdDeviation="5" />
           </filter>
         </defs>

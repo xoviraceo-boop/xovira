@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { SubscriptionManager } from "@/features/billing/utils/subscriptionManager";
+import { DateTime } from "luxon";
 
 export async function POST(req: NextRequest) {
   try {
@@ -38,7 +39,11 @@ export async function POST(req: NextRequest) {
       return jsonError(errorMsg, response.status);
     }
     try {
-      await SubscriptionManager.cancel(userId, { subscriptionId });
+      await SubscriptionManager.cancel(userId, {
+        subscriptionId,
+        reason,
+        canceledAt: DateTime.now(),
+      });
     } catch (subErr) {
       console.error("⚠️ Failed to update local subscription:", subErr);
     }
@@ -78,3 +83,4 @@ function jsonError(message: string, status = 500) {
     headers: { "Content-Type": "application/json" },
   });
 }
+

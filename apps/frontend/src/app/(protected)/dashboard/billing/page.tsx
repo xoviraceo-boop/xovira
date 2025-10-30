@@ -63,7 +63,7 @@ export default function BillingPage() {
       await fetch('/api/stripe/cancel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscriptionId: currentPlan?.subId, userId: session?.user?.id, cancelReason }),
+        body: JSON.stringify({ subscriptionId: currentPlan?.subId, userId: session?.user?.id, reason: cancelReason }),
       });
       
       // Refetch data to update UI

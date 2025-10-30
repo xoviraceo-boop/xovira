@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe/server';
 import { SubscriptionManager } from '@/features/billing/utils';
+import { DateTime } from "luxon";
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, subscriptionId } = await request.json();
+    const { userId, subscriptionId, reason } = await request.json();
 
     if (!userId) {
       return new Response(JSON.stringify({ error: "User not authenticated" }), {
@@ -23,7 +24,11 @@ export async function POST(request: NextRequest) {
     // Cancel the subscription in Stripe
     const canceledSubscription = await stripe.subscriptions.cancel(subscriptionId);
 
-    await SubscriptionManager.cancel(userId);
+    await SubscriptionManager.cancel(userId, {
+      subscriptionId,
+      reason,
+      canceledAt: DateTime.now(),
+    });
 
     return NextResponse.json({
       success: true,

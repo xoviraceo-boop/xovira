@@ -14,10 +14,12 @@ const filterPaths = [
 
 const colors = ["#FFB7C5", "#FFDDB7", "#B1C5FF", "#4FABFF", "#076EFF"];
 
-export default function EntangledStringsEffect() {
-  const ref = React.useRef(null);
+interface EntangledStringsEffectProps {
+  ref?: React.RefObject<HTMLDivElement>;
+}
+
+export default function EntangledStringsEffect({ ref }: EntangledStringsEffectProps) {
   const { scrollYProgress } = useScroll({
-    target: ref,
     offset: ["start start", "end start"],
   });
 

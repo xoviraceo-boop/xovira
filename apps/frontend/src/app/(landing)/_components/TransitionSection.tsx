@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import EntangledStringEffect from "./EntangledStringEffect";
 
 export const TransitionSection = () => {
+  const ref = React.useRef(null);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -12,7 +14,7 @@ export const TransitionSection = () => {
       className="relative h-[360px] w-full flex items-center justify-center overflow-hidden rounded-b-3xl"
     >
       {/* Background animation effect */}
-      <EntangledStringEffect />
+      <EntangledStringEffect ref={ref} />
 
       {/* Glowing backdrop card */}
       <motion.div

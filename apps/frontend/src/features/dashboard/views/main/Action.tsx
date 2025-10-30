@@ -1,4 +1,3 @@
-// components/dashboard/DashboardAction.tsx
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Button from "@/components/ui/button";
@@ -9,7 +8,7 @@ interface ActionCardItem {
   description: string;
   href: string;
   buttonText: string;
-  variant?: "default" | "outline" | "ghost" | "destructive" | "secondary" | "link";
+  variant?: "google" | "destructive" | "primary" | "outline" | "ghost" | undefined;
   icon?: ReactNode;
 }
 
@@ -42,7 +41,7 @@ export default function DashboardAction({
           </CardHeader>
           <CardContent>
             <Link href={action.href}>
-              <Button className="w-full" variant={action.variant || "default"}>
+              <Button className="w-full" variant={action.variant || "primary"}>
                 {action.buttonText}
               </Button>
             </Link>

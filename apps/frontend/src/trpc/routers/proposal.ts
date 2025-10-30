@@ -3,6 +3,7 @@ import { protectedProcedure, router } from "@/trpc/init";
 import { prisma } from "@/lib/prisma";
 import { UsageManager } from "@/features/usage/utils/usageManager";
 import { LimitGuard } from "@/features/usage/utils/limitGuard";
+import { ProposalType } from "@xovira/database/src/generated/prisma/client";
 
 export const proposalRouter = router({
 	list: protectedProcedure
@@ -593,13 +594,12 @@ export const proposalRouter = router({
 	create: protectedProcedure
 	  .input(
 	    z.object({
-	      title: z.string().optional(),
-	      shortSummary: z.string().optional(),
-	      detailedDesc: z.string().optional(),
-	      category: z.string().optional(),
-	      status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
+	      title: z.string(),
+	      shortSummary: z.string(),
+	      detailedDesc: z.string(),
+		  category: z.enum(["INVESTMENT","MENTORSHIP","TEAM","COFOUNDER","PARTNERSHIP","CUSTOMER"]),
+	      status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]),
 	      intent: z.enum(["SEEKING", "OFFERING"]).optional(),
-	      // Optional linkage based on intent/type rules
 		  projectId: z.string().optional(),
 		  teamId: z.string().optional(),
 	    })
@@ -611,7 +611,7 @@ export const proposalRouter = router({
 	      title: input.title,
 	      shortSummary: input.shortSummary,
 	      detailedDesc: input.detailedDesc,
-	      category: input.category ? input.category.toUpperCase() : undefined,
+		  category: input.category.toUpperCase() as ProposalType,
 	      status: input.status ?? "DRAFT",
 	      intent: input.intent ?? "OFFERING",
 	      projectId: input.projectId || undefined,
@@ -643,7 +643,7 @@ export const proposalRouter = router({
 		.input(
 			z.object({
 				id: z.string(),
-				category: z.string().optional(),
+				category: z.enum(["INVESTMENT","MENTORSHIP","TEAM","COFOUNDER","PARTNERSHIP","CUSTOMER"]).optional(),
 				projectId: z.string().optional(),
 				title: z.string().optional(),
 				shortSummary: z.string().optional(),

@@ -18,7 +18,9 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
 	  );
 	}
   );
-  
+
+  Card.displayName = "Card";
+
 export function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
 	return <div className={cn("flex flex-col space-y-1.5 p-6", className)} {...props} />;
 }

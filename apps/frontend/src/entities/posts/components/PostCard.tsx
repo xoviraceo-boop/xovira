@@ -8,7 +8,7 @@ import { Heart, MessageCircle, Share2 } from 'lucide-react';
 import { usePosts } from '../hooks/usePosts';
 import { CommentSection } from '../../comments/components/CommentSection';
 import { formatDistanceToNow } from 'date-fns';
-import type { Post } from '@/entities/shared/types';
+import type { Post } from '@xovira/database/src/generated/prisma/client';
 
 interface PostCardProps {
   post: Post;

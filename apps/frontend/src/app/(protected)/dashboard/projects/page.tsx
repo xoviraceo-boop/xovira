@@ -25,8 +25,6 @@ export default function ProjectsPage() {
 		data,
 		isLoading,
 		isFetching,
-		sortBy,
-		setSortBy,
 		page,
 		pageSize,
 		setPage,
@@ -57,7 +55,7 @@ export default function ProjectsPage() {
 		setFilters((f: any) => ({ ...f, industries: [], status: "" as any }));
 	};
 	
-	const handleCreateNew = async (type: string) => {
+	const handleCreateNew = async () => {
 	    try {
 	      const { id, data } = await createMutation.mutateAsync({
 	        name: "Untitled Project",
@@ -92,7 +90,7 @@ export default function ProjectsPage() {
 					  description="Create new Projects, filter, and manage your submissions."
 					  actions={
 					    <Button
-					      onClick={handleCreateNew}
+					      onClick={() => handleCreateNew()}
 					      className="max-w-16 group relative overflow-hidden bg-gradient-to-br from-cyan-500 via-cyan-600 to-blue-600 text-white hover:shadow-xl transition-all duration-300 font-semibold px-5 py-2.5 !rounded-full whitespace-nowrap"
 					    >
 					      <span className="relative z-10 flex items-center gap-2">
@@ -107,18 +105,15 @@ export default function ProjectsPage() {
 						searchValue={query}
 						searchPlaceholder="Search Projects by title or keyword..."
 						resultsCount={data?.total ?? 0}
-						sortBy={sortBy}
 						onSearchChange={setQuery}
 						onSearchSubmit={() => setPage(1)}
-						onSortChange={setSortBy}
-						onCreateNew={handleCreateNew}
+						onCreateNew={() => handleCreateNew()}
 						onFilterToggle={() => setShowFilters(true)}
 						createButtonText="Create New"
 						showFilters={true}
-						showSort={true}
+						showSort={false}
 					/>
 					
-
 					{/* Filter Chips */}
 					{chips.length > 0 && (
 						<div className="flex flex-wrap items-center gap-2">

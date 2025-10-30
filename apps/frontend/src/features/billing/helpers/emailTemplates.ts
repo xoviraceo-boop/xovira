@@ -1,22 +1,12 @@
-import { PlanType, PromotionUnit } from '@xovira/database/src/generated/prisma/client';
-import { EmailTemplate } from '@/utils/email/types';
-import { EmailTheme } from '@/utils/email/types';
+import { PromotionUnit } from '@xovira/database/src/generated/prisma/client';
+import { EmailTemplate, EmailTheme, BillingEmailData } from '@/utils/email/types';
 
 interface BillingTemplateContent {
   subject: string;
   html: string;
 }
 
-interface BillingEmailData {
-  shopName: string;
-  planName?: string;
-  amount?: number;
-  currency?: string;
-  nextBillingDate?: string;
-  credits?: number;
-  usageLimit?: number;
-  currentUsage?: number;
-}
+// Using shared BillingEmailData; any extra ad-hoc fields are accessed via (data as any)
 
 export class BillingEmailTemplates {
   private static cleanShopName(shopName: string): string {
@@ -62,8 +52,9 @@ export class BillingEmailTemplates {
     return `${formattedAmount} ${unitDisplay}`.trim();
   }
 
-  private static formatDate (date: Date) {
-    return new Date(date).toLocaleDateString('en-US', {
+  private static formatDate (date: string | Date | undefined) {
+    if (!date) return '';
+    return new Date(date as any).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
@@ -108,13 +99,8 @@ export class BillingEmailTemplates {
         <div style="background: #f8f9fa; padding: 20px; border-radius: 4px; margin: 20px 0;">
           <h3 style="color: ${theme.headerColor}; margin-top: 0;">Subscription Details:</h3>
           <p style="color: ${theme.textColor}; margin: 8px 0;">Plan: ${data.planName}</p>
-          <p style="color: ${theme.textColor}; margin: 8px 0;">Amount: ${this.formatPaymentAmount(data.amount)} ${data.currency}/month</p>
-          ${
-            data?.adjustedAmount && data?.adjustedAmount > 0 && data?.adjustedUnit
-              ? `<p style="color: ${theme.textColor}; margin: 8px 0;">Discount Amount: ${this.formatDiscountValue(data.adjustedAmount, data.adjustedUnit)}</p>`
-              : ''
-          }
-          <p style="color: ${theme.textColor}; margin: 8px 0;">Current billing date: ${data.currentBillingDate}</p>
+          <p style="color: ${theme.textColor}; margin: 8px 0;">Amount: ${this.formatPaymentAmount(data.amount ?? 0)} ${data.currency}/month</p>
+          <p style="color: ${theme.textColor}; margin: 8px 0;">Current billing date: ${(data as any)?.currentBillingDate ?? ''}</p>
           <p style="color: ${theme.textColor}; margin: 8px 0;">Next billing date: ${data.nextBillingDate}</p>
         </div>
       `
@@ -134,7 +120,7 @@ export class BillingEmailTemplates {
           <h3 style="color: ${theme.headerColor}; margin-top: 0;">Trial Details:</h3>
           <p style="color: ${theme.textColor}; margin: 8px 0;">Plan: ${data.planName}</p>
           <p style="color: ${theme.textColor}; margin: 8px 0;">Trial End Date: ${this.formatDate(data.nextBillingDate)}</p>
-          <p style="color: ${theme.textColor}; margin: 8px 0;">Plan Price: ${this.formatPaymentAmount(data.amount)} ${data.currency}</p>
+          <p style="color: ${theme.textColor}; margin: 8px 0;">Plan Price: ${this.formatPaymentAmount(data.amount ?? 0)} ${data.currency}</p>
         </div>
         <p style="color: ${theme.textColor}; margin: 16px 0;">
           After your trial ends, you'll be automatically subscribed to the ${data.planName} plan to ensure uninterrupted service.
@@ -155,7 +141,7 @@ export class BillingEmailTemplates {
         <div style="background: #f8f9fa; padding: 20px; border-radius: 4px; margin: 20px 0;">
           <h3 style="color: ${theme.headerColor}; margin-top: 0;">Subscription Details:</h3>
           <p style="color: ${theme.textColor}; margin: 8px 0;">Plan: ${data.planName}</p>
-          <p style="color: ${theme.textColor}; margin: 8px 0;">Amount: ${this.formatPaymentAmount(data.amount)} ${data.currency}/month</p>
+          <p style="color: ${theme.textColor}; margin: 8px 0;">Amount: ${this.formatPaymentAmount(data.amount ?? 0)} ${data.currency}/month</p>
           <p style="color: ${theme.textColor}; margin: 8px 0;">Billing date: ${data.nextBillingDate}</p>
         </div>
         <p style="color: ${theme.textColor}; margin: 16px 0;">
@@ -177,13 +163,13 @@ export class BillingEmailTemplates {
         <div style="background: #f8f9fa; padding: 20px; border-radius: 4px; margin: 20px 0;">
           <h3 style="color: ${theme.headerColor}; margin-top: 0;">Subscription Details:</h3>
           <p style="color: ${theme.textColor}; margin: 8px 0;">Plan: ${data.planName}</p>
-          <p style="color: ${theme.textColor}; margin: 8px 0;">Amount: ${this.formatPaymentAmount(data.amount)} ${data.currency}/month</p>
+          <p style="color: ${theme.textColor}; margin: 8px 0;">Amount: ${this.formatPaymentAmount(data.amount ?? 0)} ${data.currency}/month</p>
           ${
-            data?.adjustedAmount && data?.adjustedAmount > 0 && data?.adjustedUnit
-              ? `<p style="color: ${theme.textColor}; margin: 8px 0;">Discount Amount: ${this.formatDiscountValue(data.adjustedAmount, data.adjustedUnit)}</p>`
+            (data as any)?.adjustedAmount && (data as any)?.adjustedAmount > 0 && (data as any)?.adjustedUnit
+              ? `<p style=\"color: ${theme.textColor}; margin: 8px 0;\">Discount Amount: ${this.formatDiscountValue((data as any).adjustedAmount, (data as any).adjustedUnit)}</p>`
               : ''
           }
-          <p style="color: ${theme.textColor}; margin: 8px 0;">Current billing date: ${data.currentBillingDate}</p>
+          <p style=\"color: ${theme.textColor}; margin: 8px 0;\">Current billing date: ${(data as any)?.currentBillingDate ?? ''}</p>
           <p style="color: ${theme.textColor}; margin: 8px 0;">Next billing date: ${data.nextBillingDate}</p>
         </div>
       `
@@ -225,7 +211,7 @@ export class BillingEmailTemplates {
           Your subscription to the ${data.planName} plan has been cancelled for ${this.cleanShopName(data.shopName)}.
         </p>
         <p style="color: ${theme.textColor}; margin-bottom: 16px;">
-          Based on your usage period, you will receive a prorated refund of $${this.formatPaymentAmount(data.adjustedAmount)}. 
+          Based on your usage period, you will receive a prorated refund of $${this.formatPaymentAmount((data as any).adjustedAmount || 0)}. 
           This refund will be processed automatically.
         </p>
         <p style="color: ${theme.textColor}; margin-bottom: 16px;">
@@ -293,15 +279,15 @@ export class BillingEmailTemplates {
         </p>
         <div style="background: #f8f9fa; padding: 20px; border-radius: 4px; margin: 20px 0;">
           <h3 style="color: ${theme.headerColor}; margin-top: 0;">Purchase Details:</h3>
-          <p style="color: ${theme.textColor}; margin: 8px 0;">Plan: ${data.packageName}</p>
+          <p style="color: ${theme.textColor}; margin: 8px 0;">Plan: ${(data as any).packageName ?? ''}</p>
           <p style="color: ${theme.textColor}; margin: 8px 0;">Credits Added: ${data.credits}</p>
-          <p style="color: ${theme.textColor}; margin: 8px 0;">Amount: ${this.formatPaymentAmount(data.amount)} ${data.currency}</p>
+          <p style="color: ${theme.textColor}; margin: 8px 0;">Amount: ${this.formatPaymentAmount(data.amount ?? 0)} ${data.currency}</p>
           ${
-            data?.adjustedAmount && data?.adjustedAmount > 0 && data?.adjustedUnit
-              ? `<p style="color: ${theme.textColor}; margin: 8px 0;">Discount Amount: ${this.formatDiscountValue(data.adjustedAmount, data.adjustedUnit)}</p>`
+            (data as any)?.adjustedAmount && (data as any)?.adjustedAmount > 0 && (data as any)?.adjustedUnit
+              ? `<p style=\"color: ${theme.textColor}; margin: 8px 0;\">Discount Amount: ${this.formatDiscountValue((data as any).adjustedAmount, (data as any).adjustedUnit)}</p>`
               : ''
           }
-          <p style="color: ${theme.textColor}; margin: 8px 0;">Billing date: ${data.billingDate}</p>
+          <p style=\"color: ${theme.textColor}; margin: 8px 0;\">Billing date: ${(data as any).billingDate ?? ''}</p>
         </div>
       `
     };
@@ -383,7 +369,7 @@ export class BillingEmailTemplates {
           </p>
           <div style="background: #fff4f4; padding: 20px; border-radius: 4px; margin: 20px 0; border: 1px solid #ffe0e0;">
               <h3 style="color: #d32f2f; margin-top: 0;">Account Status: Frozen</h3>
-              <p style="color: ${theme.textColor}; margin: 8px 0;">Amount Due: ${this.formatPaymentAmount(data.amount)}</p>
+              <p style="color: ${theme.textColor}; margin: 8px 0;">Amount Due: ${this.formatPaymentAmount(data.amount ?? 0)}</p>
           </div>
           <a href="https://admin.shopify.com/store/${data.shopName}/apps/doc2product-latest/billing" 
              style="background-color: ${theme.brandColor}; color: ${theme.buttonText}; padding: 12px 24px; 
@@ -396,7 +382,7 @@ export class BillingEmailTemplates {
   }
 
    static getPackageExpiredWithOverageTemplate(data: BillingEmailData, theme: EmailTheme): EmailTemplate {
-    const getActivePackagesSection = (activePackages: Package[]) => {
+    const getActivePackagesSection = (activePackages: any[]) => {
         if (!activePackages?.length) return '';
         return `
           <div style="background: #f5f9ff; padding: 20px; border-radius: 4px; margin: 20px 0; border: 1px solid #e3efff;">
@@ -414,34 +400,34 @@ export class BillingEmailTemplates {
         `;
       };
 
-      const getContextualMessage = (activePackages: Package[]) => {
+      const getContextualMessage = (activePackages: any[]) => {
         if (!activePackages?.length) {
           return `You currently have no active packages. To continue using our services without interruption, 
           please purchase additional credits or upgrade your plan.`;
         }
-        return `While your ${data.usageDetails.packageName} package has expired, you still have ${activePackages.length} 
+        return `While your ${(data as any).usageDetails?.packageName} package has expired, you still have ${activePackages.length} 
           active package${activePackages.length > 1 ? 's' : ''}. Consider purchasing additional credits to ensure 
           uninterrupted service when your current packages expire.`;
       };
 
       const content = {
-        subject: `Package ${data.usageDetails.packageName} Expired - ${this.cleanShopName(data.shopName)}`,
+        subject: `Package ${(data as any).usageDetails?.packageName} Expired - ${this.cleanShopName(data.shopName)}`,
         html: `
           <h1 style="color: ${theme.headerColor}; margin-bottom: 24px;">Package Status Update</h1>
           <div style="background: #fff4f4; padding: 20px; border-radius: 4px; margin: 20px 0; border: 1px solid #ffe0e0;">
             <h3 style="color: #d32f2f; margin-top: 0;">Expired Package</h3>
             <div style="margin-top: 16px;">
               <p style="color: ${theme.textColor}; margin: 4px 0;">
-                <strong>Package Name:</strong> ${data.usageDetails.packageName}
+                <strong>Package Name:</strong> ${(data as any).usageDetails?.packageName}
               </p>
               <p style="color: ${theme.textColor}; margin: 4px 0;">
-                <strong>Expiration Date:</strong> ${data.usageDetails.expiredDate}
+                <strong>Expiration Date:</strong> ${(data as any).usageDetails?.expiredDate}
               </p>
             </div>
           </div>
-          ${getActivePackagesSection(data.activePackages)}
+          ${getActivePackagesSection((data as any).activePackages)}
           <p style="color: ${theme.textColor}; margin: 16px 0;">
-            ${getContextualMessage(data.activePackages)}
+            ${getContextualMessage((data as any).activePackages)}
           </p>
           <div style="margin: 24px 0;">
             <h3 style="color: ${theme.headerColor};">Available Options:</h3>
@@ -475,7 +461,7 @@ export class BillingEmailTemplates {
         <div style="background: #fff4f4; padding: 20px; border-radius: 4px; margin: 20px 0; border: 1px solid #ffe0e0;">
           <h3 style="color: #d32f2f; margin-top: 0;">Important Notice</h3>
           <p style="color: ${theme.textColor}; margin: 8px 0;">
-            You have reached your subscription usage limits for ${data.usageDetails.service === Service.CRAWL_API ? 'Crawl API' : 'AI API'} service. Doc2Product will now use your active credit packages (if any) to ensure uninterrupted service.
+            You have reached your subscription usage limits for ${((data as any).usageDetails?.service ?? 'your').toString()} service. Doc2Product will now use your active credit packages (if any) to ensure uninterrupted service.
           </p>
         </div>
         <div style="margin: 16px 0;">
@@ -484,7 +470,7 @@ export class BillingEmailTemplates {
             Your subscription limits will reset automatically at the start of your next billing cycle:
           </p>
           <p style="color: ${theme.textColor}; font-weight: bold; margin: 8px 0;">
-            Next Reset: ${data.usageDetails.nextResetDate}
+            Next Reset: ${(data as any).usageDetails?.nextResetDate ?? ''}
           </p>
         </div>
         <div style="margin: 24px 0;">
@@ -519,22 +505,22 @@ export class BillingEmailTemplates {
         <div style="background: #fff8e1; padding: 20px; border-radius: 4px; margin: 20px 0; border: 1px solid #ffe0b2;">
           <h3 style="color: #f57c00; margin-top: 0;">Total Usage Status</h3>
           <p style="color: ${theme.textColor}; margin: 8px 0;">
-            Credits Used: ${data.usageDetails.totalUsage.creditsUsed} / ${data.usageDetails.totalUsage.creditLimit}
+            Credits Used: ${(data as any).usageDetails?.totalUsage?.creditsUsed ?? 0} / ${(data as any).usageDetails?.totalUsage?.creditLimit ?? 0}
           </p>
           <p style="color: ${theme.textColor}; margin: 8px 0;">
-            Usage: ${(data.usageDetails.totalUsage.percentageUsed).toFixed(1)}%
+            Usage: ${Number(((data as any).usageDetails?.totalUsage?.percentageUsed ?? 0)).toFixed(1)}%
           </p>
         </div>
         <div style="margin: 24px 0;">
           <h3 style="color: ${theme.headerColor};">Service Details</h3>
-          ${data.usageDetails.serviceDetails.map(service => `
+          ${(((data as any).usageDetails?.serviceDetails ?? []) as any[]).map(service => `
             <div style="background: #f8f9fa; padding: 16px; border-radius: 4px; margin: 12px 0;">
               <h4 style="color: ${theme.headerColor}; margin-top: 0;">${service.service}</h4>
               <p style="color: ${theme.textColor}; margin: 4px 0;">
                 Requests: ${service.totalRequestsUsed} / ${service.totalRequests}
               </p>
               <p style="color: ${theme.textColor}; margin: 4px 0;">
-                Usage: ${(service.percentageUsed).toFixed(1)}%
+                Usage: ${Number(service.percentageUsed ?? 0).toFixed(1)}%
               </p>
               <p style="color: ${theme.textColor}; margin: 4px 0;">
                 Remaining: ${service.remainingRequests} requests
@@ -568,15 +554,15 @@ export class BillingEmailTemplates {
       <div style="background: #fff4f4; padding: 20px; border-radius: 4px; margin: 20px 0; border: 1px solid #ffe0e0;">
         <h3 style="color: #d32f2f; margin-top: 0;">Total Usage Status</h3>
         <p style="color: ${theme.textColor}; margin: 8px 0;">
-          Credits Used: ${data.usageDetails.totalUsage.creditsUsed} / ${data.usageDetails.totalUsage.creditLimit}
+            Credits Used: ${(data as any).usageDetails?.totalUsage?.creditsUsed ?? 0} / ${(data as any).usageDetails?.totalUsage?.creditLimit ?? 0}
         </p>
         <p style="color: ${theme.textColor}; margin: 8px 0;">
-          Usage: ${(data.usageDetails.totalUsage.percentageUsed).toFixed(1)}%
+            Usage: ${Number(((data as any).usageDetails?.totalUsage?.percentageUsed ?? 0)).toFixed(1)}%
         </p>
       </div>
       <div style="margin: 24px 0;">
         <h3 style="color: ${theme.headerColor};">Service Details</h3>
-        ${data.usageDetails.serviceDetails.map(service => `
+        ${(((data as any).usageDetails?.serviceDetails ?? []) as any[]).map(service => `
           <div style="background: #f8f9fa; padding: 16px; border-radius: 4px; margin: 12px 0;">
             <h4 style="color: ${theme.headerColor}; margin-top: 0;">${service.service}</h4>
             <p style="color: ${theme.textColor}; margin: 4px 0;">

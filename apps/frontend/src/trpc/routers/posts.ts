@@ -44,8 +44,47 @@ export const postsRouter = router({
 
       return { items, total, page: input.page, pageSize: input.pageSize };
     }),
+
+  // 🆕 getProjectDiscussion
+  getProjectDiscussion: protectedProcedure
+    .input(
+      z.object({
+        projectId: z.string(),
+        discussionId: z.string(),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const userId = ctx.session!.user!.id;
+
+      // Ensure project exists and user has access
+      const project = await prisma.project.findUnique({
+        where: { id: input.projectId },
+        include: {
+          members: { where: { userId } },
+        },
+      });
+
+      if (!project) throw new Error("Project not found");
+      if (project.members.length === 0)
+        throw new Error("Access denied to this project discussion");
+
+      // Get the discussion post
+      const discussion = await prisma.post.findUnique({
+        where: { id: input.discussionId },
+        include: {
+          user: true,
+          comments: {
+            include: { user: true },
+            orderBy: { createdAt: "asc" },
+          },
+        },
+      });
+
+      if (!discussion || discussion.projectId !== input.projectId)
+        throw new Error("Discussion not found or does not belong to this project");
+
+      return discussion;
+    }),
 });
 
 export type PostsRouter = typeof postsRouter;
-
-

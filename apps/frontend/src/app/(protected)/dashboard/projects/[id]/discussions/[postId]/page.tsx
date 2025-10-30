@@ -1,27 +1,33 @@
-import { notFound, redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
-import { useSession } from "next-auth/react";
+"use client";
+
+import { notFound } from "next/navigation";
+import { trpc } from "@/lib/trpc";
 import { CommentSection } from "@/entities/comments/components/CommentSection";
 
-export default async function DiscussionPage({ params }: { params: { postId: string } }) {
-  const { data: session } = useSession();
-  const discussionId = params.postId; 
+export default function DiscussionPage({
+  params,
+}: {
+  params: { id: string; postId: string };
+}) {
+  const projectId = params.id;
+  const discussionId = params.postId;
 
-  const post = await prisma.post.findUnique({ where: { id: discussionId }, select: { id: true, projectId: true } });
-  if (!post?.projectId) notFound();
+  const {
+    data: discussion,
+    isLoading,
+    isError,
+  } = trpc.discussions.get.useQuery(
+    { projectId, id: discussionId },
+    { enabled: !!projectId && !!discussionId }
+  );
 
-  const canView = await prisma.project.findFirst({
-    where: {
-      id: post.projectId,
-      OR: [
-        { ownerId: session?.user?.id },
-        { members: { some: { userId: session?.user?.id, isBlocked: false, canViewProject: true } } },
-        { teams: { some: { team: { members: { some: { userId: session?.user?.id } } } } } },
-      ],
-    },
-    select: { id: true },
-  });
-  if (!canView) notFound();
+  if (isLoading) {
+    return <div>Loading discussion...</div>;
+  }
+
+  if (isError || !discussion) {
+    return notFound();
+  }
 
   return (
     <div className="p-6">
@@ -36,5 +42,3 @@ export default async function DiscussionPage({ params }: { params: { postId: str
     </div>
   );
 }
-
-

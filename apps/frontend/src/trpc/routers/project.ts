@@ -314,4 +314,25 @@ export const projectRouter = router({
             await prisma.projectLike.create({ data: { projectId: input.projectId, userId } });
             return { interested: true } as const;
         }),
+
+	getDiscussionViewPermission: protectedProcedure
+		.input(z.object({ postId: z.string() }))
+		.query(async ({ ctx, input }) => {
+		  const userId = ctx.session!.user!.id;
+		  const post = await prisma.post.findUnique({ where: { id: input.postId }, select: { projectId: true } });
+		  if (!post?.projectId) return null;
+		  const canView = await prisma.project.findFirst({
+			where: {
+			  id: post.projectId,
+			  OR: [
+				{ ownerId: userId },
+				{ members: { some: { userId, isBlocked: false, canViewProject: true } } },
+				{ teams: { some: { team: { members: { some: { userId } } } } } },
+			  ],
+			},
+			select: { id: true },
+		  });
+		  if (!canView) return null;
+		  return post.projectId;
+		}),
 });

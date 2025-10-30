@@ -122,20 +122,6 @@ export default function TeamLayout({ children }: TeamLayoutProps) {
     }
   }, [teamId, router]);
 
-  // Permission gate: show empty state if user is not allowed to view
-  if (!isCloudLoading && !cloudData) {
-    return (
-      <Shell>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center space-y-3">
-            <h2 className="text-xl font-semibold">Permission denied</h2>
-            <p className="text-muted-foreground">You don't have access to this team. Ask the owner to add you as a member.</p>
-          </div>
-        </div>
-      </Shell>
-    );
-  }
-
   // Set current team in Redux
   useEffect(() => {
     if (teamId) {
@@ -207,6 +193,20 @@ export default function TeamLayout({ children }: TeamLayoutProps) {
     hasCheckedInitialSync.current = true; // Reset check after skipping
   }, [cloudData, teamId, dispatch]);
   
+   // Permission gate: show empty state if user is not allowed to view
+   if (!isCloudLoading && !cloudData) {
+    return (
+      <Shell>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center space-y-3">
+            <h2 className="text-xl font-semibold">Permission denied</h2>
+            <p className="text-muted-foreground">You don't have access to this team. Ask the owner to add you as a member.</p>
+          </div>
+        </div>
+      </Shell>
+    );
+  }
+
   return (
     <Shell>
       <SyncWarningBanner

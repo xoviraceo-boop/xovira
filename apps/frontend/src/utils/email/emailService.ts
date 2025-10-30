@@ -13,7 +13,7 @@ export class EmailServiceError extends Error {
 
 export class EmailService {
   private static instances: Map<string, EmailService> = new Map();
-  private transporter: unknown;
+  private transporter: any;
   private defaultFrom: string;
   private theme: EmailTheme;
   private templateCache: Map<string, EmailTemplate> = new Map();

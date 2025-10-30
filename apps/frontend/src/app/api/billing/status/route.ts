@@ -53,8 +53,8 @@ export async function GET(request: NextRequest) {
       method,
       id: subId || orderId
     });
-
-  } catch (error) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
     console.error('Error checking billing status:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -89,8 +89,8 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true });
-
-  } catch (error) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
     console.error('Error updating billing status:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

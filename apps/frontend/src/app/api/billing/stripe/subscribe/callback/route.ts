@@ -30,9 +30,9 @@ export async function GET(request: NextRequest) {
       const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
 
       if (subscription) {
-        // @ts-ignore: Property 'current_period_start' may not exist on Response<Subscription>
+        // @ts-expect-error: Property 'current_period_start' may not exist on Response<Subscription>
         const currentPeriodStartTimestamp = subscription.current_period_start;
-        // @ts-ignore: Property 'current_period_end' may not exist on Response<Subscription>
+        // @ts-expect-error: Property 'current_period_end' may not exist on Response<Subscription>
         const currentPeriodEndTimestamp = subscription.current_period_end;
 
         // 1. Define the Date object for the start time for safe arithmetic
@@ -89,7 +89,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(
       `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/billing/upgrade?error=payment_failed`
     );
-  } catch (error) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
     console.error('Stripe subscription callback error:', error);
     return NextResponse.redirect(
       `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/billing/upgrade?error=callback_error`

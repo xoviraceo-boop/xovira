@@ -55,7 +55,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
         cleanup();
         resolve(socket);
       };
-
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const handleError = (err: any) => {
         cleanup();
         reject(new Error(err?.message || 'Connection failed'));
@@ -106,7 +106,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
           console.log('❌ Socket disconnected:', reason);
           setIsConnected(false);
         };
-
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const handleConnectError = (error: any) => {
           console.error('Socket connection error:', error);
           
@@ -120,7 +120,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
             toastShownRef.current = true;
           }
         };
-
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const handleError = (error: any) => {
           console.error('Socket error:', error);
           toast({

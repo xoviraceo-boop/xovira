@@ -55,7 +55,8 @@ export async function POST(req: NextRequest) {
       success: true,
       data: { subId, planId }
     });
-  } catch (error) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
     console.error('Subscription activation error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(

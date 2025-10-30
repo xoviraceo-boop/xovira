@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
     await StripeWebhookManager.queueWebhook(event);
     await StripeWebhookManager.processWebhook(event);
     console.log(`✅ Webhook processed successfully for ${event.type}`);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error('🔥 Stripe Webhook Processing Failed:', error);
     return NextResponse.json(
@@ -49,3 +50,4 @@ export async function POST(req: NextRequest) {
   }
   return NextResponse.json({ message: 'Success' }, { status: 200 });
 }
+

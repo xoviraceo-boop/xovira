@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
       }),
     });
     const resultText = await response.text();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let resultJson: any;
     try {
       resultJson = JSON.parse(resultText);
@@ -51,6 +52,7 @@ export async function POST(req: NextRequest) {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error("🔥 Unexpected error in PayPal cancellation:", error);
     return jsonError(error.message || "Internal server error", 500);

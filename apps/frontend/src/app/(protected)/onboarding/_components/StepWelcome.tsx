@@ -20,6 +20,7 @@ export default function StepWelcome() {
           <h2 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
             Welcome to Xovira
           </h2>
+          {/* eslint-disable-next-line react/no-unescaped-entities */}
           <p className="text-lg text-slate-400 max-w-md mx-auto leading-relaxed">
             Let's personalize your experience with a quick setup. This will only take a minute.
           </p>
@@ -46,6 +47,7 @@ export default function StepWelcome() {
     </div>
   );
 }
+
 
 
 

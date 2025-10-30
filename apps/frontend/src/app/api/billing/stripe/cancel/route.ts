@@ -38,8 +38,8 @@ export async function POST(request: NextRequest) {
         canceledAt: canceledSubscription.canceled_at
       }
     });
-
-  } catch (error) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
     console.error('Stripe cancellation error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     

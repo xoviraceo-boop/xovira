@@ -58,8 +58,8 @@ export async function POST(req: Request): Promise<Response> {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
-
-  } catch (error) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
     console.error('PayPal capture error:', error);
     return new Response(
       JSON.stringify({

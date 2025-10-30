@@ -181,13 +181,13 @@ const FlowFieldBackground = () => {
 
     canvas.addEventListener('click', handleClick);
 
-    // Animation loop
+    // Animation loop - FIXED
     const animate = () => {
       timeRef.current++;
     
-      // Transparent background instead of black
-      ctx.fillStyle = `rgba(0, 0, 0, 0)`; 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Proper fade trail effect
+      ctx.fillStyle = `rgba(0, 0, 0, ${1 / opt.tail})`;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
     
       ctx.lineWidth = opt.strokeWeight;
     
@@ -198,14 +198,28 @@ const FlowFieldBackground = () => {
     
       animationFrameRef.current = requestAnimationFrame(animate);
     };
-    
 
     animate();
 
-    // Handle resize
+    // Handle resize - FIXED
     const handleResize = () => {
+      const oldWidth = canvas.width;
+      const oldHeight = canvas.height;
+      
       setCanvasSize();
-      initParticles();
+      
+      // Scale existing particles instead of reinitializing
+      if (oldWidth > 0 && oldHeight > 0) {
+        for (const particle of particlesRef.current) {
+          particle.x = (particle.x / oldWidth) * canvas.width;
+          particle.y = (particle.y / oldHeight) * canvas.height;
+          particle.lx = (particle.lx / oldWidth) * canvas.width;
+          particle.ly = (particle.ly / oldHeight) * canvas.height;
+        }
+      } else {
+        // First load, initialize new particles
+        initParticles();
+      }
     };
 
     window.addEventListener('resize', handleResize);
@@ -221,12 +235,12 @@ const FlowFieldBackground = () => {
   }, []);
 
   return (
-    <div className="absolute -z-10 inset-0 overflow-hidden pointer-events-none">
+    <div className="absolute -z-10 inset-0 overflow-hidden">
       {/* Canvas for flow field */}
       <canvas
         id="flow-field"
         ref={canvasRef}
-        className="absolute inset-0 w-full h-full cursor-pointer mix-blend-screen"
+        className="absolute inset-0 w-full h-full cursor-pointer mix-blend-screen pointer-events-auto"
       />
     </div>
   );

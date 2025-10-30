@@ -5,13 +5,20 @@ import jwt from 'jsonwebtoken';
 export async function GET(req: Request) {
   try {
     const secret = process.env.AUTH_SECRET;
-    const token = await getToken({ req, secret });
+    if (!secret) {
+      throw new Error('Missing AUTH_SECRET environment variable');
+    }
 
+    const token = await getToken({ req, secret });
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const signed = jwt.sign({ sub: token.sub, email: token.email }, secret, { expiresIn: '1h' });
+    const signed = jwt.sign(
+      { sub: token.sub, email: token.email },
+      secret,
+      { expiresIn: '1h' }
+    );
 
     return NextResponse.json({ token: signed });
   } catch (error) {

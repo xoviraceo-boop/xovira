@@ -17,7 +17,7 @@ export const actions = [
       description: "Draft and publish to marketplace",
       href: "#proposals",
       buttonText: "New Proposal",
-      variant: "default" as const
+      variant: "primary" as const
     },
     {
       title: "Create Project",

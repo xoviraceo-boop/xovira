@@ -44,20 +44,21 @@ export const EntangledStrings: React.FC<EntangledStringsProps> = ({
   // FIXED: Move the hook listeners into a useEffect
   useEffect(() => {
     const unsubscribers: Array<() => void> = [];
-
+    
     pathLengths.forEach((val, i) => {
       if (typeof val !== "number") {
         const unsubscribe = val.on("change", (latest) => {
-          controls.start({
-            pathLength: latest,
-            transition: { duration: 0.1, ease: "linear" },
+          controls.set((index) => {
+            if (index === i) {
+              return { pathLength: latest };
+            }
+            return {};
           });
         });
         unsubscribers.push(unsubscribe);
       }
     });
-
-    // Cleanup subscriptions
+  
     return () => {
       unsubscribers.forEach((unsubscribe) => unsubscribe());
     };

@@ -12,7 +12,7 @@ export default function PublicProfileCard({ profile }: { profile: any }) {
   const { data: currentUser } = trpc.user.me.useQuery();
   const [isCompact, setIsCompact] = useState(false);
   const isInitiallyInterested = (profile?.likes || []).some((l: any) => l.userId === currentUser?.id);
-  const [isInterested, setIsInterested] = useState(isInitiallyInterested);
+  const [isInterested, setIsInterested] = useState<boolean>(isInitiallyInterested);
   const utils = trpc.useUtils();
 
   useEffect(() => {

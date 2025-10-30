@@ -4,18 +4,21 @@ import { cn } from "@/lib/utils";
 
 export type CardProps = React.HTMLAttributes<HTMLDivElement>;
 
-export function Card({ className, ...props }: CardProps) {
-	return (
+export const Card = React.forwardRef<HTMLDivElement, CardProps>(
+	({ className, ...props }, ref) => {
+	  return (
 		<div
-			className={cn(
-				"rounded-xl border bg-background text-foreground shadow-sm",
-				className
-			)}
-			{...props}
+		  ref={ref}
+		  className={cn(
+			"rounded-xl border bg-background text-foreground shadow-sm",
+			className
+		  )}
+		  {...props}
 		/>
-	);
-}
-
+	  );
+	}
+  );
+  
 export function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
 	return <div className={cn("flex flex-col space-y-1.5 p-6", className)} {...props} />;
 }

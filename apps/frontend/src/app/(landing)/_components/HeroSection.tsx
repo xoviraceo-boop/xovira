@@ -186,9 +186,9 @@ const FlowFieldBackground = () => {
       timeRef.current++;
     
       // Proper fade trail effect
-      ctx.fillStyle = `rgba(0, 0, 0, ${1 / opt.tail})`;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
+      ctx.fillStyle = `rgba(0, 0, 0, 0)`; 
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+     
       ctx.lineWidth = opt.strokeWeight;
     
       for (const particle of particlesRef.current) {

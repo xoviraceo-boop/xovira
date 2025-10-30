@@ -8,8 +8,12 @@ import StepFinish from "./StepFinish";
 import { trpc } from '@/lib/trpc';
 import { useSession } from 'next-auth/react';
 
-export default function StepSwitcher() {
-  const [step, setStep] = useState(0);
+interface StepSwitcherProps {
+  step: number;
+  onStepChange: (step: number) => void;
+}
+
+export default function StepSwitcher({ step, onStepChange }: StepSwitcherProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { update: updateSession } = useSession();
   const update = trpc.onboarding.update.useMutation();
@@ -26,7 +30,7 @@ export default function StepSwitcher() {
   const goNext = async () => {
     const next = Math.min(step + 1, 3);
     await update.mutateAsync({ step: next });
-    setStep(next);
+    onStepChange(next);
   };
 
   const complete = async () => {
@@ -92,7 +96,7 @@ export default function StepSwitcher() {
               <div className="flex items-center gap-3">
                 {step > 0 && step < 3 && (
                   <button
-                    onClick={() => setStep(step - 1)}
+                    onClick={() => onStepChange(step - 1)}
                     disabled={isLoading}
                     className="px-6 py-3 bg-slate-800/50 border border-slate-700/50 text-slate-300 rounded-xl font-medium hover:bg-slate-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >

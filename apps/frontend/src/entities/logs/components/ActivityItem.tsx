@@ -2,7 +2,7 @@
 
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
-import type { ActivityLog } from '@/entities/shared/types';
+import type { ActivityLog } from '@xovira/database/src/generated/prisma/client';
 import {
   UserPlus,
   UserMinus,

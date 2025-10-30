@@ -7,7 +7,7 @@ export type ProposalScope = "all" | "owned" | "saved" | "interested";
 export function useProposalList() {
   const [page, setPage] = useState(1);
   const pageSize = 12;
-  const [sortBy, setSortBy] = useState<"relevance" | "latest">("latest");
+  const [sortBy, setSortBy] = useState<string>("latest");
   const [query, setQuery] = useState("");
   const [scope, setScope] = useState<ProposalScope>("owned");
   const [filters, setFilters] = useState<{ industries: string[]; country?: string; commitment?: any; urgency?: any; minFunding?: number; maxFunding?: number; status?: "DRAFT"|"PUBLISHED"|"ARCHIVED"|"" }>(

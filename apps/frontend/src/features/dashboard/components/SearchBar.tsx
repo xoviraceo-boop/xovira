@@ -1,16 +1,19 @@
 "use client";
 import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 
 export default function SearchBar({
   value,
   onChange,
   onSubmit,
   placeholder = "Search...",
+  className,
 }: {
   value?: string;
   onChange?: (v: string) => void;
   onSubmit?: () => void;
   placeholder?: string;
+  className?: string;
 }) {
   const [local, setLocal] = useState(value || "");
 
@@ -19,7 +22,7 @@ export default function SearchBar({
   }, [value]);
 
   return (
-    <div className="flex w-full max-w-xl items-center gap-2">
+    <div className={cn("flex w-full max-w-xl items-center gap-2", className)}>
       <input
         type="text"
         value={local}

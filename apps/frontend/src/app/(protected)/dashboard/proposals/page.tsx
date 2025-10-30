@@ -2,6 +2,7 @@
 import { Plus, X } from "lucide-react";
 import Shell from "@/components/layout/Shell";
 import { PageHeader } from "@/entities/shared/components/PageHeader";
+import { SearchSection } from "@/entities/shared/components/SearchSection";
 import ProposalCard from "@/entities/proposals/components/ProposalCard";
 import ProposalFilterSidebar from "@/entities/proposals/components/ProposalFilterSidebar";
 import { Pagination } from "@/components/ui/pagination";
@@ -63,10 +64,24 @@ export default function ProposalsPage() {
 		<Shell>
 			<div className="grid grid-cols-1 lg:grid-cols-[1fr_var(--filter-sidebar-width,_18rem)] gap-0">
 				<div className="order-2 lg:order-1 flex-1 lg:pr-4 space-y-6">
-					{/* Enhanced Header Component */}
+						{/* Enhanced Header Component */}
 					<PageHeader
-						title="Proposals"
-						description="Create new proposals, filter, and manage your submissions."
+					  title="Projects"
+					  description="Create new Projects, filter, and manage your submissions."
+					  actions={
+					    <Button
+					      onClick={() => handleCreateNew()}
+					      className="max-w-16 group relative overflow-hidden bg-gradient-to-br from-cyan-500 via-cyan-600 to-blue-600 text-white hover:shadow-xl transition-all duration-300 font-semibold px-5 py-2.5 !rounded-full whitespace-nowrap"
+					    >
+					      <span className="relative z-10 flex items-center gap-2">
+					        <Plus className="h-4 w-4 transition-transform group-hover:rotate-90 duration-300" />
+					      </span>
+					      <div className="absolute inset-0 bg-gradient-to-br from-cyan-400 via-cyan-500 to-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+					    </Button>
+					  }
+					/>
+					{/* Enhanced Header Component */}
+					<SearchSection
 						searchValue={query}
 						searchPlaceholder="Search proposals by title or keyword..."
 						resultsCount={data?.total ?? 0}

@@ -17,12 +17,9 @@ export default function SearchResultPage() {
   const [page, setPage] = useState(1);
   const pageSize = 12;
   const [filters, setFilters] = useState({
-    industries: [] as string[],
-    country: undefined as string | undefined,
-    commitment: undefined as any,
-    urgency: undefined as any,
-    minFunding: undefined as number | undefined,
-    maxFunding: undefined as number | undefined,
+    industry: [] as string[],
+    location: undefined as string | undefined,
+    teamType: undefined as any,
   });
   const [category, setCategory] = useState<string | undefined>(undefined);
   const [sortBy, setSortBy] = useState<"relevance" | "latest">("latest");
@@ -30,40 +27,26 @@ export default function SearchResultPage() {
 
   // Optimized data fetching with prefetching
   const { data, isLoading, isFetching } = usePrefetchedTeams({
+    industry: filters.industry,
+    location: filters.location,
+    teamType: filters.teamType,
     page,
     pageSize,
     sortBy,
-    query,
-    industries: filters.industries,
-    category,
-    country: filters.country,
-    commitment: filters.commitment,
-    urgency: filters.urgency,
-    minFunding: filters.minFunding,
-    maxFunding: filters.maxFunding,
+    query
   });
 
   // Hydrate from URL on mount
   useEffect(() => {
     const q = searchParams.get("q") || "";
-    const inds = (searchParams.get("industries") || "").split(",").filter(Boolean);
-    const country = searchParams.get("country") || undefined;
-    const commitment = searchParams.get("commitment") || undefined;
-    const urgency = searchParams.get("urgency") || undefined;
-    const minFunding = searchParams.get("minFunding");
-    const maxFunding = searchParams.get("maxFunding");
+    const inds = (searchParams.get("industry") || "").split(",").filter(Boolean);
+    const location = searchParams.get("location") || undefined;
+    const teamType = searchParams.get("teamType") || undefined;
     const sort = (searchParams.get("sort") as any) || "latest";
     const p = Number(searchParams.get("page") || 1);
 
     setQuery(q);
-    setFilters({
-      industries: inds,
-      country,
-      commitment: commitment as any,
-      urgency: urgency as any,
-      minFunding: minFunding ? Number(minFunding) : undefined,
-      maxFunding: maxFunding ? Number(maxFunding) : undefined,
-    });
+    setFilters({ industry: inds, location, teamType });
     setSortBy(sort);
     setPage(Number.isFinite(p) && p > 0 ? p : 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -73,12 +56,9 @@ export default function SearchResultPage() {
   useEffect(() => {
     const params = new URLSearchParams();
     if (query) params.set("q", query);
-    if (filters.industries.length) params.set("industries", filters.industries.join(","));
-    if (filters.country) params.set("country", filters.country);
-    if (filters.commitment) params.set("commitment", String(filters.commitment));
-    if (filters.urgency) params.set("urgency", String(filters.urgency));
-    if (filters.minFunding != null) params.set("minFunding", String(filters.minFunding));
-    if (filters.maxFunding != null) params.set("maxFunding", String(filters.maxFunding));
+    if (filters.industry.length) params.set("industry", filters.industry.join(","));
+    if (filters.location) params.set("location", filters.location);
+    if (filters.teamType) params.set("teamType", String(filters.teamType));
     if (sortBy) params.set("sort", sortBy);
     if (page !== 1) params.set("page", String(page));
 
@@ -89,7 +69,7 @@ export default function SearchResultPage() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setPage(1);
-  }, [query, filters.industries, filters.country, filters.commitment, filters.urgency, filters.minFunding, filters.maxFunding, sortBy]);
+  }, [query, filters.industry, filters.location, filters.teamType, sortBy]);
 
   // Build filter chips
   const filterChips = React.useMemo(() => {
@@ -103,45 +83,27 @@ export default function SearchResultPage() {
       });
     }
 
-    filters.industries.forEach((ind) => {
+    filters.industry.forEach((ind) => {
       chips.push({
         id: `industry-${ind}`,
         label: ind,
-        onRemove: () =>
-          setFilters((f) => ({ ...f, industries: f.industries.filter((x) => x !== ind) })),
+        onRemove: () => setFilters((f) => ({ ...f, industry: f.industry.filter((x) => x !== ind) }))
       });
     });
 
-    if (filters.country) {
+    if (filters.location) {
       chips.push({
-        id: "country",
-        label: `country: ${filters.country}`,
-        onRemove: () => setFilters((f) => ({ ...f, country: undefined })),
+        id: "location",
+        label: `location: ${filters.location}`,
+        onRemove: () => setFilters((f) => ({ ...f, location: undefined })),
       });
     }
 
-    if (filters.commitment) {
+    if (filters.teamType) {
       chips.push({
-        id: "commitment",
-        label: `commitment: ${String(filters.commitment)}`,
-        onRemove: () => setFilters((f) => ({ ...f, commitment: undefined })),
-      });
-    }
-
-    if (filters.urgency) {
-      chips.push({
-        id: "urgency",
-        label: `urgency: ${String(filters.urgency)}`,
-        onRemove: () => setFilters((f) => ({ ...f, urgency: undefined })),
-      });
-    }
-
-    if (filters.minFunding != null || filters.maxFunding != null) {
-      chips.push({
-        id: "funding",
-        label: `funding: ${filters.minFunding ?? 0} - ${filters.maxFunding ?? "∞"}`,
-        onRemove: () =>
-          setFilters((f) => ({ ...f, minFunding: undefined, maxFunding: undefined })),
+        id: "teamType",
+        label: `teamType: ${String(filters.teamType)}`,
+        onRemove: () => setFilters((f) => ({ ...f, teamType: undefined })),
       });
     }
 
@@ -149,25 +111,14 @@ export default function SearchResultPage() {
   }, [query, filters]);
 
   const handleClearAll = useCallback(() => {
-    setQuery("");
-    setFilters({
-      industries: [],
-      country: undefined,
-      commitment: undefined,
-      urgency: undefined,
-      minFunding: undefined,
-      maxFunding: undefined,
-    });
+    setFilters({ industry: [], location: undefined, teamType: undefined });
   }, []);
 
   const handleFilterChange = useCallback((next: any) => {
     setFilters({
-      industries: next.industries || [],
-      country: next.country,
-      commitment: next.commitment,
-      urgency: next.urgency,
-      minFunding: next.minFunding,
-      maxFunding: next.maxFunding,
+      industry: next.industry || [],
+      location: next.location,
+      teamType: next.teamType
     });
   }, []);
 

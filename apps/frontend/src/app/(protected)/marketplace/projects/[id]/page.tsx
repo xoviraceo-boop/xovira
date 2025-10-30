@@ -135,7 +135,7 @@ export default function ProjectDetailPage() {
         <div className="w-full mx-auto px-6 py-8">
           {editing ? (
             <div className="bg-card border rounded-lg shadow-sm">
-              <ProjectForm project={project} />
+              <ProjectForm projectId={project.id} />
             </div>
           ) : (
             <ProjectView project={project} />

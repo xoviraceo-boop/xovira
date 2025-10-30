@@ -1,7 +1,7 @@
 "use client";
 import Shell from "@/components/layout/Shell";
 import { Header, Content } from "@/features/marketplace/views/shared";
-import PublicProposalCard from "@/entities/proposals/components/PublicProposalCard";
+import PublicProfileCard from "@/entities/users/components/PublicProfileCard";
 import CardSkeleton from "@/components/ui/card.skeleton";
 import { usePrefetchedProposals } from "@/features/marketplace/hooks/usePrefetchedProposals";
 import React, { useState, useCallback } from "react";
@@ -50,10 +50,10 @@ export default function MarketplacePage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {isLoading
                 ? Array.from({ length: 9 }).map((_, i) => <CardSkeleton key={i} />)
-                : (data?.items ?? []).map((proposal) => (
-                    <PublicProposalCard 
-                      key={proposal.id} 
-                      proposal={proposal} 
+                : (data?.items ?? []).map((profile) => (
+                    <PublicProfileCard 
+                      key={profile.id} 
+                      profile={profile}
                     />
                   ))}
             </div>

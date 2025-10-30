@@ -17,12 +17,9 @@ export default function SearchResultPage() {
   const [page, setPage] = useState(1);
   const pageSize = 12;
   const [filters, setFilters] = useState({
-    industries: [] as string[],
+    skills: [] as string[],
     country: undefined as string | undefined,
     commitment: undefined as any,
-    urgency: undefined as any,
-    minFunding: undefined as number | undefined,
-    maxFunding: undefined as number | undefined,
   });
   const [category, setCategory] = useState<string | undefined>(undefined);
   const [sortBy, setSortBy] = useState<"relevance" | "latest">("latest");
@@ -34,35 +31,24 @@ export default function SearchResultPage() {
     pageSize,
     sortBy,
     query,
-    industries: filters.industries,
-    category,
     country: filters.country,
     commitment: filters.commitment,
-    urgency: filters.urgency,
-    minFunding: filters.minFunding,
-    maxFunding: filters.maxFunding,
   });
 
   // Hydrate from URL on mount
   useEffect(() => {
     const q = searchParams.get("q") || "";
-    const inds = (searchParams.get("industries") || "").split(",").filter(Boolean);
+    const skills = (searchParams.get("skills") || "").split(",").filter(Boolean);
     const country = searchParams.get("country") || undefined;
     const commitment = searchParams.get("commitment") || undefined;
-    const urgency = searchParams.get("urgency") || undefined;
-    const minFunding = searchParams.get("minFunding");
-    const maxFunding = searchParams.get("maxFunding");
     const sort = (searchParams.get("sort") as any) || "latest";
     const p = Number(searchParams.get("page") || 1);
 
     setQuery(q);
     setFilters({
-      industries: inds,
+      skills,
       country,
       commitment: commitment as any,
-      urgency: urgency as any,
-      minFunding: minFunding ? Number(minFunding) : undefined,
-      maxFunding: maxFunding ? Number(maxFunding) : undefined,
     });
     setSortBy(sort);
     setPage(Number.isFinite(p) && p > 0 ? p : 1);
@@ -73,12 +59,9 @@ export default function SearchResultPage() {
   useEffect(() => {
     const params = new URLSearchParams();
     if (query) params.set("q", query);
-    if (filters.industries.length) params.set("industries", filters.industries.join(","));
+    if (filters.skills.length) params.set("skills", filters.skills.join(","));
     if (filters.country) params.set("country", filters.country);
     if (filters.commitment) params.set("commitment", String(filters.commitment));
-    if (filters.urgency) params.set("urgency", String(filters.urgency));
-    if (filters.minFunding != null) params.set("minFunding", String(filters.minFunding));
-    if (filters.maxFunding != null) params.set("maxFunding", String(filters.maxFunding));
     if (sortBy) params.set("sort", sortBy);
     if (page !== 1) params.set("page", String(page));
 
@@ -89,7 +72,7 @@ export default function SearchResultPage() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setPage(1);
-  }, [query, filters.industries, filters.country, filters.commitment, filters.urgency, filters.minFunding, filters.maxFunding, sortBy]);
+  }, [query, filters.skills, filters.country, filters.commitment, sortBy]);
 
   // Build filter chips
   const filterChips = React.useMemo(() => {
@@ -103,12 +86,12 @@ export default function SearchResultPage() {
       });
     }
 
-    filters.industries.forEach((ind) => {
+    filters.skills.forEach((skill) => {
       chips.push({
-        id: `industry-${ind}`,
-        label: ind,
+        id: `skill-${skill}`,
+        label: skill,
         onRemove: () =>
-          setFilters((f) => ({ ...f, industries: f.industries.filter((x) => x !== ind) })),
+          setFilters((f) => ({ ...f, skills: f.skills.filter((x) => x !== skill) })),
       });
     });
 
@@ -128,47 +111,16 @@ export default function SearchResultPage() {
       });
     }
 
-    if (filters.urgency) {
-      chips.push({
-        id: "urgency",
-        label: `urgency: ${String(filters.urgency)}`,
-        onRemove: () => setFilters((f) => ({ ...f, urgency: undefined })),
-      });
-    }
-
-    if (filters.minFunding != null || filters.maxFunding != null) {
-      chips.push({
-        id: "funding",
-        label: `funding: ${filters.minFunding ?? 0} - ${filters.maxFunding ?? "∞"}`,
-        onRemove: () =>
-          setFilters((f) => ({ ...f, minFunding: undefined, maxFunding: undefined })),
-      });
-    }
-
     return chips;
   }, [query, filters]);
 
   const handleClearAll = useCallback(() => {
     setQuery("");
-    setFilters({
-      industries: [],
-      country: undefined,
-      commitment: undefined,
-      urgency: undefined,
-      minFunding: undefined,
-      maxFunding: undefined,
-    });
+    setFilters({ skills: [], country: undefined, commitment: undefined });
   }, []);
 
   const handleFilterChange = useCallback((next: any) => {
-    setFilters({
-      industries: next.industries || [],
-      country: next.country,
-      commitment: next.commitment,
-      urgency: next.urgency,
-      minFunding: next.minFunding,
-      maxFunding: next.maxFunding,
-    });
+    setFilters({ skills: Array.isArray(next.skills) ? next.skills : [], country: next.country, commitment: next.commitment });
   }, []);
 
   const toggleFilters = useCallback((open: boolean) => {
@@ -215,16 +167,7 @@ export default function SearchResultPage() {
                   : (data?.items || []).map((it: any) => (
                       <PublicProfileCard
                         key={it.id}
-                        item={it}
-                        onInterest={() => {}}
-                        onShare={() => {
-                          if (navigator?.share)
-                            navigator.share({
-                              title: it.title,
-                              url:
-                                typeof window !== "undefined" ? window.location.href : "",
-                            });
-                        }}
+                        profile={it}
                       />
                     ))}
               </div>
@@ -267,3 +210,4 @@ export default function SearchResultPage() {
     </Shell>
   );
 }
+

@@ -51,9 +51,16 @@ export default function MarketplacePage() {
               {isLoading
                 ? Array.from({ length: 9 }).map((_, i) => <CardSkeleton key={i} />)
                 : (data?.items ?? []).map((proposal) => (
-                    <PublicProposalCard 
-                      key={proposal.id} 
-                      proposal={proposal} 
+                    <PublicProposalCard
+                      key={proposal.id}
+                      proposal={{
+                        ...proposal,
+                        projectId: proposal.projectId ?? undefined,
+                        teamId: proposal.teamId ?? undefined,
+                        createdAt: typeof proposal.createdAt === 'string' ? proposal.createdAt : proposal.createdAt?.toISOString?.() ?? '',
+                        updatedAt: typeof proposal.updatedAt === 'string' ? proposal.updatedAt : proposal.updatedAt?.toISOString?.() ?? '',
+                        user: proposal.user ? { ...proposal.user, name: proposal.user.name ?? '' } : undefined,
+                      }}
                     />
                   ))}
             </div>

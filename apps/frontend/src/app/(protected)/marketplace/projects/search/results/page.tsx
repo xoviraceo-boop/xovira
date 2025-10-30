@@ -46,11 +46,7 @@ export default function SearchResultPage() {
     const p = Number(searchParams.get("page") || 1);
 
     setQuery(q);
-    setFilters({
-      industry: inds,
-      location,
-      stage: stage as any,
-    });
+    setFilters({ industry: inds, location, stage: stage as any });
     setSortBy(sort);
     setPage(Number.isFinite(p) && p > 0 ? p : 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -91,8 +87,7 @@ export default function SearchResultPage() {
       chips.push({
         id: `industry-${ind}`,
         label: ind,
-        onRemove: () =>
-          setFilters((f) => ({ ...f, industries: f.industries.filter((x) => x !== ind) })),
+        onRemove: () => setFilters((f) => ({ ...f, industry: f.industry.filter((x) => x !== ind) }))
       });
     });
 
@@ -119,19 +114,11 @@ export default function SearchResultPage() {
 
   const handleClearAll = useCallback(() => {
     setQuery("");
-    setFilters({
-      industry: [],
-      location: undefined,
-      stage: undefined,
-    });
+    setFilters({ industry: [], location: undefined, stage: undefined });
   }, []);
 
   const handleFilterChange = useCallback((next: any) => {
-    setFilters({
-      industry: next.industry || [],
-      location: next.location,
-      stage: next.stage,
-    });
+    setFilters({ industry: next.industry || [], location: next.location, stage: next.stage });
   }, []);
 
   const toggleFilters = useCallback((open: boolean) => {

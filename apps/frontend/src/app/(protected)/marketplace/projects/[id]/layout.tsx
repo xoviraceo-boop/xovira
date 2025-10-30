@@ -180,8 +180,7 @@ export default function ProjectLayout({ children }: ProjectLayoutProps) {
     try {
       if (isPublished) {
         await updateMutation.mutateAsync({
-          id: projectId,
-          status: 'DRAFT'
+          id: projectId
         });
       } else {
         await publishMutation.mutateAsync({

@@ -48,8 +48,7 @@ export const DiscussionsView = ({ projectId }: DiscussionsViewProps) => {
           {DISCUSSSION_FILTERS.map((f) => (
             <Button
               key={f.key}
-              variant={activeFilter === f.key ? "default" : "outline"}
-              size="sm"
+              variant={activeFilter === f.key ? "primary" : "outline"}
               onClick={() => setActiveFilter(f.key)}
             >
               {f.label}
@@ -86,7 +85,7 @@ export const DiscussionsView = ({ projectId }: DiscussionsViewProps) => {
             <div className="p-4 border-b border-slate-200 flex items-center justify-between">
               <p className="text-slate-600">Recent discussions and conversations</p>
               <Link href={`/dashboard/projects/${projectId}/discussions/new`}>
-                <Button size="sm">Create New</Button>
+                <Button>Create New</Button>
               </Link>
             </div>
             <div className="divide-y">

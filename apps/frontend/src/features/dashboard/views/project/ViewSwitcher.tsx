@@ -34,7 +34,7 @@ export default function ViewSwitcher({ activeTab, project }: ViewSwitcherProps) 
       case 'members':
         return <MembersView />;
       default:
-        return <OverviewView />;
+        return <OverviewView project={project} />;
     }
   };
 

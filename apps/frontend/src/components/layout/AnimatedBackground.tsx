@@ -11,3 +11,4 @@ export const AnimatedBackground = () => {
       <div className="absolute -bottom-8 left-20 w-96 h-96 bg-cyan-400 rounded-full mix-blend-screen blur-3xl opacity-30 animate-blob animation-delay-4000"></div>
     </div>
   );
+}

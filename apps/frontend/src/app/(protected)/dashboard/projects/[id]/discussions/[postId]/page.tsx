@@ -1,19 +1,16 @@
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { useSession } from "next-auth/react";
 import { CommentSection } from "@/entities/comments/components/CommentSection";
 
-export default async function DiscussionPage({ params }: { params: { id: string } }) {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+export default async function DiscussionPage({ params }: { params: { postId: string } }) {
+  const { data: session } = useSession();
+  const discussionId = params.postId; 
 
-  const discussionId = params.postId; // This is the inner [id] due to duplicate segment name
-
-  // Load post to derive projectId safely
   const post = await prisma.post.findUnique({ where: { id: discussionId }, select: { id: true, projectId: true } });
   if (!post?.projectId) notFound();
 
-  // Verify membership server-side
   const userId = session.user.id;
   const canView = await prisma.project.findFirst({
     where: {

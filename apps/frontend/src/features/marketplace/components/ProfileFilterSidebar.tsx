@@ -65,7 +65,14 @@ export default function FilterSidebar({ values, onChange, isOverlay = false }: P
 
           <section>
             <h3 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Commitment</h3>
-            <select className="w-full rounded-md border px-2 py-1 text-sm" value={local.commitment || ""} onChange={(e) => { const next = { ...local, commitment: e.target.value || undefined }; setLocal(next); onChange(next); }}>
+            <select className="w-full rounded-md border px-2 py-1 text-sm" value={local.commitment || ""} onChange={(e) => {
+              const next = {
+                ...local,
+                commitment: (e.target.value as Props["values"]["commitment"]) || undefined,
+              };
+              setLocal(next);
+              onChange(next);
+            }}>
               <option value="">Any</option>
               <option value="FULL_TIME">Full-time</option>
               <option value="PART_TIME">Part-time</option>
@@ -102,3 +109,4 @@ export default function FilterSidebar({ values, onChange, isOverlay = false }: P
     </Wrapper>
   );
 }
+

@@ -72,18 +72,7 @@ export default function FilterSidebar({ values, onChange, isOverlay = false }: P
               ))}
             </select>
           </section>
-
-          <section>
-            <h3 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Urgency</h3>
-            <select className="w-full rounded-md border px-2 py-1 text-sm" value={local.urgency || ""} onChange={(e) => { const next = { ...local, urgency: e.target.value || undefined }; setLocal(next); onChange(next); }}>
-              <option value="">Any</option>
-              <option value="LOW">Low</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="HIGH">High</option>
-              <option value="URGENT">Urgent</option>
-            </select>
-          </section>
-
+          
           <section>
             <h3 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Location</h3>
             <select className="w-full rounded-md border px-2 py-1 text-sm" value={local.location || ""} onChange={(e) => { const next = { ...local, location: e.target.value || undefined }; setLocal(next); onChange(next); }}>

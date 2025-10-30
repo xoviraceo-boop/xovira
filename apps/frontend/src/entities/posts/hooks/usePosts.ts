@@ -7,8 +7,7 @@ import { useSocket } from '@/components/providers/SocketProvider';
 import { useEffect, useRef, useCallback } from 'react';
 import { useToast } from '@/hooks/useToast';
 import type { Post } from '@xovira/database/src/generated/prisma/client';
-
-type CreatePostData = { content: string; attachments?: any[]; };
+import { CreatePostData } from '@xovira/types';
 
 export function usePosts(feedType: 'global' | 'user' | 'project', feedId?: string) {
   const { socket, isConnected, waitForConnection } = useSocket();

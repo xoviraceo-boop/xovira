@@ -15,11 +15,12 @@ const filterPaths = [
 const colors = ["#FFB7C5", "#FFDDB7", "#B1C5FF", "#4FABFF", "#076EFF"];
 
 interface EntangledStringsEffectProps {
-  ref?: React.RefObject<HTMLDivElement>;
+  ref?: React.RefObject<HTMLDivElement | null>;
 }
 
 export default function EntangledStringsEffect({ ref }: EntangledStringsEffectProps) {
   const { scrollYProgress } = useScroll({
+    target: ref,
     offset: ["start start", "end start"],
   });
 
@@ -32,7 +33,6 @@ export default function EntangledStringsEffect({ ref }: EntangledStringsEffectPr
   return (
     <div
       className="h-full w-full rounded-md relative overflow-clip"
-      ref={ref}
     >
       <EntangledStrings
         pathLengths={[

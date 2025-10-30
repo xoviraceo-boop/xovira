@@ -18,7 +18,7 @@ export const FeatureSection = () => {
     <section 
       ref={sectionRef}
       id="features" 
-      className={`py-20 sm:py-32 px-4 sm:px-6 lg:px-8`}
+      className={`pt-20 sm:pt-32 px-4 sm:px-6 lg:px-8`}
     >
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">

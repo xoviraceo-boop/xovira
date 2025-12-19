@@ -1,0 +1,26 @@
+CHANNEL 
+
+
+here check material/tool creation 
+
+i want user to be abl
+
+similar to the space view 
+
+in workspace chat view also add the tool modal + empty add member accordingly 
+
+
+irm https://raw.githubusercontent.com/yeongpin/cursor-free-vip/main/scripts/install.ps1 | iex
+
+create a sepeare component here and make the ui appear more sleek, professional  and call it inside spacedetailview
+
+there is an issue the spacesetting sidebar still open even though the setting button is not clicked???
+
+create materialcreationmodal and toolcreationmodal 
+
+for materialcreationmodal let users enter title, description, select category, enter urls,etc. refer schema  and checkbox for sale when for sale add fiels related to selling and a checkbox i gurantee this material is owned by me and uphold the responsiblities upon infrigment and only when user click checkbox allow them to publish to marketplace
+similarly for tool 
+
+in marketplace routes add tools+materials routes refer to projects/teams routes for reference 
+
+make sure following similar layout for filter+list, etc. view so to add relevant codes 

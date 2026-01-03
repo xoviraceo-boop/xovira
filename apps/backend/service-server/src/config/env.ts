@@ -36,6 +36,11 @@ const envSchema = z.object({
   MATCHING_INTERVAL_DAYS: z.string().default('3'),
   MATCHING_SCORE_THRESHOLD: z.string().default('0.85'),
   DATABASE_URL: z.string(),
+  
+  // Inngest (optional)
+  INNGEST_EVENT_KEY: z.string().optional(),
+  INNGEST_SIGNING_KEY: z.string().optional(),
+  INNGEST_BASE_URL: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);

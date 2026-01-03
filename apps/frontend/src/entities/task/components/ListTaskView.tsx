@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { CreateTaskModal } from './TaskCreationModal'
 import { TaskContextType } from './TaskView'
 import { trpc } from '@/lib/trpc'
+import { GitBranch } from 'lucide-react'
 
 type Option = { id: string; name: string }
 
@@ -104,6 +105,42 @@ export function ListTaskView({ context, contextId, workspaceId }: ListTaskViewPr
     }
   }, [listQueryData?.items])
 
+  // Organize tasks hierarchically - parent tasks first, then subtasks
+  const organizedTasks = React.useMemo(() => {
+    if (!tasksData?.items) return []
+    const tasks = tasksData.items
+    const parentTasks = tasks.filter((t: any) => !t.parentId)
+    const subtasksByParent = new Map<string, any[]>()
+    
+    tasks.forEach((task: any) => {
+      if (task.parentId) {
+        if (!subtasksByParent.has(task.parentId)) {
+          subtasksByParent.set(task.parentId, [])
+        }
+        subtasksByParent.get(task.parentId)!.push(task)
+      }
+    })
+
+    // Flatten: parent tasks with their subtasks
+    const result: any[] = []
+    parentTasks.forEach((parent: any) => {
+      result.push(parent)
+      const subtasks = subtasksByParent.get(parent.id) || []
+      subtasks.forEach((subtask: any) => {
+        result.push({ ...subtask, _isSubtask: true, _parentTitle: parent.title })
+      })
+    })
+
+    // Add orphaned subtasks (subtasks whose parent is not in the list)
+    tasks.forEach((task: any) => {
+      if (task.parentId && !tasks.find((t: any) => t.id === task.parentId)) {
+        result.push({ ...task, _isSubtask: true, _parentTitle: null })
+      }
+    })
+
+    return result
+  }, [tasksData?.items])
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -138,14 +175,27 @@ export function ListTaskView({ context, contextId, workspaceId }: ListTaskViewPr
                 <TableCell colSpan={7}>Loading...</TableCell>
               </TableRow>
             )}
-            {!isLoading && tasksData?.items?.length === 0 && (
+            {!isLoading && organizedTasks.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7}>No tasks found</TableCell>
               </TableRow>
             )}
-            {tasksData?.items?.map((t: any) => (
-              <TableRow key={t.id}>
-                <TableCell>{t.title}</TableCell>
+            {organizedTasks.map((t: any) => (
+              <TableRow key={t.id} className={t._isSubtask ? 'bg-muted/30' : ''}>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    {t._isSubtask && (
+                      <>
+                        <GitBranch className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">
+                          {t._parentTitle || 'Parent task not found'}
+                        </span>
+                        <span className="text-muted-foreground">→</span>
+                      </>
+                    )}
+                    <span className={t._isSubtask ? 'text-sm' : ''}>{t.title}</span>
+                  </div>
+                </TableCell>
                 <TableCell>{t.assignee?.name || ''}</TableCell>
                 <TableCell>{t.project?.name || ''}</TableCell>
                 <TableCell>{t.team?.name || ''}</TableCell>

@@ -47,15 +47,20 @@ export function TaskGroupCreationModal({ context, contextId, workspaceId }: Task
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!resolvedWorkspaceId) return
-
-    const payload = {
+    const payload: any = {
       name: name.trim(),
       description: description.trim() || undefined,
-      workspaceId: resolvedWorkspaceId,
-      projectId: context === 'PROJECT' ? contextId : undefined,
-      teamId: context === 'TEAM' ? contextId : undefined,
-      spaceId: context === 'SPACE' ? contextId : undefined,
+    }
+
+    // Add context IDs - at least one must be provided
+    if (resolvedWorkspaceId) payload.workspaceId = resolvedWorkspaceId
+    if (context === 'PROJECT' && contextId) payload.projectId = contextId
+    if (context === 'TEAM' && contextId) payload.teamId = contextId
+    if (context === 'SPACE' && contextId) payload.spaceId = contextId
+
+    // Ensure at least one context is provided
+    if (!payload.workspaceId && !payload.projectId && !payload.teamId && !payload.spaceId) {
+      return // Validation will be handled by tRPC
     }
 
     await createList.mutateAsync(payload)
@@ -65,12 +70,12 @@ export function TaskGroupCreationModal({ context, contextId, workspaceId }: Task
   }
 
   const isSubmitting = createList.isPending
-  const isDisabled = !resolvedWorkspaceId
+  const isDisabled = !name.trim() || (!resolvedWorkspaceId && !contextId)
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" disabled={isDisabled}>
+        <Button className="max-w-24" variant="outline">
           <FolderPlusIcon className="mr-2 h-4 w-4" />
           Create Group
         </Button>
@@ -101,14 +106,19 @@ export function TaskGroupCreationModal({ context, contextId, workspaceId }: Task
           </div>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => setIsOpen(false)} disabled={isSubmitting}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting || isDisabled || !name.trim()}>
+            <Button type="submit" disabled={isSubmitting || !name.trim()}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create Group
             </Button>
           </div>
-          {isDisabled && (
+          {isDisabled && !name.trim() && (
             <p className="text-sm text-muted-foreground">
-              Select a workspace context before creating a group.
+              Please provide a name for the group.
+            </p>
+          )}
+          {isDisabled && name.trim() && !resolvedWorkspaceId && !contextId && (
+            <p className="text-sm text-muted-foreground">
+              Select a workspace, project, team, or space context before creating a group.
             </p>
           )}
         </form>

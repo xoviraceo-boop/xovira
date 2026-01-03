@@ -27,7 +27,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
             {/* Desktop layout with inline sidebar */}
             <div className="hidden md:grid md:grid-cols-[var(--main-sidebar-width,_16rem)_1fr]">
                 <Sidebar />
-                <div className="min-h-[calc(100vh-8rem)] p-6">
+                <div className="min-h-[calc(100vh-8rem)] max-h-screen overflow-y-auto p-6">
                     {children}
                 </div>
             </div>

@@ -2,6 +2,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { GitBranch, UserIcon, Bot } from "lucide-react";
 
 type TaskSummary = {
 	id: string;
@@ -10,10 +11,20 @@ type TaskSummary = {
 	status?: string | null;
 	visibility?: string | null;
 	isPublic?: boolean | null;
+	parentId?: string | null;
 	project?: { id: string; name: string | null } | null;
 	team?: { id: string; name: string | null } | null;
 	channel?: { id: string; name: string | null } | null;
 	assignee?: { id: string; name: string | null; email: string | null } | null;
+	assignees?: Array<{
+		id: string;
+		userId: string | null;
+		agentId: string | null;
+		user?: { id: string; name: string | null; email: string | null; image: string | null } | null;
+		agent?: { id: string; name: string | null; avatar: string | null } | null;
+	}>;
+	parent?: { id: string; title: string } | null;
+	subtasks?: TaskSummary[];
 	updatedAt?: string | Date | null;
 };
 
@@ -38,7 +49,17 @@ export function TaskCard({ item, onOpen, onConvert }: Props) {
 		<Card className="flex h-full flex-col">
 			<CardHeader className="space-y-3">
 				<div className="flex items-start justify-between gap-4">
+					<div className="flex-1 min-w-0">
+						<div className="flex items-center gap-2">
+							{item.parent && (
+								<div className="flex items-center gap-1 text-xs text-muted-foreground">
+									<GitBranch className="h-3 w-3" />
+									<span className="truncate">{item.parent.title}</span>
+								</div>
+							)}
+						</div>
 					<CardTitle className="min-w-0 truncate text-lg">{item.title}</CardTitle>
+					</div>
 					<div className="flex flex-col items-end gap-2">
 						<Badge className={statusClass}>{item.status ?? "OPEN"}</Badge>
 						{item.visibility && (
@@ -48,6 +69,12 @@ export function TaskCard({ item, onOpen, onConvert }: Props) {
 				</div>
 				{item.description && (
 					<p className="line-clamp-3 text-sm text-muted-foreground">{item.description}</p>
+				)}
+				{item.subtasks && item.subtasks.length > 0 && (
+					<div className="flex items-center gap-2 text-xs text-muted-foreground">
+						<GitBranch className="h-3 w-3" />
+						<span>{item.subtasks.length} subtask{item.subtasks.length !== 1 ? 's' : ''}</span>
+					</div>
 				)}
 			</CardHeader>
 			<CardContent className="flex flex-1 flex-col gap-4 text-xs">
@@ -71,9 +98,34 @@ export function TaskCard({ item, onOpen, onConvert }: Props) {
 						</div>
 					)}
 					<div className="rounded-md border bg-muted/30 px-3 py-2">
-						<div className="text-muted-foreground">Assignee</div>
-						<div className="truncate font-medium">
-							{item.assignee?.name ?? item.assignee?.email ?? "Unassigned"}
+						<div className="text-muted-foreground">Assignees</div>
+						<div className="flex flex-wrap gap-1 mt-1">
+							{item.assignees && item.assignees.length > 0 ? (
+								<>
+									{item.assignees.map((assignee) => (
+										<Badge key={assignee.id} variant="secondary" className="text-xs flex items-center gap-1">
+											{assignee.user ? (
+												<>
+													<UserIcon className="h-3 w-3" />
+													{assignee.user.name || assignee.user.email || "User"}
+												</>
+											) : assignee.agent ? (
+												<>
+													<Bot className="h-3 w-3" />
+													{assignee.agent.name || "Agent"}
+												</>
+											) : null}
+										</Badge>
+									))}
+								</>
+							) : item.assignee ? (
+								<Badge variant="secondary" className="text-xs flex items-center gap-1">
+									<UserIcon className="h-3 w-3" />
+									{item.assignee.name ?? item.assignee.email ?? "User"}
+								</Badge>
+							) : (
+								<span className="text-xs text-muted-foreground">Unassigned</span>
+							)}
 						</div>
 					</div>
 				</div>

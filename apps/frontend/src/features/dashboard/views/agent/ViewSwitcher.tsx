@@ -1,0 +1,42 @@
+import { OverviewView } from './OverviewView';
+import { BuilderView } from './BuilderView';
+import { AutomationView } from './AutomationView';
+import { ChatView } from './ChatView';
+import { ActivitiesView } from './ActivitiesView';
+import { TasksView } from './TasksView';
+import { LogsView } from './LogsView';
+
+interface ViewSwitcherProps {
+  activeTab: string;
+  agent?: any;
+}
+
+export default function ViewSwitcher({ activeTab, agent }: ViewSwitcherProps) {
+
+  const renderView = () => {
+    switch (activeTab) {
+      case 'overview':
+        return <OverviewView agent={agent} />;
+      case 'builder':
+        return <BuilderView agent={agent} />;
+      case 'automation':
+        return <AutomationView agent={agent} />;
+      case 'chat':
+        return <ChatView agent={agent} />;
+      case 'activities':
+        return <ActivitiesView agentId={agent?.id} />;
+      case 'tasks':
+        return <TasksView agentId={agent?.id} />;
+      case 'logs':
+        return <LogsView agentId={agent?.id} />;
+      default:
+        return <OverviewView agent={agent} />;
+    }
+  };
+
+  return (
+    <div className="flex-1 overflow-auto bg-slate-50">
+      {renderView()}
+    </div>
+  );
+}

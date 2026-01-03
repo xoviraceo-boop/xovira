@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, memo } from 'react'
+import { useEffect, useMemo, useRef, memo, useState } from 'react'
 import { MessagePart } from '@llamaindex/chat-ui'
 import { MessageRole } from '@xovira/database/src/generated/prisma/client'
 import { cn } from '@/lib/utils'
@@ -9,6 +9,24 @@ import { Card } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { MessageDisplay } from './ChatDisplay'
 import { TypingIndicator } from './TypingIndicator'
+import { Button } from '@/components/ui/button'
+import { ThumbsUp, ThumbsDown, Copy, Check, CornerDownRight } from 'lucide-react'
+import { trpc } from '@/lib/trpc'
+import { useToast } from '@/hooks/useToast'
+
+export interface MessageFollowup {
+  id: string
+  label: string
+  description?: string
+}
+
+export type MessageActionVariant = 'primary' | 'secondary' | 'ghost'
+
+export interface MessageAction {
+  id: string
+  label: string
+  variant?: MessageActionVariant
+}
 
 export interface RenderedMessage {
   id: string
@@ -16,11 +34,19 @@ export interface RenderedMessage {
   content: string
   createdAt: string | Date
   parts?: MessagePart[]
+  followups?: MessageFollowup[]
+  actions?: MessageAction[]
+  feedback?: {
+    isHelpful: boolean | null
+  } | null
 }
 
 interface ChatMessageListProps {
   messages: RenderedMessage[]
   pendingAssistantMessage?: string | null
+  onFollowupClick?: (messageId: string, followup: MessageFollowup) => void
+  onActionClick?: (messageId: string, action: MessageAction) => void
+  onFeedbackChange?: (messageId: string, isHelpful: boolean | null) => void
 }
 
 const ROLE_LABELS: Record<MessageRole, string> = {
@@ -42,12 +68,85 @@ const MessageItem = memo(function MessageItem({
   message,
   isUser,
   isLast,
+  onFollowupClick,
+  onActionClick,
+  onFeedbackChange,
 }: {
   message: RenderedMessage
   isUser: boolean
   isLast: boolean
+  onFollowupClick?: (messageId: string, followup: MessageFollowup) => void
+  onActionClick?: (messageId: string, action: MessageAction) => void
+  onFeedbackChange?: (messageId: string, isHelpful: boolean | null) => void
 }) {
   const parts = message.parts ?? [{ type: 'text', text: message.content } satisfies MessagePart]
+  const { toast } = useToast()
+  const [copied, setCopied] = useState(false)
+  const utils = trpc.useUtils()
+
+  const feedbackMutation = trpc.chat.toggleMessageFeedback.useMutation({
+    onSuccess: (data) => {
+      onFeedbackChange?.(message.id, data.isHelpful)
+      // Invalidate all message queries to update feedback state
+      utils.chat.getMessages.invalidate()
+    },
+  })
+
+  const showFollowups = !isUser && message.followups && message.followups.length > 0
+  const showActions = !isUser && message.actions && message.actions.length > 0
+  const showFeedbackButtons = !isUser && !message.id.startsWith('pending-') && !message.id.startsWith('temp-')
+  
+  const currentFeedback = message.feedback?.isHelpful ?? null
+  const isLiked = currentFeedback === true
+  const isDisliked = currentFeedback === false
+
+  const handleLike = async () => {
+    try {
+      await feedbackMutation.mutateAsync({
+        messageId: message.id,
+        isHelpful: true,
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update feedback',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleDislike = async () => {
+    try {
+      await feedbackMutation.mutateAsync({
+        messageId: message.id,
+        isHelpful: false,
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update feedback',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(message.content)
+      setCopied(true)
+      toast({
+        title: 'Copied!',
+        description: 'Message copied to clipboard',
+      })
+      setTimeout(() => setCopied(false), 2000)
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to copy message',
+        variant: 'destructive',
+      })
+    }
+  }
 
   return (
     <div className={cn('flex w-full gap-2 sm:gap-3', isUser ? 'flex-row-reverse' : 'flex-row')}>
@@ -76,6 +175,114 @@ const MessageItem = memo(function MessageItem({
           isLast={isLast}
           messageId={message.id}
         />
+
+        {showFollowups && (
+          <div className="mt-6 flex flex-col gap-2 w-full max-w-2xl">
+            {/* Header Label */}
+            <span className="text-[11px] font-medium text-muted-foreground/70 ml-1 mb-1">
+              Follow ups
+            </span>
+            {/* Follow-up Buttons */}
+            <div className="flex flex-col gap-2">
+              {message.followups?.map((followup) => (
+                <button
+                  key={followup.id}
+                  onClick={() => {
+                    if (onFollowupClick) {
+                      onFollowupClick(message.id, followup);
+                    }
+                  }}
+                  className="group flex items-start gap-3 rounded-2xl border border-black/5 bg-white p-4 text-left shadow-sm transition-all hover:bg-slate-50 hover:border-black/10 active:scale-[0.99]"
+                >
+                  <CornerDownRight 
+                    className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/50 group-hover:text-primary" 
+                  />
+                  <span className="text-[14px] leading-relaxed text-slate-700">
+                    {followup.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+          )}
+
+        {showActions && (
+          <div className="mt-3 flex flex-wrap justify-end gap-2">
+            {message.actions!.map((action) => {
+              const variant = action.variant ?? 'primary'
+
+              const buttonVariant =
+                variant === 'secondary'
+                  ? 'outline'
+                  : variant === 'ghost'
+                    ? 'ghost'
+                    : 'default'
+
+              return (
+                <Button
+                  key={action.id}
+                  size="sm"
+                  variant={buttonVariant as any}
+                  onClick={() => onActionClick?.(message.id, action)}
+                  className="rounded-full px-4"
+                >
+                  {action.label}
+                </Button>
+              )
+            })}
+          </div>
+        )}
+
+        {showFeedbackButtons && (
+          <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3">
+            <button
+              type="button"
+              onClick={handleLike}
+              disabled={feedbackMutation.isPending}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all hover:bg-slate-100 disabled:opacity-50',
+                isLiked
+                  ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                  : 'text-slate-600'
+              )}
+            >
+              <ThumbsUp className={cn('h-3.5 w-3.5', isLiked && 'fill-current')} />
+              <span>Like</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleDislike}
+              disabled={feedbackMutation.isPending}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all hover:bg-slate-100 disabled:opacity-50',
+                isDisliked
+                  ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                  : 'text-slate-600'
+              )}
+            >
+              <ThumbsDown className={cn('h-3.5 w-3.5', isDisliked && 'fill-current')} />
+              <span>Dislike</span>
+            </button>
+            <div className="flex-1" />
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-600 transition-all hover:bg-slate-100"
+            >
+              {copied ? (
+                <>
+                  <Check className="h-3.5 w-3.5 text-green-600" />
+                  <span className="text-green-600">Copied</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3.5 w-3.5" />
+                  <span>Copy</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </Card>
     </div>
   )
@@ -101,10 +308,14 @@ const TypingIndicatorMessage = memo(function TypingIndicatorMessage() {
 export const ChatMessageList = memo(function ChatMessageList({
   messages,
   pendingAssistantMessage,
+  onFollowupClick,
+  onActionClick,
+  onFeedbackChange,
 }: ChatMessageListProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const scrollAreaRef = useRef<HTMLDivElement | null>(null)
   const prevMessagesLengthRef = useRef(messages.length)
+  const bottomRef = useRef<HTMLDivElement | null>(null)
 
   // Memoize rendered messages to prevent recalculation
   const renderedMessages = useMemo(() => {
@@ -137,24 +348,42 @@ export const ChatMessageList = memo(function ChatMessageList({
 
   // Auto-scroll only when new messages are added or streaming
   useEffect(() => {
-    if (!scrollRef.current) return
-
     const hasNewMessage = messages.length > prevMessagesLengthRef.current
     const isStreaming = pendingAssistantMessage !== null
 
     if (hasNewMessage || isStreaming) {
-      const element = scrollRef.current
+      // Use a small delay to ensure DOM is updated
+      const scrollToBottom = () => {
+        // Try to find the ScrollArea viewport element
+        if (scrollAreaRef.current) {
+          const viewport = scrollAreaRef.current.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement
+          if (viewport) {
+            viewport.scrollTo({
+              top: viewport.scrollHeight,
+              behavior: hasNewMessage ? 'smooth' : 'auto',
+            })
+            return
+          }
+        }
+        
+        // Fallback: use bottomRef to scroll into view
+        if (bottomRef.current) {
+          bottomRef.current.scrollIntoView({
+            behavior: hasNewMessage ? 'smooth' : 'auto',
+            block: 'end',
+          })
+        }
+      }
+
       // Use requestAnimationFrame for smoother scrolling
       requestAnimationFrame(() => {
-        element.scrollTo({
-          top: element.scrollHeight,
-          behavior: hasNewMessage ? 'smooth' : 'auto',
-        })
+        // Small delay to ensure DOM is fully updated
+        setTimeout(scrollToBottom, 50)
       })
     }
 
     prevMessagesLengthRef.current = messages.length
-  }, [messages.length, pendingAssistantMessage])
+  }, [messages.length, pendingAssistantMessage, renderedMessages.length])
 
   return (
     <ScrollArea className="h-full" ref={scrollAreaRef}>
@@ -163,7 +392,17 @@ export const ChatMessageList = memo(function ChatMessageList({
           const isUser = message.role === MessageRole.USER
           const isLast = index === renderedMessages.length - 1 && !showTypingIndicator
 
-          return <MessageItem key={message.id} message={message} isUser={isUser} isLast={isLast} />
+          return (
+            <MessageItem
+              key={message.id}
+              message={message}
+              isUser={isUser}
+              isLast={isLast}
+              onFollowupClick={onFollowupClick}
+              onActionClick={onActionClick}
+              onFeedbackChange={onFeedbackChange}
+            />
+          )
         })}
 
         {showTypingIndicator && <TypingIndicatorMessage />}
@@ -179,6 +418,9 @@ export const ChatMessageList = memo(function ChatMessageList({
             </p>
           </div>
         )}
+
+        {/* Invisible element at the bottom for scrolling reference */}
+        <div ref={bottomRef} className="h-1" />
       </div>
     </ScrollArea>
   )

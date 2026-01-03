@@ -1,27 +1,10 @@
 // lib/socket.ts
 import { io, Socket } from 'socket.io-client';
 import type { ServerToClientEvents, ClientToServerEvents } from '@/types/socket-events';
+import { fetchAuthToken } from '@/utils/backend-request';
 
 let socket: Socket<ServerToClientEvents, ClientToServerEvents> | null = null;
 let heartbeatInterval: NodeJS.Timeout | null = null;
-let tokenPromise: Promise<string> | null = null;
-
-const fetchAuthToken = async (): Promise<string> => {
-  // Cache token fetch to prevent multiple simultaneous requests
-  if (!tokenPromise) {
-    tokenPromise = (async () => {
-      try {
-        const res = await fetch('/api/auth/token', { credentials: 'include' });
-        if (!res.ok) throw new Error('Unable to fetch auth token');
-        const { token } = await res.json();
-        return token;
-      } finally {
-        tokenPromise = null;
-      }
-    })();
-  }
-  return tokenPromise;
-};
 
 const stopHeartbeat = () => {
   if (heartbeatInterval) {

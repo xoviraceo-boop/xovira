@@ -48,6 +48,16 @@ export const projectMenuItems = [
   { label: "Members", value: "members", icon: Users },
 ] as const;
 
+export const agentMenuItems = [
+  { label: "Overview", value: "overview", icon: LayoutDashboard },
+  { label: "Builder", value: "builder", icon: Users },
+  { label: "Automation", value: "automation", icon: Users },
+  { label: "Chat", value: "chat", icon: Bot },
+  { label: "Activities", value: "activities", icon: Activity },
+  { label: "Tasks", value: "tasks", icon: CheckSquare },
+  { label: "Logs", value: "logs", icon: FileText },
+] as const;
+
 export const teamMenuItems = [
   { label: "Overview", value: "overview", icon: LayoutDashboard },
   { label: "Discussions", value: "discussions", icon: MessageSquare },

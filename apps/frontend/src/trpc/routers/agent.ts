@@ -5,9 +5,24 @@ import { backendApi } from "@/lib/agent";
 import { randomUUID } from "crypto";
 
 // Default triggers for new agents
-const DEFAULT_TRIGGERS = [
+interface TriggerConfig {
+  scope: string;
+  [key: string]: unknown;
+}
+
+interface DefaultTrigger {
+  triggerType: string;
+  triggerConfig: TriggerConfig;
+  name: string;
+  description: string;
+  isActive: boolean;
+  priority: number;
+  tags: string[];
+}
+
+const DEFAULT_TRIGGERS: DefaultTrigger[] = [
   {
-    triggerType: 'ASSIGN_TASK' as any,
+    triggerType: 'ASSIGN_TASK',
     triggerConfig: { scope: 'all' },
     name: 'Task Assignment',
     description: 'Triggers when a task is assigned to a user or agent',
@@ -16,7 +31,7 @@ const DEFAULT_TRIGGERS = [
     tags: ['task', 'assignment'],
   },
   {
-    triggerType: 'DIRECT_MESSAGE' as any,
+    triggerType: 'DIRECT_MESSAGE',
     triggerConfig: { scope: 'all' },
     name: 'Direct Message',
     description: 'Triggers when a direct message is sent to the agent',
@@ -25,7 +40,7 @@ const DEFAULT_TRIGGERS = [
     tags: ['message', 'communication'],
   },
   {
-    triggerType: 'MENTION' as any,
+    triggerType: 'MENTION',
     triggerConfig: { scope: 'all' },
     name: 'Mention',
     description: 'Triggers when the agent is mentioned in a comment or message',
@@ -958,10 +973,41 @@ export const agentRouter = router({
         }
         return response.json();
       }),
-  },
+  }),
 
   // Operator endpoints
   operator: router({
+    initialize: protectedProcedure
+      .input(z.object({
+        conversationId: z.string().optional(),
+        agentId: z.string().optional(),
+        skipWelcome: z.boolean().optional(), 
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const session = ctx.session;
+        const response = await backendApi.agents.operator.initialize(input, session);
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+          throw new Error(error.error || 'Failed to initialize builder');
+        }
+        return response.json();
+      }),
+    message: protectedProcedure
+      .input(z.object({
+        conversationId: z.string(),
+        agentId: z.string(),
+        message: z.string().min(1),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const session = ctx.session;
+        const response = await backendApi.agents.operator.message(input, session);
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+          throw new Error(error.error || 'Failed to process message');
+        }
+        return response.json();
+      }),
+
     chat: protectedProcedure
       .input(z.object({
         agentId: z.string(),
@@ -975,7 +1021,7 @@ export const agentRouter = router({
         const response = await backendApi.agents.operator.chat(input, session);
         if (!response.ok) {
           const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-          throw new Error(error.error || 'Failed to run operator chat');
+          throw new Error(error.error || 'Failed to process operator chat message');
         }
         return response.json();
       }),
@@ -983,7 +1029,7 @@ export const agentRouter = router({
     apply: protectedProcedure
       .input(z.object({
         agentId: z.string(),
-        patch: z.record(z.any()),
+        patch: z.any(),
       }))
       .mutation(async ({ ctx, input }) => {
         const session = ctx.session;
@@ -1011,134 +1057,35 @@ export const agentRouter = router({
         return response.json();
       }),
   }),
-
-  // Builder View endpoints
-  builderView: {
-    getBuilderData: protectedProcedure
+  // Operator endpoints
+  executor: router({
+    initialize: protectedProcedure
       .input(z.object({
-        agentId: z.string(),
-      }))
-      .query(async ({ ctx, input }) => {
-        const session = ctx.session;
-        const response = await backendApi.agents.builderView.getBuilderData(input.agentId, session);
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-          throw new Error(error.error || 'Failed to get builder data');
-        }
-        return response.json();
-      }),
-
-    update: protectedProcedure
-      .input(z.object({
-        agentId: z.string(),
-        updates: z.any(), // Partial<AgentUpdateRequest['updates']>
+        conversationId: z.string().optional(),
+        agentId: z.string().optional(),
+        skipWelcome: z.boolean().optional(), 
       }))
       .mutation(async ({ ctx, input }) => {
         const session = ctx.session;
-        const response = await backendApi.agents.builderView.update(input.agentId, { updates: input.updates }, session);
+        const response = await backendApi.agents.operator.initialize(input, session);
         if (!response.ok) {
           const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-          throw new Error(error.error || 'Failed to update agent');
+          throw new Error(error.error || 'Failed to initialize builder');
         }
         return response.json();
       }),
-
-    assistant: protectedProcedure
+    message: protectedProcedure
       .input(z.object({
+        conversationId: z.string(),
         agentId: z.string(),
         message: z.string().min(1),
-        conversationHistory: z.array(z.object({
-          role: z.string(),
-          content: z.string(),
-        })).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const session = ctx.session;
-        const response = await backendApi.agents.builderView.assistant(
-          input.agentId,
-          {
-            message: input.message,
-            conversationHistory: input.conversationHistory,
-          },
-          session
-        );
+        const response = await backendApi.agents.operator.message(input, session);
         if (!response.ok) {
           const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-          throw new Error(error.error || 'Failed to process assistant message');
-        }
-        return response.json();
-      }),
-
-    validate: protectedProcedure
-      .input(z.object({
-        agentId: z.string(),
-      }))
-      .query(async ({ ctx, input }) => {
-        const session = ctx.session;
-        const response = await backendApi.agents.builderView.validate(input.agentId, session);
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-          throw new Error(error.error || 'Failed to validate agent');
-        }
-        return response.json();
-      }),
-
-    getVersions: protectedProcedure
-      .input(z.object({
-        agentId: z.string(),
-      }))
-      .query(async ({ ctx, input }) => {
-        const session = ctx.session;
-        const response = await backendApi.agents.builderView.getVersions(input.agentId, session);
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-          throw new Error(error.error || 'Failed to get versions');
-        }
-        return response.json();
-      }),
-
-    restoreVersion: protectedProcedure
-      .input(z.object({
-        agentId: z.string(),
-        versionId: z.string(),
-      }))
-      .mutation(async ({ ctx, input }) => {
-        const session = ctx.session;
-        const response = await backendApi.agents.builderView.restoreVersion(input.agentId, { versionId: input.versionId }, session);
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-          throw new Error(error.error || 'Failed to restore version');
-        }
-        return response.json();
-      }),
-  },
-
-  // Chat View endpoints
-  chatView: {
-    getWelcomeMessage: protectedProcedure
-      .input(z.object({
-        agentId: z.string(),
-      }))
-      .query(async ({ ctx, input }) => {
-        const session = ctx.session;
-        const response = await backendApi.agents.chatView.getWelcomeMessage(input.agentId, session);
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-          throw new Error(error.error || 'Failed to get welcome message');
-        }
-        return response.json();
-      }),
-
-    getChatContext: protectedProcedure
-      .input(z.object({
-        agentId: z.string(),
-      }))
-      .query(async ({ ctx, input }) => {
-        const session = ctx.session;
-        const response = await backendApi.agents.chatView.getChatContext(input.agentId, session);
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-          throw new Error(error.error || 'Failed to get chat context');
+          throw new Error(error.error || 'Failed to process message');
         }
         return response.json();
       }),
@@ -1147,44 +1094,50 @@ export const agentRouter = router({
       .input(z.object({
         agentId: z.string(),
         message: z.string().min(1),
+        workspaceId: z.string().optional(),
         conversationId: z.string().optional(),
         context: z.any().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const session = ctx.session;
-        const response = await backendApi.agents.chatView.chat(
-          input.agentId,
-          {
-            message: input.message,
-            conversationId: input.conversationId,
-            context: input.context,
-          },
-          session
-        );
+        const response = await backendApi.agents.operator.chat(input, session);
         if (!response.ok) {
           const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-          throw new Error(error.error || 'Failed to process chat message');
+          throw new Error(error.error || 'Failed to process operator chat message');
         }
         return response.json();
       }),
-  },
 
-  // System tools endpoint
-  getSystemTools: protectedProcedure
-    .query(async ({ ctx }) => {
-      // Call backend API to get system tools
-      try {
-        const response = await backendApi.agents.getSystemTools(ctx.session);
+    apply: protectedProcedure
+      .input(z.object({
+        agentId: z.string(),
+        patch: z.any(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const session = ctx.session;
+        const response = await backendApi.agents.operator.apply(input, session);
         if (!response.ok) {
           const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-          throw new Error(error.error || 'Failed to get system tools');
+          throw new Error(error.error || 'Failed to apply operator patch');
         }
         return response.json();
-      } catch (error) {
-        // Fallback: return empty array if backend is unavailable
-        console.error('Failed to fetch system tools:', error);
-        return [];
-      }
-    }),
+      }),
+
+    execute: protectedProcedure
+      .input(z.object({
+        agentId: z.string(),
+        inputData: z.any().optional(),
+        executionContext: z.any().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const session = ctx.session;
+        const response = await backendApi.agents.operator.execute(input, session);
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+          throw new Error(error.error || 'Failed to trigger operator execution');
+        }
+        return response.json();
+      }),
+  }),
 });
 

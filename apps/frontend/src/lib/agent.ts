@@ -119,6 +119,26 @@ export const backendApi = {
 
     // Operator endpoints
     operator: {
+      initialize: (data: {
+        conversationId?: string;
+        agentId?: string;
+        skipWelcome?: boolean;
+      }, session?: any) =>
+        sendBackendRequest('/v1/agents/operator/initialize', {
+          method: 'POST',
+          body: JSON.stringify(data),
+        }, session),
+
+      message: (data: {
+        conversationId: string;
+        agentId: string;
+        message: string;
+      }, session?: any) =>
+        sendBackendRequest('/v1/agents/operator/message', {
+          method: 'POST',
+          body: JSON.stringify(data),
+        }, session),
+
       chat: (data: {
         agentId: string;
         message: string;

@@ -5,6 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   Bot, 
   Settings, 
@@ -19,7 +25,10 @@ import {
   Eye,
   FileText,
   Wrench,
-  Brain
+  Brain,
+  MoreVertical,
+  Send,
+  Play
 } from "lucide-react";
 import { InstructionsTab } from "./tabs/InstructionsTab";
 import { TriggersTab } from "./tabs/TriggersTab";
@@ -27,6 +36,7 @@ import { ToolsTab } from "./tabs/ToolsTab";
 import { KnowledgeTab } from "./tabs/KnowledgeTab";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 interface AgentProfileProps {
   agent: {
@@ -86,6 +96,7 @@ export function AgentProfile({
   onConfigure 
 }: AgentProfileProps) {
   const [activeTab, setActiveTab] = useState("instructions");
+  const router = useRouter();
 
   // Refetch agent data on update
   const { refetch: refetchAgent } = trpc.agent.get.useQuery(
@@ -100,14 +111,8 @@ export function AgentProfile({
   const isExecuting = agent.status === "EXECUTING";
   
   // Check if agent is being reconfigured
-  // Only true when:
-  // 1. Explicitly passed as prop (from parent component that knows the state)
-  // 2. OR agent is ACTIVE and has metadata indicating an active reconfiguration
   const metadata = agent.metadata || {};
   
-  // Check for active reconfiguration in metadata
-  // Only consider it reconfiguring if agent is ACTIVE and has a conversation stage in review/testing
-  // This ensures we don't show reconfiguring for stale data or draft agents
   const hasActiveReconfiguration = Boolean(
     isLive && 
     metadata?.stage && 
@@ -115,12 +120,25 @@ export function AgentProfile({
     ['review', 'testing'].includes(metadata.stage)
   );
   
-  // Only show reconfiguring if explicitly set OR if there's an active reconfiguration
-  // Defaults to false on page reload since isReconfiguring prop defaults to false
   const isActuallyReconfiguring = Boolean(isReconfiguring || hasActiveReconfiguration);
+
+  // Check if agent has schedules
+  const hasSchedules = agent.schedules && agent.schedules.length > 0;
 
   const handleUpdate = async () => {
     await refetchAgent();
+  };
+
+  const handleMessage = () => {
+    router.push(`/dashboard/agents/${agent.id}?tab=chat`);
+  };
+
+  const handleSendDM = () => {
+    router.push(`/dashboard/agents/${agent.id}?tab=chat`);
+  };
+
+  const handleScheduleRun = () => {
+    toast.info('Schedule run feature coming soon!');
   };
 
   const getStatusBadge = () => {
@@ -251,14 +269,75 @@ export function AgentProfile({
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {/* Message Button */}
               <Button
-                variant="ghost"
-                onClick={() => toast.info('View feature coming soon!')}
+                variant="default"
+                onClick={handleMessage}
                 disabled={isActuallyReconfiguring}
-                className="text-sm"
+                className="gap-2"
               >
-                <Eye className="w-4 h-4" />
+                <MessageSquare className="w-4 h-4" />
+                Message
               </Button>
+
+              {/* Run Agent Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    disabled={isActuallyReconfiguring}
+                    className="gap-2"
+                  >
+                    <Play className="w-4 h-4" />
+                    Run agent
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={handleSendDM} className="gap-2">
+                    <Send className="w-4 h-4" />
+                    <div className="flex flex-col">
+                      <span className="font-medium">Send DM</span>
+                      <span className="text-xs text-muted-foreground">
+                        Start a direct chat with the agent
+                      </span>
+                    </div>
+                  </DropdownMenuItem>
+                  {hasSchedules && (
+                    <DropdownMenuItem onClick={handleScheduleRun} className="gap-2">
+                      <Calendar className="w-4 h-4" />
+                      <div className="flex flex-col">
+                        <span className="font-medium">Scheduled run</span>
+                        <span className="text-xs text-muted-foreground">
+                          Preview how the agent will run at its scheduled time
+                        </span>
+                      </div>
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* More Options Button */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    disabled={isActuallyReconfiguring}
+                  >
+                    <MoreVertical className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => toast.info('View feature coming soon!')}>
+                    <Eye className="w-4 h-4 mr-2" />
+                    View
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onEdit}>
+                    <Settings className="w-4 h-4 mr-2" />
+                    Settings
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </CardHeader>

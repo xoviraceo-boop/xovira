@@ -27,6 +27,7 @@ import { resourceRouter } from "@/trpc/routers/resource";
 import { marketplaceRouter } from "@/trpc/routers/marketplace";
 import { payoutRouter } from "@/trpc/routers/payout";
 import { listRouter } from "@/trpc/routers/list";
+import { agentRouter } from "@/trpc/routers/agent";
 
 export const appRouter = router({
   proposal: proposalRouter,
@@ -57,6 +58,7 @@ export const appRouter = router({
   payout: payoutRouter,
   resource: resourceRouter,
   list: listRouter,
+  agent: agentRouter,
 });
 
 export type AppRouter = typeof appRouter;

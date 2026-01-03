@@ -169,12 +169,42 @@ export const chatRouter = router({
           role: true,
           content: true,
           createdAt: true,
+          metadata: true,
+          feedback: {
+            where: {
+              userId: ctx.session.user.id,
+            },
+            select: {
+              isHelpful: true,
+            },
+          },
         },
+      })
+
+      // Transform messages to include feedback data and follow-ups from metadata
+      const messagesWithFeedback = messages.map((message) => {
+        // Extract follow-ups from metadata if present
+        let followups: Array<{ id: string; label: string }> | undefined;
+        const metadata = message.metadata && typeof message.metadata === 'object' ? (message.metadata as any) : {};
+        
+        if (metadata.followups && Array.isArray(metadata.followups)) {
+          followups = metadata.followups;
+        }
+
+        return {
+          id: message.id,
+          role: message.role,
+          content: message.content,
+          createdAt: message.createdAt,
+          feedback: message.feedback[0] ? { isHelpful: message.feedback[0].isHelpful } : null,
+          followups,
+          metadata, // Include full metadata so frontend can check followupsConsumed
+        };
       })
 
       return {
         conversation,
-        messages,
+        messages: messagesWithFeedback,
       }
     }),
 
@@ -369,5 +399,150 @@ export const chatRouter = router({
       })
 
       return conversation
+    }),
+
+  // Message feedback endpoints
+  toggleMessageFeedback: protectedProcedure
+    .input(
+      z.object({
+        messageId: z.string(),
+        isHelpful: z.boolean(), // true = like, false = dislike
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = prisma as any
+      const userId = ctx.session.user.id
+
+      // Verify message exists and belongs to user's conversation
+      const message = await db.aiMessage.findFirst({
+        where: {
+          id: input.messageId,
+          conversation: {
+            userId,
+          },
+        },
+        select: {
+          id: true,
+        },
+      })
+
+      if (!message) {
+        throw new Error('Message not found')
+      }
+
+      // Check if feedback already exists
+      const existingFeedback = await db.aiMessageFeedback.findUnique({
+        where: {
+          messageId_userId: {
+            messageId: input.messageId,
+            userId,
+          },
+        },
+      })
+
+      if (existingFeedback) {
+        // If the same feedback is clicked, remove it
+        if (existingFeedback.isHelpful === input.isHelpful) {
+          await db.aiMessageFeedback.delete({
+            where: {
+              id: existingFeedback.id,
+            },
+          })
+          return { action: 'removed', isHelpful: null }
+        } else {
+          // If different feedback, update it
+          const updated = await db.aiMessageFeedback.update({
+            where: {
+              id: existingFeedback.id,
+            },
+            data: {
+              isHelpful: input.isHelpful,
+            },
+          })
+          return { action: 'updated', isHelpful: updated.isHelpful }
+        }
+      } else {
+        // Create new feedback
+        const created = await db.aiMessageFeedback.create({
+          data: {
+            messageId: input.messageId,
+            userId,
+            isHelpful: input.isHelpful,
+          },
+        })
+        return { action: 'added', isHelpful: created.isHelpful }
+      }
+    }),
+
+  getMessageFeedback: protectedProcedure
+    .input(
+      z.object({
+        messageId: z.string(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const db = prisma as any
+      const userId = ctx.session.user.id
+
+      const feedback = await db.aiMessageFeedback.findUnique({
+        where: {
+          messageId_userId: {
+            messageId: input.messageId,
+            userId,
+          },
+        },
+        select: {
+          isHelpful: true,
+        },
+      })
+
+      return feedback ? { isHelpful: feedback.isHelpful } : { isHelpful: null }
+    }),
+
+  // Mark follow-ups as consumed for a message
+  markFollowupsConsumed: protectedProcedure
+    .input(
+      z.object({
+        messageId: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = prisma as any
+      const userId = ctx.session.user.id
+
+      // Verify message exists and belongs to user's conversation
+      const message = await db.aiMessage.findFirst({
+        where: {
+          id: input.messageId,
+          conversation: {
+            userId,
+          },
+        },
+        select: {
+          id: true,
+          metadata: true,
+        },
+      })
+
+      if (!message) {
+        throw new Error('Message not found')
+      }
+
+      // Update metadata to mark follow-ups as consumed
+      const currentMetadata = (message.metadata as any) || {}
+      const updatedMetadata = {
+        ...currentMetadata,
+        followupsConsumed: true,
+        followupsConsumedAt: new Date().toISOString(),
+      }
+
+      await db.aiMessage.update({
+        where: { id: input.messageId },
+        data: {
+          metadata: updatedMetadata,
+        },
+      })
+
+      return { success: true }
     }),
 })

@@ -34,12 +34,27 @@ interface CreateTaskModalProps {
   teams?: Option[];
   lists?: Option[];
   spaces?: Option[];
+  defaultListId?: string;
+  defaultStatus?: string;
+  trigger?: React.ReactNode;
 }
 
 type RouterInputs = inferRouterInputs<AppRouter>;
 type TaskCreateInput = RouterInputs['task']['create'];
 
-export function CreateTaskModal({ context, contextId, workspaceId, users, projects = [], teams = [], lists = [], spaces = [] }: CreateTaskModalProps) {
+export function CreateTaskModal({ 
+  context, 
+  contextId, 
+  workspaceId, 
+  users, 
+  projects = [], 
+  teams = [], 
+  lists = [], 
+  spaces = [],
+  defaultListId,
+  defaultStatus,
+  trigger
+}: CreateTaskModalProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const createTask = trpc.task.create.useMutation();
@@ -55,9 +70,28 @@ export function CreateTaskModal({ context, contextId, workspaceId, users, projec
       spaceId: context === 'SPACE' ? contextId : undefined,
       projectId: context === 'PROJECT' ? contextId : undefined,
       teamId: context === 'TEAM' ? contextId : undefined,
-      listId: undefined,
+      listId: defaultListId,
+      status: defaultStatus,
     },
   });
+
+  // Reset form when modal opens with new defaults
+  React.useEffect(() => {
+    if (isOpen) {
+      methods.reset({
+        title: '',
+        description: '',
+        visibility: 'PRIVATE',
+        isPublic: false,
+        workspaceId: workspaceId,
+        spaceId: context === 'SPACE' ? contextId : undefined,
+        projectId: context === 'PROJECT' ? contextId : undefined,
+        teamId: context === 'TEAM' ? contextId : undefined,
+        listId: defaultListId,
+        status: defaultStatus,
+      });
+    }
+  }, [isOpen, defaultListId, defaultStatus, context, contextId, workspaceId, methods]);
 
   const onSubmit = async (data: TaskFormValues) => {
     setIsSubmitting(true);
@@ -65,6 +99,7 @@ export function CreateTaskModal({ context, contextId, workspaceId, users, projec
       const payload: TaskCreateInput = {
         title: data.title,
         description: data.description || undefined,
+        status: data.status || 'OPEN',
         visibility: data.visibility,
         isPublic: data.isPublic ?? false,
         workspaceId: data.workspaceId || workspaceId,
@@ -73,6 +108,7 @@ export function CreateTaskModal({ context, contextId, workspaceId, users, projec
         teamId: context === 'TEAM' ? contextId : data.teamId || undefined,
         assigneeId: data.assigneeId || undefined,
         listId: data.listId || undefined,
+        parentId: data.parentId || undefined,
       };
       await createTask.mutateAsync(payload);
       await utils.task.list.invalidate();
@@ -83,13 +119,17 @@ export function CreateTaskModal({ context, contextId, workspaceId, users, projec
     }
   };
 
+  const defaultTrigger = (
+    <Button className="font-semibold w-auto px-4">
+      <PlusIcon className="mr-2 h-4 w-4" />
+      Create Task
+    </Button>
+  );
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button className="font-semibold">
-          <PlusIcon className="mr-2 h-4 w-4" />
-          Create Task
-        </Button>
+        {trigger || defaultTrigger}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden">
         <DialogHeader className="pt-6 px-6">

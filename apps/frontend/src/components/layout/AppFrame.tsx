@@ -29,7 +29,7 @@ export default function AppFrame({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen grid grid-rows-[auto_1fr_auto]">
       <Header />
-      <main className="max-h-screen w-full overflow-y-auto overflow-x-none">{children}</main>
+      <main className="max-h-screen w-full overflow-x-none">{children}</main>
 
       {/* Floating message launcher visible on all pages */}
       <button

@@ -1,6 +1,6 @@
 import env from '@/config/env';
 import { prisma } from '@/lib/prisma';
-import { initializeOpenAI } from '@/lib/openai';
+import { openai } from '@/lib/openai';
 import { supabaseAdmin } from '@/lib/supabase';
 import {
   buildProjectText,
@@ -21,11 +21,10 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     throw new Error('Text cannot be empty');
   }
 
-  const client = initializeOpenAI();
   const model = env.EMBEDDING_MODEL || 'text-embedding-3-large';
 
   try {
-    const response = await client.embeddings.create({
+    const response = await openai.embeddings.create({
       model,
       input: text,
     });

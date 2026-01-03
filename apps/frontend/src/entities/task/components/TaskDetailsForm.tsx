@@ -12,11 +12,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CalendarIcon, UserIcon, FolderIcon, ListIcon } from 'lucide-react';
+import { CalendarIcon, UserIcon, FolderIcon, ListIcon, CheckCircle2, GitBranch } from 'lucide-react';
+import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils'; // utility function for merging classnames
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar'; // Ensure you have this component
+import { AssigneeSelector } from './AssigneeSelector';
 
 // Utility type for common props
 interface SelectOption { id: string; name: string }
@@ -30,10 +32,34 @@ interface TaskDetailsFormProps {
   teams?: SelectOption[];
   lists?: SelectOption[];
   spaces?: SelectOption[];
+  currentTaskId?: string; // For editing - to exclude from parent options
 }
 
-export function TaskDetailsForm({ context, contextId, users, projects = [], teams = [], lists = [], spaces = [] }: TaskDetailsFormProps) {
+export function TaskDetailsForm({ context, contextId, users, projects = [], teams = [], lists = [], spaces = [], currentTaskId, workspaceId }: TaskDetailsFormProps) {
   const { register, setValue, watch, formState: { errors } } = useFormContext();
+  const workspaceId = watch('workspaceId');
+  
+  // Fetch available parent tasks (tasks without a parent, excluding current task if editing)
+  const { data: parentTasksData } = trpc.task.list.useQuery(
+    {
+      workspaceId: workspaceId || undefined,
+      scope: 'all',
+      pageSize: 100,
+      includeRelations: false,
+    },
+    {
+      enabled: !!workspaceId,
+    }
+  );
+
+  // Filter out tasks that already have a parent and the current task
+  const availableParentTasks = React.useMemo(() => {
+    if (!parentTasksData?.items) return [];
+    return parentTasksData.items
+      .filter((task) => !task.parentId && task.id !== currentTaskId)
+      .map((task) => ({ id: task.id, name: task.title }));
+  }, [parentTasksData, currentTaskId]);
+
   React.useEffect(() => {
     if (context === 'PROJECT' && contextId) setValue('projectId', contextId);
     if (context === 'TEAM' && contextId) setValue('teamId', contextId);
@@ -71,6 +97,27 @@ export function TaskDetailsForm({ context, contextId, users, projects = [], team
         />
       </div>
 
+      <div className="space-y-2">
+        <Label htmlFor="status" className="flex items-center text-base font-semibold">
+          <CheckCircle2 className="h-4 w-4 mr-2 text-muted-foreground" />
+          Status
+        </Label>
+        <Select
+          onValueChange={(val) => setValue('status', val as any)}
+          defaultValue={watch('status') || 'OPEN'}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="OPEN">Open</SelectItem>
+            <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+            <SelectItem value="COMPLETED">Completed</SelectItem>
+            <SelectItem value="BLOCKED">Blocked</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {context !== 'PROJECT' && (
         <div className="space-y-2">
           <Label htmlFor="projectId" className="flex items-center text-base font-semibold">
@@ -90,27 +137,11 @@ export function TaskDetailsForm({ context, contextId, users, projects = [], team
         </div>
       )}
 
-      <div className="space-y-2">
-        <Label htmlFor="assigneeId" className="flex items-center text-base font-semibold">
-          <UserIcon className="h-4 w-4 mr-2 text-muted-foreground" />
-          Assignee
-        </Label>
-        <Select
-          onValueChange={(val) => setValue('assigneeId', val)}
-          defaultValue={watch('assigneeId')}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Unassigned" />
-          </SelectTrigger>
-          <SelectContent>
-            {users.map((u) => (
-              <SelectItem key={u.id} value={u.id}>
-                {u.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <AssigneeSelector
+        users={users}
+        workspaceId={workspaceId}
+        className="md:col-span-2"
+      />
 
       <div className="space-y-2">
         <Label htmlFor="listId" className="flex items-center text-base font-semibold">
@@ -164,6 +195,34 @@ export function TaskDetailsForm({ context, contextId, users, projects = [], team
               ))}
             </SelectContent>
           </Select>
+        </div>
+      )}
+
+      {workspaceId && (
+        <div className="space-y-2">
+          <Label htmlFor="parentId" className="flex items-center text-base font-semibold">
+            <GitBranch className="h-4 w-4 mr-2 text-muted-foreground" />
+            Parent Task
+          </Label>
+          <Select 
+            onValueChange={(val) => setValue('parentId', val === 'none' ? null : val)} 
+            defaultValue={watch('parentId') || 'none'}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="No parent task" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No parent task</SelectItem>
+              {availableParentTasks.map((task) => (
+                <SelectItem key={task.id} value={task.id}>
+                  {task.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Create this as a subtask of another task
+          </p>
         </div>
       )}
     </div>

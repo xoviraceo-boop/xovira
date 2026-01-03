@@ -178,38 +178,38 @@ exports.Prisma.WorkspaceScalarFieldEnum = {
   id: 'id',
   ownerId: 'ownerId',
   name: 'name',
-  slug: 'slug',
   description: 'description',
-  avatar: 'avatar',
-  color: 'color',
-  settings: 'settings',
   isActive: 'isActive',
-  isArchived: 'isArchived',
-  memberLimit: 'memberLimit',
-  storageLimit: 'storageLimit',
-  storageUsed: 'storageUsed',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   archivedAt: 'archivedAt',
-  embeddingUpdatedAt: 'embeddingUpdatedAt'
+  avatar: 'avatar',
+  color: 'color',
+  embeddingUpdatedAt: 'embeddingUpdatedAt',
+  isArchived: 'isArchived',
+  memberLimit: 'memberLimit',
+  settings: 'settings',
+  slug: 'slug',
+  storageLimit: 'storageLimit',
+  storageUsed: 'storageUsed'
 };
 
 exports.Prisma.WorkspaceMemberScalarFieldEnum = {
   id: 'id',
   workspaceId: 'workspaceId',
   userId: 'userId',
-  role: 'role',
-  permissions: 'permissions',
-  canInvite: 'canInvite',
   canCreateSpaces: 'canCreateSpaces',
+  canInvite: 'canInvite',
   canManageBilling: 'canManageBilling',
-  status: 'status',
-  invitedBy: 'invitedBy',
-  notificationSettings: 'notificationSettings',
   customization: 'customization',
+  invitedBy: 'invitedBy',
   joinedAt: 'joinedAt',
   lastActiveAt: 'lastActiveAt',
-  leftAt: 'leftAt'
+  leftAt: 'leftAt',
+  notificationSettings: 'notificationSettings',
+  permissions: 'permissions',
+  status: 'status',
+  role: 'role'
 };
 
 exports.Prisma.WorkspaceInvitationScalarFieldEnum = {
@@ -267,21 +267,22 @@ exports.Prisma.AutomationLogScalarFieldEnum = {
 exports.Prisma.TaskScalarFieldEnum = {
   id: 'id',
   workspaceId: 'workspaceId',
-  spaceId: 'spaceId',
-  listId: 'listId',
-  statusId: 'statusId',
   channelId: 'channelId',
   projectId: 'projectId',
   teamId: 'teamId',
-  proposalId: 'proposalId',
   title: 'title',
   description: 'description',
   assigneeId: 'assigneeId',
   createdBy: 'createdBy',
   visibility: 'visibility',
   isPublic: 'isPublic',
+  proposalId: 'proposalId',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  listId: 'listId',
+  statusId: 'statusId',
+  spaceId: 'spaceId',
+  parent_id: 'parent_id'
 };
 
 exports.Prisma.StatusScalarFieldEnum = {
@@ -300,6 +301,15 @@ exports.Prisma.TaskDependencyScalarFieldEnum = {
   dependsOnId: 'dependsOnId',
   type: 'type',
   createdAt: 'createdAt'
+};
+
+exports.Prisma.TaskAssigneeScalarFieldEnum = {
+  id: 'id',
+  taskId: 'taskId',
+  userId: 'userId',
+  agentId: 'agentId',
+  assigned_at: 'assigned_at',
+  assigned_by: 'assigned_by'
 };
 
 exports.Prisma.TaskWatcherScalarFieldEnum = {
@@ -418,8 +428,6 @@ exports.Prisma.ListScalarFieldEnum = {
   id: 'id',
   workspaceId: 'workspaceId',
   spaceId: 'spaceId',
-  projectId: 'projectId',
-  teamId: 'teamId',
   folderId: 'folderId',
   name: 'name',
   description: 'description',
@@ -431,7 +439,9 @@ exports.Prisma.ListScalarFieldEnum = {
   settings: 'settings',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
-  archivedAt: 'archivedAt'
+  archivedAt: 'archivedAt',
+  projectId: 'projectId',
+  teamId: 'teamId'
 };
 
 exports.Prisma.ViewScalarFieldEnum = {
@@ -559,18 +569,18 @@ exports.Prisma.TemplateScalarFieldEnum = {
 exports.Prisma.ChannelScalarFieldEnum = {
   id: 'id',
   workspaceId: 'workspaceId',
-  createdBy: 'createdBy',
   name: 'name',
   description: 'description',
-  topic: 'topic',
-  type: 'type',
-  isArchived: 'isArchived',
-  isDefault: 'isDefault',
-  allowThreads: 'allowThreads',
-  allowReactions: 'allowReactions',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
-  archivedAt: 'archivedAt'
+  allowReactions: 'allowReactions',
+  allowThreads: 'allowThreads',
+  archivedAt: 'archivedAt',
+  createdBy: 'createdBy',
+  isArchived: 'isArchived',
+  isDefault: 'isDefault',
+  topic: 'topic',
+  type: 'type'
 };
 
 exports.Prisma.ChannelMemberScalarFieldEnum = {
@@ -643,15 +653,41 @@ exports.Prisma.AutomationScalarFieldEnum = {
   createdBy: 'createdBy',
   name: 'name',
   description: 'description',
-  triggerType: 'triggerType',
-  triggerConfig: 'triggerConfig',
   conditions: 'conditions',
   actions: 'actions',
   isActive: 'isActive',
   runCount: 'runCount',
   lastRanAt: 'lastRanAt',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  agentId: 'agentId',
+  cronExpression: 'cronExpression',
+  isScheduled: 'isScheduled',
+  projectId: 'projectId',
+  spaceId: 'spaceId',
+  teamId: 'teamId',
+  timezone: 'timezone'
+};
+
+exports.Prisma.AutomationTriggerScalarFieldEnum = {
+  id: 'id',
+  automationId: 'automationId',
+  triggerType: 'triggerType',
+  triggerConfig: 'triggerConfig',
+  name: 'name',
+  description: 'description',
+  isActive: 'isActive',
+  priority: 'priority',
+  conditions: 'conditions',
+  filters: 'filters',
+  metadata: 'metadata',
+  tags: 'tags',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  activatedAt: 'activatedAt',
+  deactivatedAt: 'deactivatedAt',
+  lastTriggeredAt: 'lastTriggeredAt',
+  triggerCount: 'triggerCount'
 };
 
 exports.Prisma.UserLikeScalarFieldEnum = {
@@ -734,7 +770,6 @@ exports.Prisma.MemberProfileScalarFieldEnum = {
 exports.Prisma.ProjectScalarFieldEnum = {
   id: 'id',
   workspaceId: 'workspaceId',
-  spaceId: 'spaceId',
   ownerId: 'ownerId',
   previousOwnerId: 'previousOwnerId',
   name: 'name',
@@ -753,7 +788,6 @@ exports.Prisma.ProjectScalarFieldEnum = {
   valuationCap: 'valuationCap',
   teamSize: 'teamSize',
   isHiring: 'isHiring',
-  hiringRoles: 'hiringRoles',
   status: 'status',
   isActive: 'isActive',
   isPublic: 'isPublic',
@@ -766,7 +800,9 @@ exports.Prisma.ProjectScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   launchedAt: 'launchedAt',
-  transferredAt: 'transferredAt'
+  transferredAt: 'transferredAt',
+  hiringRoles: 'hiringRoles',
+  spaceId: 'spaceId'
 };
 
 exports.Prisma.ProjectMemberScalarFieldEnum = {
@@ -916,7 +952,6 @@ exports.Prisma.ActivityLogScalarFieldEnum = {
 exports.Prisma.TeamScalarFieldEnum = {
   id: 'id',
   workspaceId: 'workspaceId',
-  spaceId: 'spaceId',
   ownerId: 'ownerId',
   name: 'name',
   description: 'description',
@@ -927,14 +962,15 @@ exports.Prisma.TeamScalarFieldEnum = {
   status: 'status',
   isActive: 'isActive',
   isHiring: 'isHiring',
-  hiringRoles: 'hiringRoles',
   size: 'size',
   maxSize: 'maxSize',
   location: 'location',
   isRemote: 'isRemote',
   embeddingUpdatedAt: 'embeddingUpdatedAt',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  hiringRoles: 'hiringRoles',
+  spaceId: 'spaceId'
 };
 
 exports.Prisma.TeamLikeScalarFieldEnum = {
@@ -1240,7 +1276,6 @@ exports.Prisma.ProposalScalarFieldEnum = {
   createdBy: 'createdBy',
   category: 'category',
   projectId: 'projectId',
-  spaceId: 'spaceId',
   teamId: 'teamId',
   title: 'title',
   shortSummary: 'shortSummary',
@@ -1263,27 +1298,28 @@ exports.Prisma.ProposalScalarFieldEnum = {
   expiresAt: 'expiresAt',
   metadata: 'metadata',
   embeddingUpdatedAt: 'embeddingUpdatedAt',
-  intent: 'intent'
+  intent: 'intent',
+  spaceId: 'spaceId'
 };
 
 exports.Prisma.MaterialScalarFieldEnum = {
   id: 'id',
   ownerId: 'ownerId',
-  workspaceId: 'workspaceId',
-  spaceId: 'spaceId',
   title: 'title',
   description: 'description',
   category: 'category',
   priceUsd: 'priceUsd',
-  status: 'status',
-  visibility: 'visibility',
-  isForSale: 'isForSale',
   isPublic: 'isPublic',
-  thumbnailUrl: 'thumbnailUrl',
   fileUrl: 'fileUrl',
   externalUrl: 'externalUrl',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  spaceId: 'spaceId',
+  workspaceId: 'workspaceId',
+  isForSale: 'isForSale',
+  thumbnailUrl: 'thumbnailUrl',
+  status: 'status',
+  visibility: 'visibility'
 };
 
 exports.Prisma.MaterialPurchaseScalarFieldEnum = {
@@ -1299,19 +1335,19 @@ exports.Prisma.MaterialPurchaseScalarFieldEnum = {
 exports.Prisma.ToolScalarFieldEnum = {
   id: 'id',
   ownerId: 'ownerId',
-  workspaceId: 'workspaceId',
-  spaceId: 'spaceId',
-  thumbnailUrl: 'thumbnailUrl',
-  status: 'status',
-  visibility: 'visibility',
   name: 'name',
   description: 'description',
   category: 'category',
   productUrl: 'productUrl',
-  fileUrl: 'fileUrl',
   isPublic: 'isPublic',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  spaceId: 'spaceId',
+  workspaceId: 'workspaceId',
+  thumbnailUrl: 'thumbnailUrl',
+  fileUrl: 'fileUrl',
+  status: 'status',
+  visibility: 'visibility'
 };
 
 exports.Prisma.PayoutScalarFieldEnum = {
@@ -1329,9 +1365,6 @@ exports.Prisma.AttachmentScalarFieldEnum = {
   proposalId: 'proposalId',
   projectId: 'projectId',
   teamId: 'teamId',
-  materialId: 'materialId',
-  toolId: 'toolId',
-  resourceId: 'resourceId',
   investmentId: 'investmentId',
   verificationRequestId: 'verificationRequestId',
   filename: 'filename',
@@ -1347,7 +1380,10 @@ exports.Prisma.AttachmentScalarFieldEnum = {
   views: 'views',
   downloads: 'downloads',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  materialId: 'materialId',
+  resourceId: 'resourceId',
+  toolId: 'toolId'
 };
 
 exports.Prisma.BudgetScalarFieldEnum = {
@@ -1651,8 +1687,6 @@ exports.Prisma.FeatureScalarFieldEnum = {
   description: 'description',
   maxProjects: 'maxProjects',
   maxTeams: 'maxTeams',
-  maxWorkspaces: 'maxWorkspaces',
-  maxSpaces: 'maxSpaces',
   maxProposals: 'maxProposals',
   maxRequests: 'maxRequests',
   maxSupabaseStorage: 'maxSupabaseStorage',
@@ -1670,7 +1704,9 @@ exports.Prisma.FeatureScalarFieldEnum = {
   planId: 'planId',
   packageId: 'packageId',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  maxSpaces: 'maxSpaces',
+  maxWorkspaces: 'maxWorkspaces'
 };
 
 exports.Prisma.PaymentScalarFieldEnum = {
@@ -1800,10 +1836,6 @@ exports.Prisma.UsageScalarFieldEnum = {
   remainingProjects: 'remainingProjects',
   maxTeams: 'maxTeams',
   remainingTeams: 'remainingTeams',
-  maxWorkspaces: 'maxWorkspaces',
-  remainingWorkspaces: 'remainingWorkspaces',
-  maxSpaces: 'maxSpaces',
-  remainingSpaces: 'remainingSpaces',
   maxProposals: 'maxProposals',
   remainingProposals: 'remainingProposals',
   maxRequests: 'maxRequests',
@@ -1827,7 +1859,11 @@ exports.Prisma.UsageScalarFieldEnum = {
   maxChatsPerProposal: 'maxChatsPerProposal',
   remainingChatsPerProposal: 'remainingChatsPerProposal',
   maxChatsPerTeam: 'maxChatsPerTeam',
-  remainingChatsPerTeam: 'remainingChatsPerTeam'
+  remainingChatsPerTeam: 'remainingChatsPerTeam',
+  maxSpaces: 'maxSpaces',
+  maxWorkspaces: 'maxWorkspaces',
+  remainingSpaces: 'remainingSpaces',
+  remainingWorkspaces: 'remainingWorkspaces'
 };
 
 exports.Prisma.UserQuotaScalarFieldEnum = {
@@ -1923,9 +1959,6 @@ exports.Prisma.AiConversationScalarFieldEnum = {
   teamId: 'teamId',
   systemPrompt: 'systemPrompt',
   modelId: 'modelId',
-  workspaceId: 'workspaceId',
-  spaceId: 'spaceId',
-  channelId: 'channelId',
   messageCount: 'messageCount',
   totalTokensUsed: 'totalTokensUsed',
   isActive: 'isActive',
@@ -1934,7 +1967,12 @@ exports.Prisma.AiConversationScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   lastMessageAt: 'lastMessageAt',
-  archivedAt: 'archivedAt'
+  archivedAt: 'archivedAt',
+  channelId: 'channelId',
+  spaceId: 'spaceId',
+  workspaceId: 'workspaceId',
+  agentId: 'agentId',
+  metadata: 'metadata'
 };
 
 exports.Prisma.AiMessageScalarFieldEnum = {
@@ -1955,7 +1993,8 @@ exports.Prisma.AiMessageScalarFieldEnum = {
   isBookmarked: 'isBookmarked',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
-  editedAt: 'editedAt'
+  editedAt: 'editedAt',
+  metadata: 'metadata'
 };
 
 exports.Prisma.AiModelScalarFieldEnum = {
@@ -2088,10 +2127,6 @@ exports.Prisma.ResourceScalarFieldEnum = {
   externalUrl: 'externalUrl',
   sourceUrl: 'sourceUrl',
   documentationUrl: 'documentationUrl',
-  fileUrl: 'fileUrl',
-  fileName: 'fileName',
-  fileSize: 'fileSize',
-  fileMimeType: 'fileMimeType',
   thumbnailUrl: 'thumbnailUrl',
   viewCount: 'viewCount',
   downloadCount: 'downloadCount',
@@ -2109,7 +2144,11 @@ exports.Prisma.ResourceScalarFieldEnum = {
   publishedAt: 'publishedAt',
   archivedAt: 'archivedAt',
   deletedAt: 'deletedAt',
-  lastViewedAt: 'lastViewedAt'
+  lastViewedAt: 'lastViewedAt',
+  fileMimeType: 'fileMimeType',
+  fileName: 'fileName',
+  fileSize: 'fileSize',
+  fileUrl: 'fileUrl'
 };
 
 exports.Prisma.ResourceCommentScalarFieldEnum = {
@@ -2175,6 +2214,364 @@ exports.Prisma.ResourceVersionScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.AgentCollaboratorScalarFieldEnum = {
+  id: 'id',
+  agentId: 'agentId',
+  userId: 'userId',
+  role: 'role',
+  canView: 'canView',
+  canEdit: 'canEdit',
+  canExecute: 'canExecute',
+  canDelete: 'canDelete',
+  canShare: 'canShare',
+  addedBy: 'addedBy',
+  addedAt: 'addedAt'
+};
+
+exports.Prisma.AgentExecutionStepScalarFieldEnum = {
+  id: 'id',
+  executionId: 'executionId',
+  stepNumber: 'stepNumber',
+  stepName: 'stepName',
+  stepType: 'stepType',
+  input: 'input',
+  output: 'output',
+  reasoning: 'reasoning',
+  confidence: 'confidence',
+  toolUsed: 'toolUsed',
+  action: 'action',
+  parameters: 'parameters',
+  status: 'status',
+  error: 'error',
+  startedAt: 'startedAt',
+  completedAt: 'completedAt',
+  duration: 'duration',
+  tokensUsed: 'tokensUsed',
+  metadata: 'metadata'
+};
+
+exports.Prisma.AgentExecutionScalarFieldEnum = {
+  id: 'id',
+  agentId: 'agentId',
+  triggeredBy: 'triggeredBy',
+  triggerUserId: 'triggerUserId',
+  triggerEventId: 'triggerEventId',
+  triggerData: 'triggerData',
+  executionContext: 'executionContext',
+  inputData: 'inputData',
+  outputData: 'outputData',
+  totalSteps: 'totalSteps',
+  completedSteps: 'completedSteps',
+  currentStep: 'currentStep',
+  startedAt: 'startedAt',
+  completedAt: 'completedAt',
+  duration: 'duration',
+  tokensUsed: 'tokensUsed',
+  cost: 'cost',
+  status: 'status',
+  result: 'result',
+  error: 'error',
+  errorCode: 'errorCode',
+  errorStack: 'errorStack',
+  reasoning: 'reasoning',
+  decisionsCount: 'decisionsCount',
+  toolCallsCount: 'toolCallsCount',
+  requiresApproval: 'requiresApproval',
+  approvalStatus: 'approvalStatus',
+  approvedBy: 'approvedBy',
+  approvedAt: 'approvedAt',
+  rejectionReason: 'rejectionReason',
+  metadata: 'metadata',
+  tags: 'tags',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.AgentFeedbackScalarFieldEnum = {
+  id: 'id',
+  agentId: 'agentId',
+  executionId: 'executionId',
+  userId: 'userId',
+  feedbackType: 'feedbackType',
+  overallRating: 'overallRating',
+  accuracyRating: 'accuracyRating',
+  speedRating: 'speedRating',
+  helpfulnessRating: 'helpfulnessRating',
+  comment: 'comment',
+  suggestions: 'suggestions',
+  issueCategories: 'issueCategories',
+  context: 'context',
+  metadata: 'metadata',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.AgentMemoryScalarFieldEnum = {
+  id: 'id',
+  agentId: 'agentId',
+  memoryType: 'memoryType',
+  category: 'category',
+  key: 'key',
+  content: 'content',
+  summary: 'summary',
+  contextType: 'contextType',
+  contextId: 'contextId',
+  associatedData: 'associatedData',
+  embedding: 'embedding',
+  embeddingModel: 'embeddingModel',
+  importance: 'importance',
+  accessCount: 'accessCount',
+  lastAccessedAt: 'lastAccessedAt',
+  expiresAt: 'expiresAt',
+  isActive: 'isActive',
+  isArchived: 'isArchived',
+  metadata: 'metadata',
+  tags: 'tags',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.AgentScheduleScalarFieldEnum = {
+  id: 'id',
+  agentId: 'agentId',
+  name: 'name',
+  description: 'description',
+  repeatTime: 'repeatTime',
+  startTime: 'startTime',
+  endTime: 'endTime',
+  timezone: 'timezone',
+  instructions: 'instructions',
+  context: 'context',
+  isActive: 'isActive',
+  maxRuns: 'maxRuns',
+  runCount: 'runCount',
+  lastRunAt: 'lastRunAt',
+  nextRunAt: 'nextRunAt',
+  priority: 'priority',
+  metadata: 'metadata',
+  tags: 'tags',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  activatedAt: 'activatedAt',
+  deactivatedAt: 'deactivatedAt'
+};
+
+exports.Prisma.AgentTriggerScalarFieldEnum = {
+  id: 'id',
+  agentId: 'agentId',
+  triggerType: 'triggerType',
+  triggerConfig: 'triggerConfig',
+  name: 'name',
+  description: 'description',
+  isActive: 'isActive',
+  priority: 'priority',
+  conditions: 'conditions',
+  filters: 'filters',
+  metadata: 'metadata',
+  tags: 'tags',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  activatedAt: 'activatedAt',
+  deactivatedAt: 'deactivatedAt',
+  lastTriggeredAt: 'lastTriggeredAt',
+  triggerCount: 'triggerCount'
+};
+
+exports.Prisma.AgentTaskScalarFieldEnum = {
+  id: 'id',
+  agentId: 'agentId',
+  title: 'title',
+  description: 'description',
+  taskType: 'taskType',
+  priority: 'priority',
+  inputData: 'inputData',
+  context: 'context',
+  requirements: 'requirements',
+  constraints: 'constraints',
+  scheduledFor: 'scheduledFor',
+  deadline: 'deadline',
+  recurrence: 'recurrence',
+  assignedBy: 'assignedBy',
+  assignedTo: 'assignedTo',
+  status: 'status',
+  progress: 'progress',
+  result: 'result',
+  error: 'error',
+  dependsOn: 'dependsOn',
+  blockedBy: 'blockedBy',
+  executionId: 'executionId',
+  attempts: 'attempts',
+  maxAttempts: 'maxAttempts',
+  lastAttemptAt: 'lastAttemptAt',
+  metadata: 'metadata',
+  tags: 'tags',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  startedAt: 'startedAt',
+  completedAt: 'completedAt'
+};
+
+exports.Prisma.AgentToolCallScalarFieldEnum = {
+  id: 'id',
+  executionId: 'executionId',
+  toolId: 'toolId',
+  toolName: 'toolName',
+  action: 'action',
+  request: 'request',
+  response: 'response',
+  status: 'status',
+  error: 'error',
+  errorCode: 'errorCode',
+  startedAt: 'startedAt',
+  completedAt: 'completedAt',
+  duration: 'duration',
+  cost: 'cost',
+  metadata: 'metadata'
+};
+
+exports.Prisma.AgentToolScalarFieldEnum = {
+  id: 'id',
+  agentId: 'agentId',
+  name: 'name',
+  description: 'description',
+  toolType: 'toolType',
+  category: 'category',
+  endpoint: 'endpoint',
+  method: 'method',
+  headers: 'headers',
+  authentication: 'authentication',
+  functionSchema: 'functionSchema',
+  parameters: 'parameters',
+  returns: 'returns',
+  isEnabled: 'isEnabled',
+  requiresAuth: 'requiresAuth',
+  rateLimit: 'rateLimit',
+  timeout: 'timeout',
+  retryOnError: 'retryOnError',
+  costPerCall: 'costPerCall',
+  monthlyQuota: 'monthlyQuota',
+  usageCount: 'usageCount',
+  examples: 'examples',
+  documentation: 'documentation',
+  isActive: 'isActive',
+  metadata: 'metadata',
+  tags: 'tags',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  lastUsedAt: 'lastUsedAt'
+};
+
+exports.Prisma.AgentVersionScalarFieldEnum = {
+  id: 'id',
+  agentId: 'agentId',
+  version: 'version',
+  versionNumber: 'versionNumber',
+  snapshot: 'snapshot',
+  changeLog: 'changeLog',
+  changedBy: 'changedBy',
+  changeType: 'changeType',
+  isActive: 'isActive',
+  metadata: 'metadata',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.AgentAuditLogScalarFieldEnum = {
+  id: 'id',
+  agentId: 'agentId',
+  userId: 'userId',
+  action: 'action',
+  changes: 'changes',
+  diff: 'diff',
+  metadata: 'metadata',
+  integrity: 'integrity',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.AiAgentScalarFieldEnum = {
+  id: 'id',
+  workspaceId: 'workspaceId',
+  spaceId: 'spaceId',
+  projectId: 'projectId',
+  teamId: 'teamId',
+  createdBy: 'createdBy',
+  name: 'name',
+  description: 'description',
+  avatar: 'avatar',
+  version: 'version',
+  agentType: 'agentType',
+  systemPrompt: 'systemPrompt',
+  personality: 'personality',
+  capabilities: 'capabilities',
+  constraints: 'constraints',
+  modelId: 'modelId',
+  temperature: 'temperature',
+  maxTokens: 'maxTokens',
+  topP: 'topP',
+  frequencyPenalty: 'frequencyPenalty',
+  presencePenalty: 'presencePenalty',
+  maxIterations: 'maxIterations',
+  maxExecutionTime: 'maxExecutionTime',
+  autoRetry: 'autoRetry',
+  maxRetries: 'maxRetries',
+  retryDelay: 'retryDelay',
+  memoryType: 'memoryType',
+  contextWindow: 'contextWindow',
+  useVectorMemory: 'useVectorMemory',
+  memoryRetention: 'memoryRetention',
+  autonomyLevel: 'autonomyLevel',
+  requiresApproval: 'requiresApproval',
+  approvalThreshold: 'approvalThreshold',
+  availableTools: 'availableTools',
+  allowedResources: 'allowedResources',
+  permissionLevel: 'permissionLevel',
+  schedule: 'schedule',
+  isScheduleActive: 'isScheduleActive',
+  workflow: 'workflow',
+  fallbackBehavior: 'fallbackBehavior',
+  errorHandling: 'errorHandling',
+  status: 'status',
+  isActive: 'isActive',
+  isPaused: 'isPaused',
+  isArchived: 'isArchived',
+  totalExecutions: 'totalExecutions',
+  successfulRuns: 'successfulRuns',
+  failedRuns: 'failedRuns',
+  averageRunTime: 'averageRunTime',
+  totalTokensUsed: 'totalTokensUsed',
+  totalCost: 'totalCost',
+  successRate: 'successRate',
+  isShared: 'isShared',
+  visibility: 'visibility',
+  tags: 'tags',
+  metadata: 'metadata',
+  customFields: 'customFields',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  lastExecutedAt: 'lastExecutedAt',
+  lastModifiedBy: 'lastModifiedBy',
+  archivedAt: 'archivedAt'
+};
+
+exports.Prisma.SystemToolScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  description: 'description',
+  category: 'category',
+  functionSchema: 'functionSchema',
+  deterministic: 'deterministic',
+  isDefault: 'isDefault',
+  requiresAuth: 'requiresAuth',
+  rateLimit: 'rateLimit',
+  timeout: 'timeout',
+  examples: 'examples',
+  documentation: 'documentation',
+  tags: 'tags',
+  metadata: 'metadata',
+  isActive: 'isActive',
+  isBuiltIn: 'isBuiltIn',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  lastUsedAt: 'lastUsedAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -2220,13 +2617,6 @@ exports.VerificationLevel = exports.$Enums.VerificationLevel = {
   PREMIUM_VERIFIED: 'PREMIUM_VERIFIED'
 };
 
-exports.WorkspaceRole = exports.$Enums.WorkspaceRole = {
-  OWNER: 'OWNER',
-  ADMIN: 'ADMIN',
-  MEMBER: 'MEMBER',
-  GUEST: 'GUEST'
-};
-
 exports.MemberStatus = exports.$Enums.MemberStatus = {
   ACTIVE: 'ACTIVE',
   INACTIVE: 'INACTIVE',
@@ -2234,14 +2624,38 @@ exports.MemberStatus = exports.$Enums.MemberStatus = {
   TERMINATED: 'TERMINATED'
 };
 
-exports.AutomationTrigger = exports.$Enums.AutomationTrigger = {
-  TASK_CREATED: 'TASK_CREATED',
-  TASK_UPDATED: 'TASK_UPDATED',
+exports.WorkspaceRole = exports.$Enums.WorkspaceRole = {
+  OWNER: 'OWNER',
+  ADMIN: 'ADMIN',
+  MEMBER: 'MEMBER',
+  GUEST: 'GUEST'
+};
+
+exports.AutomationTriggerType = exports.$Enums.AutomationTriggerType = {
+  TASK_OR_SUBTASK_CREATED: 'TASK_OR_SUBTASK_CREATED',
   TASK_STATUS_CHANGED: 'TASK_STATUS_CHANGED',
-  TASK_ASSIGNED: 'TASK_ASSIGNED',
-  TASK_DUE_DATE: 'TASK_DUE_DATE',
-  TASK_COMPLETED: 'TASK_COMPLETED',
-  TIME_BASED: 'TIME_BASED',
+  TASK_ASSIGNEE_ADDED: 'TASK_ASSIGNEE_ADDED',
+  TASK_ASSIGNEE_REMOVED: 'TASK_ASSIGNEE_REMOVED',
+  TASK_DUE_DATE_ARRIVES: 'TASK_DUE_DATE_ARRIVES',
+  TASK_DUE_DATE_CHANGED: 'TASK_DUE_DATE_CHANGED',
+  TASK_START_DATE_ARRIVES: 'TASK_START_DATE_ARRIVES',
+  TASK_START_DATE_CHANGED: 'TASK_START_DATE_CHANGED',
+  TASK_PRIORITY_CHANGED: 'TASK_PRIORITY_CHANGED',
+  TASK_NAME_CHANGED: 'TASK_NAME_CHANGED',
+  TASK_TYPE_CHANGED: 'TASK_TYPE_CHANGED',
+  TASK_LINKED: 'TASK_LINKED',
+  TASK_TIME_TRACKED: 'TASK_TIME_TRACKED',
+  TASK_UNBLOCKED: 'TASK_UNBLOCKED',
+  CUSTOM_FIELD_CHANGED: 'CUSTOM_FIELD_CHANGED',
+  TAG_ADDED: 'TAG_ADDED',
+  TAG_REMOVED: 'TAG_REMOVED',
+  CHECKLISTS_RESOLVED: 'CHECKLISTS_RESOLVED',
+  SUBTASKS_RESOLVED: 'SUBTASKS_RESOLVED',
+  EXISTING_TASK_ADDED_TO_LOCATION: 'EXISTING_TASK_ADDED_TO_LOCATION',
+  MOVE_TO_LIST: 'MOVE_TO_LIST',
+  DATE_BEFORE_AFTER: 'DATE_BEFORE_AFTER',
+  EVERY_SCHEDULED_TIME: 'EVERY_SCHEDULED_TIME',
+  CHAT_MESSAGE_POSTED: 'CHAT_MESSAGE_POSTED',
   WEBHOOK: 'WEBHOOK'
 };
 
@@ -3125,7 +3539,10 @@ exports.ConversationType = exports.$Enums.ConversationType = {
   BRAINSTORMING: 'BRAINSTORMING',
   CODE_REVIEW: 'CODE_REVIEW',
   DOCUMENT_QA: 'DOCUMENT_QA',
-  MENTORSHIP: 'MENTORSHIP'
+  MENTORSHIP: 'MENTORSHIP',
+  AGENT_BUILDER: 'AGENT_BUILDER',
+  AGENT_EXECUTOR: 'AGENT_EXECUTOR',
+  AGENT_OPERATOR: 'AGENT_OPERATOR'
 };
 
 exports.MessageRole = exports.$Enums.MessageRole = {
@@ -3236,6 +3653,194 @@ exports.ResourceStatus = exports.$Enums.ResourceStatus = {
   DELETED: 'DELETED'
 };
 
+exports.AgentCollaboratorRole = exports.$Enums.AgentCollaboratorRole = {
+  VIEWER: 'VIEWER',
+  EDITOR: 'EDITOR',
+  ADMIN: 'ADMIN',
+  OWNER: 'OWNER'
+};
+
+exports.StepType = exports.$Enums.StepType = {
+  REASONING: 'REASONING',
+  TOOL_CALL: 'TOOL_CALL',
+  DECISION: 'DECISION',
+  API_REQUEST: 'API_REQUEST',
+  DATA_PROCESSING: 'DATA_PROCESSING',
+  VALIDATION: 'VALIDATION',
+  NOTIFICATION: 'NOTIFICATION',
+  WAIT: 'WAIT',
+  CONDITION: 'CONDITION',
+  LOOP: 'LOOP',
+  PARALLEL: 'PARALLEL',
+  CUSTOM: 'CUSTOM'
+};
+
+exports.StepStatus = exports.$Enums.StepStatus = {
+  PENDING: 'PENDING',
+  RUNNING: 'RUNNING',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED',
+  SKIPPED: 'SKIPPED',
+  CANCELLED: 'CANCELLED'
+};
+
+exports.AgentExecutionTrigger = exports.$Enums.AgentExecutionTrigger = {
+  MANUAL: 'MANUAL',
+  SCHEDULED: 'SCHEDULED',
+  EVENT: 'EVENT',
+  WEBHOOK: 'WEBHOOK',
+  API: 'API',
+  AGENT: 'AGENT',
+  SYSTEM: 'SYSTEM'
+};
+
+exports.AgentExecutionStatus = exports.$Enums.AgentExecutionStatus = {
+  QUEUED: 'QUEUED',
+  RUNNING: 'RUNNING',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED',
+  CANCELLED: 'CANCELLED',
+  TIMEOUT: 'TIMEOUT',
+  PENDING_APPROVAL: 'PENDING_APPROVAL',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED'
+};
+
+exports.ApprovalStatus = exports.$Enums.ApprovalStatus = {
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+  AUTO_APPROVED: 'AUTO_APPROVED'
+};
+
+exports.AgentMemoryType = exports.$Enums.AgentMemoryType = {
+  SHORT_TERM: 'SHORT_TERM',
+  LONG_TERM: 'LONG_TERM',
+  EPISODIC: 'EPISODIC',
+  SEMANTIC: 'SEMANTIC',
+  PROCEDURAL: 'PROCEDURAL',
+  WORKING: 'WORKING'
+};
+
+exports.AgentTriggerType = exports.$Enums.AgentTriggerType = {
+  SCHEDULED: 'SCHEDULED',
+  AUTOMATION: 'AUTOMATION',
+  ASSIGN_TASK: 'ASSIGN_TASK',
+  DIRECT_MESSAGE: 'DIRECT_MESSAGE',
+  MENTION: 'MENTION'
+};
+
+exports.AgentTaskType = exports.$Enums.AgentTaskType = {
+  CREATE_TASK: 'CREATE_TASK',
+  UPDATE_TASK: 'UPDATE_TASK',
+  DELETE_TASK: 'DELETE_TASK',
+  GENERATE_REPORT: 'GENERATE_REPORT',
+  ANALYZE_DATA: 'ANALYZE_DATA',
+  SEND_MESSAGE: 'SEND_MESSAGE',
+  CREATE_PROJECT: 'CREATE_PROJECT',
+  UPDATE_PROJECT: 'UPDATE_PROJECT',
+  REVIEW_CODE: 'REVIEW_CODE',
+  RUN_TESTS: 'RUN_TESTS',
+  DEPLOY: 'DEPLOY',
+  BACKUP: 'BACKUP',
+  SYNC_DATA: 'SYNC_DATA',
+  GENERATE_CONTENT: 'GENERATE_CONTENT',
+  RESEARCH: 'RESEARCH',
+  CUSTOM: 'CUSTOM'
+};
+
+exports.TaskPriority = exports.$Enums.TaskPriority = {
+  URGENT: 'URGENT',
+  HIGH: 'HIGH',
+  NORMAL: 'NORMAL',
+  LOW: 'LOW'
+};
+
+exports.AgentTaskStatus = exports.$Enums.AgentTaskStatus = {
+  PENDING: 'PENDING',
+  QUEUED: 'QUEUED',
+  RUNNING: 'RUNNING',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED',
+  CANCELLED: 'CANCELLED',
+  PAUSED: 'PAUSED',
+  BLOCKED: 'BLOCKED'
+};
+
+exports.ToolCallStatus = exports.$Enums.ToolCallStatus = {
+  SUCCESS: 'SUCCESS',
+  FAILED: 'FAILED',
+  TIMEOUT: 'TIMEOUT',
+  RATE_LIMITED: 'RATE_LIMITED',
+  UNAUTHORIZED: 'UNAUTHORIZED',
+  NOT_FOUND: 'NOT_FOUND'
+};
+
+exports.ToolType = exports.$Enums.ToolType = {
+  API: 'API',
+  DATABASE: 'DATABASE',
+  FILE_SYSTEM: 'FILE_SYSTEM',
+  EMAIL: 'EMAIL',
+  NOTIFICATION: 'NOTIFICATION',
+  INTEGRATION: 'INTEGRATION',
+  COMPUTATION: 'COMPUTATION',
+  SEARCH: 'SEARCH',
+  GENERATION: 'GENERATION',
+  ANALYSIS: 'ANALYSIS',
+  AUTOMATION: 'AUTOMATION',
+  CUSTOM: 'CUSTOM'
+};
+
+exports.VersionChangeType = exports.$Enums.VersionChangeType = {
+  MAJOR: 'MAJOR',
+  MINOR: 'MINOR',
+  PATCH: 'PATCH',
+  HOTFIX: 'HOTFIX',
+  ROLLBACK: 'ROLLBACK'
+};
+
+exports.AgentType = exports.$Enums.AgentType = {
+  TASK_EXECUTOR: 'TASK_EXECUTOR',
+  WORKFLOW_MANAGER: 'WORKFLOW_MANAGER',
+  DATA_ANALYST: 'DATA_ANALYST',
+  CODE_GENERATOR: 'CODE_GENERATOR',
+  CONTENT_CREATOR: 'CONTENT_CREATOR',
+  CUSTOMER_SUPPORT: 'CUSTOMER_SUPPORT',
+  RESEARCHER: 'RESEARCHER',
+  PROJECT_MANAGER: 'PROJECT_MANAGER',
+  QA_TESTER: 'QA_TESTER',
+  INTEGRATION: 'INTEGRATION',
+  MONITORING: 'MONITORING',
+  GENERAL_ASSISTANT: 'GENERAL_ASSISTANT',
+  CUSTOM: 'CUSTOM'
+};
+
+exports.AgentAutonomyLevel = exports.$Enums.AgentAutonomyLevel = {
+  SUPERVISED: 'SUPERVISED',
+  SEMI_AUTONOMOUS: 'SEMI_AUTONOMOUS',
+  AUTONOMOUS: 'AUTONOMOUS',
+  COLLABORATIVE: 'COLLABORATIVE'
+};
+
+exports.AgentPermissionLevel = exports.$Enums.AgentPermissionLevel = {
+  RESTRICTED: 'RESTRICTED',
+  STANDARD: 'STANDARD',
+  ELEVATED: 'ELEVATED',
+  ADMIN: 'ADMIN'
+};
+
+exports.AgentStatus = exports.$Enums.AgentStatus = {
+  DRAFT: 'DRAFT',
+  BUILDING: 'BUILDING',
+  RECONFIGURING: 'RECONFIGURING',
+  ACTIVE: 'ACTIVE',
+  EXECUTING: 'EXECUTING',
+  PAUSED: 'PAUSED',
+  DISABLED: 'DISABLED',
+  ARCHIVED: 'ARCHIVED',
+  ERROR: 'ERROR'
+};
+
 exports.Prisma.ModelName = {
   Account: 'Account',
   Session: 'Session',
@@ -3249,6 +3854,7 @@ exports.Prisma.ModelName = {
   Task: 'Task',
   Status: 'Status',
   TaskDependency: 'TaskDependency',
+  TaskAssignee: 'TaskAssignee',
   TaskWatcher: 'TaskWatcher',
   TaskComment: 'TaskComment',
   TaskAttachment: 'TaskAttachment',
@@ -3276,6 +3882,7 @@ exports.Prisma.ModelName = {
   TaskActivity: 'TaskActivity',
   WorkspaceAnalytics: 'WorkspaceAnalytics',
   Automation: 'Automation',
+  AutomationTrigger: 'AutomationTrigger',
   UserLike: 'UserLike',
   UserComment: 'UserComment',
   FounderProfile: 'FounderProfile',
@@ -3370,7 +3977,21 @@ exports.Prisma.ModelName = {
   ResourceBookmark: 'ResourceBookmark',
   ResourceShare: 'ResourceShare',
   ResourcePermission: 'ResourcePermission',
-  ResourceVersion: 'ResourceVersion'
+  ResourceVersion: 'ResourceVersion',
+  AgentCollaborator: 'AgentCollaborator',
+  AgentExecutionStep: 'AgentExecutionStep',
+  AgentExecution: 'AgentExecution',
+  AgentFeedback: 'AgentFeedback',
+  AgentMemory: 'AgentMemory',
+  AgentSchedule: 'AgentSchedule',
+  AgentTrigger: 'AgentTrigger',
+  AgentTask: 'AgentTask',
+  AgentToolCall: 'AgentToolCall',
+  AgentTool: 'AgentTool',
+  AgentVersion: 'AgentVersion',
+  AgentAuditLog: 'AgentAuditLog',
+  AiAgent: 'AiAgent',
+  SystemTool: 'SystemTool'
 };
 
 /**

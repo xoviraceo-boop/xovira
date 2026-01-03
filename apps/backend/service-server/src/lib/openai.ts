@@ -11,4 +11,4 @@ function initializeOpenAI() {
   });
 }
 
-export { initializeOpenAI };
+export const openai = initializeOpenAI();

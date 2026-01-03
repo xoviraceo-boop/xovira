@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, memo } from 'react'
-import { SendHorizontal, Loader2, Paperclip, Search, X, Zap, Layers } from 'lucide-react'
+import { SendHorizontal, Loader2, Paperclip, Search, X, Layers, CornerDownLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import type { ParsedFile } from '../utils/fileParser'
@@ -14,6 +14,8 @@ interface ChatComposerProps {
   disabled?: boolean
   onContextClick?: () => void
   contextCount?: number
+  className?: string
+  inputClassName?: string
 }
 
 export const ChatComposer = memo(function ChatComposer({ 
@@ -22,7 +24,9 @@ export const ChatComposer = memo(function ChatComposer({
   isSending, 
   disabled,
   onContextClick,
-  contextCount = 0
+  contextCount = 0,
+  className,
+  inputClassName 
 }: ChatComposerProps) {
   const [value, setValue] = useState('')
   const [attachments, setAttachments] = useState<ParsedFile[]>([])
@@ -109,47 +113,53 @@ export const ChatComposer = memo(function ChatComposer({
   return (
     <div
       className={cn(
-        'w-full rounded-xl border-2 bg-white transition-all duration-200 sm:rounded-2xl',
+        'group relative w-full flex flex-col rounded-2xl border transition-all duration-300 ease-out',
+        'bg-white/80 backdrop-blur-sm shadow-sm',
+        className,
         isFocused 
-          ? 'border-primary/50 shadow-lg shadow-primary/10' 
-          : 'border-slate-200 shadow-md'
+          ? 'border-zinc-400 ring-4 ring-zinc-900/5 shadow-md' 
+          : 'border-zinc-200'
       )}
     >
-      <div className="p-3 sm:p-4">
-        {attachments.length > 0 && (
-          <div className="mb-2 flex flex-wrap gap-2 sm:mb-3">
-            {attachments.map((attachment, index) => (
-              <div
-                key={index}
-                className="group flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 transition-all hover:border-primary/50 hover:bg-primary/5 sm:px-3 sm:py-2"
+      {/* File Preview Area */}
+      {attachments.length > 0 && (
+        <div className="flex flex-wrap gap-2 px-4 pt-4">
+          {attachments.map((attachment, index) => (
+            <div
+              key={index}
+              className="group flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50/50 pl-2.5 pr-1.5 py-1 transition-all hover:bg-white hover:shadow-sm"
+            >
+              <Paperclip className="h-3 w-3 text-zinc-400" />
+              <span className="max-w-[150px] truncate text-[11px] font-medium text-zinc-600">
+                {attachment.filename}
+              </span>
+              <button
+                onClick={() => removeAttachment(index)}
+                className="rounded-full p-0.5 text-zinc-400 hover:bg-zinc-200 hover:text-zinc-900"
               >
-                <Paperclip className="h-3 w-3 shrink-0 text-slate-500 sm:h-3.5 sm:w-3.5" />
-                <span className="max-w-[120px] truncate text-xs font-medium text-slate-700 sm:max-w-[200px] sm:text-sm">
-                  {attachment.filename}
-                </span>
-                <button
-                  onClick={() => removeAttachment(index)}
-                  className="rounded-full p-0.5 text-slate-400 transition-colors hover:bg-red-100 hover:text-red-600"
-                  disabled={disabled || isSending}
-                >
-                  <X className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-        
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Input Area */}
+      <div className="px-4 pt-4 pb-2">
         <Textarea
           ref={textareaRef}
           value={value}
-          onChange={(event) => setValue(event.target.value)}
+          onChange={(e) => setValue(e.target.value)}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
-          placeholder="Ask anything about your project..."
-          className="max-h-[200px] min-h-[60px] resize-none border-0 bg-transparent p-0 text-sm placeholder:text-slate-400 focus-visible:ring-0 sm:min-h-[80px] sm:text-base"
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.shiftKey) {
-              event.preventDefault()
+          placeholder="Type a message or drop files..."
+          className={cn(
+            'min-h-[44px] w-full resize-none border-0 bg-transparent p-0 text-[15px] leading-relaxed text-zinc-900 placeholder:text-zinc-400 focus-visible:ring-0',
+            inputClassName
+          )}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
               handleSubmit()
             }
           }}
@@ -157,92 +167,72 @@ export const ChatComposer = memo(function ChatComposer({
         />
       </div>
 
-      <div className="flex flex-col gap-2 border-t border-slate-100 bg-slate-50/50 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+      {/* Toolbar */}
+      <div className="flex items-center justify-between px-3 pb-3">
         <div className="flex items-center gap-1">
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={handleFileSelect}
-            disabled={disabled || isSending || uploading}
-          />
+          <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
           
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={disabled || isSending || uploading}
-            className="h-8 w-8 rounded-lg p-0 transition-all hover:bg-slate-200 sm:h-9 sm:w-9"
-            title="Attach files"
+          <ToolbarButton 
+            onClick={() => fileInputRef.current?.click()} 
+            active={false}
+            tooltip="Attach files"
           >
-            {uploading ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-primary sm:h-4 sm:w-4" />
-            ) : (
-              <Paperclip className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            )}
-          </Button>
-          
-          {onContextClick && (
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={onContextClick}
-              disabled={disabled || isSending}
-              className={cn(
-                'h-8 w-8 rounded-lg p-0 transition-all sm:h-9 sm:w-9 relative',
-                contextCount > 0
-                  ? 'bg-primary text-white hover:bg-primary/90' 
-                  : 'hover:bg-slate-200'
-              )}
-              title="Select context"
-            >
-              <Layers className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              {contextCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] font-bold text-primary">
-                  {contextCount}
-                </span>
-              )}
-            </Button>
-          )}
-          
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => setWebSearch(!webSearch)}
-            disabled={disabled || isSending}
-            className={cn(
-              'h-8 w-8 rounded-lg p-0 transition-all sm:h-9 sm:w-9',
-              webSearch 
-                ? 'bg-primary text-white hover:bg-primary/90' 
-                : 'hover:bg-slate-200'
-            )}
-            title="Enable web search"
-          >
-            <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-          </Button>
+            <Paperclip className="h-4 w-4" />
+          </ToolbarButton>
 
-          <span className="ml-2 hidden text-xs text-slate-500 lg:inline">
-            <kbd className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold">Shift</kbd>
-            {' + '}
-            <kbd className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold">Enter</kbd>
-          </span>
+          <ToolbarButton 
+            onClick={onContextClick} 
+            active={contextCount > 0}
+            tooltip="Project Context"
+          >
+            <Layers className="h-4 w-4" />
+            {contextCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-zinc-900 text-[9px] font-bold text-white ring-2 ring-white">
+                {contextCount}
+              </span>
+            )}
+          </ToolbarButton>
+
+          <ToolbarButton 
+            onClick={() => setWebSearch(!webSearch)} 
+            active={webSearch}
+            tooltip="Web Search"
+          >
+            <Search className="h-4 w-4" />
+          </ToolbarButton>
+          
+          <div className="ml-2 hidden items-center gap-1.5 px-2 py-1 text-[10px] font-medium text-zinc-400 sm:flex">
+            <kbd className="flex h-5 items-center justify-center rounded border border-zinc-200 bg-white px-1 shadow-[0_1px_0_rgba(0,0,0,0.05)]">Shift</kbd>
+            <span>+</span>
+            <kbd className="flex h-5 items-center justify-center rounded border border-zinc-200 bg-white px-1 shadow-[0_1px_0_rgba(0,0,0,0.05)]">Enter</kbd>
+            <span className="ml-1 opacity-60">to new line</span>
+          </div>
         </div>
 
+        {/* WORLD CLASS SEND BUTTON */}
         <Button 
           onClick={handleSubmit} 
           disabled={disabled || isSending || !value.trim()}
-          className="h-9 w-full gap-2 rounded-lg px-4 font-semibold shadow-sm transition-all hover:shadow-md disabled:opacity-50 sm:w-auto"
+          className={cn(
+            "relative max-w-24 h-9 rounded-lg px-4 font-semibold transition-all duration-200 overflow-hidden",
+            "flex items-center justify-center gap-2 select-none active:scale-[0.96]",
+            "bg-zinc-900 text-zinc-50 hover:bg-zinc-800 hover:shadow-lg hover:shadow-zinc-900/10",
+            "shadow-[0_1px_2px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.1)]",
+            "disabled:bg-zinc-100 disabled:text-zinc-400 disabled:shadow-none disabled:active:scale-100",
+            isSending && "text-transparent pointer-events-none"
+          )}
         >
           {isSending ? (
-            <>
-              <Loader2 className="h-3.5 w-3.5 animate-spin sm:h-4 sm:w-4" />
-              <span className="text-sm sm:text-base">Sending...</span>
-            </>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
+            </div>
           ) : (
             <>
-              <Zap className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="text-sm sm:text-base">Send</span>
+              <span className="text-sm tracking-tight">Send</span>
+              <SendHorizontal className={cn(
+                "h-3.5 w-3.5 transition-all duration-300 ease-out",
+                value.trim() ? "translate-x-0 opacity-100" : "translate-x-1 opacity-0"
+              )} />
             </>
           )}
         </Button>
@@ -250,3 +240,23 @@ export const ChatComposer = memo(function ChatComposer({
     </div>
   )
 })
+
+// Sub-component for Toolbar Buttons to keep code DRY
+function ToolbarButton({ children, onClick, active, tooltip }: { children: React.ReactNode, onClick?: () => void, active?: boolean, tooltip: string }) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      onClick={onClick}
+      title={tooltip}
+      className={cn(
+        "relative h-8 w-8 rounded-lg p-0 transition-all duration-200",
+        active 
+          ? "bg-zinc-900 text-white hover:bg-zinc-800" 
+          : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+      )}
+    >
+      {children}
+    </Button>
+  )
+}

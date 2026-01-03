@@ -198,11 +198,12 @@ export function useChats({ contextType, entityId, activeConversationId }: UseCha
   const renderedMessages = useMemo<RenderedMessage[]>(() => {
     if (!messagesQuery.data?.messages) return []
 
-    return messagesQuery.data.messages.map((message) => ({
+    return messagesQuery.data.messages.map((message: any) => ({
       id: message.id,
       role: message.role,
       content: message.content,
       createdAt: message.createdAt,
+      feedback: message.feedback || null,
     }))
   }, [messagesQuery.data?.messages])
 

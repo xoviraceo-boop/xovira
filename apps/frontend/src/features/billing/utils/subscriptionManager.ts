@@ -243,11 +243,23 @@ export class SubscriptionManager {
     if (existing) return existing;
     const freePlan = await prisma.plan.findFirst({ where: { name: 'FREE', isActive: true }, include: { feature: true } });
     if (!freePlan) throw new Error('Free plan not found in the system');
+    const now = new Date();
     const currentPeriodStart = DateTime.now().startOf('day');
     const currentPeriodEnd = currentPeriodStart.plus({ months: 1 });
+    const subscription = await prisma.subscription.create({
+      data: { 
+        userId, 
+        planId: freePlan.id, 
+        status: SubscriptionStatus.ACTIVE, 
+        currentPeriodStart: currentPeriodStart.toJSDate(), 
+        currentPeriodEnd: currentPeriodEnd.toJSDate() 
+      },
+      include: { plan: true, payments: true }
+    });
     const usage = await prisma.usage.create({
       data: {
         userId,
+        subscriptionId: subscription.id,
         maxProjects: freePlan.feature?.maxProjects || 0,
         remainingProjects: freePlan.feature?.maxProjects || 0,
         maxTeams: freePlan.feature?.maxTeams || 0,
@@ -257,13 +269,13 @@ export class SubscriptionManager {
         maxRequests: freePlan.feature?.maxRequests || 0,
         remainingRequests: freePlan.feature?.maxRequests || 0,
         maxCredits: freePlan.feature?.maxCredits || 0,
-        remainingCredits: freePlan.feature?.maxCredits || 0
+        remainingCredits: freePlan.feature?.maxCredits || 0,
+        maxTokens: freePlan.feature?.maxTokens || 0,
+        remainingTokens: freePlan.feature?.maxTokens || 0,
+        updatedAt: now,
       }
     });
-    return prisma.subscription.create({
-      data: { userId, planId: freePlan.id, status: SubscriptionStatus.ACTIVE, currentPeriodStart: currentPeriodStart.toJSDate(), currentPeriodEnd: currentPeriodEnd.toJSDate() },
-      include: { plan: true, payments: true }
-    });
+    return subscription;
   }
 
   static async renew(userId: string, params: RenewInput) {

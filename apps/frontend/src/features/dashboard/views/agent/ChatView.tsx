@@ -1,261 +1,554 @@
-'use client'
+"use client";
 
-import { useEffect, useMemo, useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { Card } from '@/components/ui/card';
+import {
+  ChatMessageList,
+  RenderedMessage,
+  MessageFollowup,
+  MessageAction,
+} from '@/entities/chats/components/MessageList';
+import { ChatComposer } from '@/entities/chats/components/ChatComposer';
+import { ChatHeader } from '@/entities/chats/components/ChatHeader';
+import { trpc } from '@/lib/trpc';
+import { toast } from 'sonner';
+import { MessageRole } from '@xovira/database/src/generated/prisma/client';
+import { AgentProfile } from '@/entities/agents/components/AgentProfile';
+import type { QuickAction, AgentDraft, UserContext, ConversationState } from '@/entities/agents/types';
 
-import { ConversationList } from '@/entities/chats/components/ConversationList'
-import { ChatPanel } from '@/entities/chats/components/ChatPanel'
-import { useChats } from '@/entities/chats/hooks/useChats'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import type { ChatContextType } from '@/entities/chats/utils/context'
-import { trpc } from '@/lib/trpc'
-
-type UpperContext = 'PROJECT' | 'PROFILE' | 'PROPOSAL' | 'TEAM' | 'WORKSPACE' | 'SPACE' | 'CHANNEL'
-
-interface ContextOption {
-  label: string
-  value: ChatContextType
-  entityId: string
-  name?: string
-}
-
-interface ChatViewProps {
+interface BuilderViewProps {
+  agentId?: string;
   agent?: any;
-  contextType?: UpperContext
-  contextId?: string
-  contextName?: string
-  contextOptions?: ContextOption[]
-  onContextClick?: () => void
-  contextCount?: number
-  selectedContexts?: Array<{ type: string; id: string; name: string }>
 }
 
-const STORAGE_KEY_PREFIX = 'xovira_active_chat_'
-
-export function ChatView({ agent, contextType = 'PROJECT', contextId, contextName, contextOptions, onContextClick, contextCount = 0, selectedContexts = [] }: ChatViewProps) {
-  // If agent is provided, use agent context
-  const initialType = agent ? 'AGENT' : ((contextType ?? 'PROJECT').toLowerCase() as ChatContextType)
-  const initialId = agent?.id ?? contextId ?? contextOptions?.[0]?.entityId ?? ''
-  const initialName = agent?.name ?? contextName ?? contextOptions?.find((o) => o.value === initialType)?.name ?? contextOptions?.[0]?.name
-
-  const [selectedContext, setSelectedContext] = useState<{ type: ChatContextType; entityId: string; name?: string }>(
-    { type: initialType, entityId: initialId, name: initialName }
-  )
-
-  useEffect(() => {
-    if (!selectedContext.entityId && contextOptions && contextOptions.length > 0) {
-      const next = contextOptions[0]
-      setSelectedContext({ type: next.value, entityId: next.entityId, name: next.name ?? next.label })
-    }
-  }, [contextOptions, selectedContext.entityId])
-
-  const storageKey = `${STORAGE_KEY_PREFIX}${selectedContext.type}_${selectedContext.entityId}`
+export const BuilderView: React.FC<BuilderViewProps> = ({
+  agentId,
+  agent,
+}) => {
+  const [messages, setMessages] = useState<RenderedMessage[]>([]);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [conversationState, setConversationState] = useState<ConversationState | null>(null);
+  const [userContext, setUserContext] = useState<UserContext | null>(null);
+  const [followupsMap, setFollowupsMap] = useState<Map<string, MessageFollowup[]>>(new Map());
+  const [agentDraft, setAgentDraft] = useState<AgentDraft | null>(null);
+  const [isSending, setIsSending] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [showAgentProfile, setShowAgentProfile] = useState(false);
+  const resolvedAgentId = agentId ?? agent?.id;
   
-  // Load active conversation from localStorage on mount
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(() => {
-    if (typeof window !== 'undefined' && selectedContext.entityId) {
-      const stored = localStorage.getItem(storageKey)
-      return stored || null
+  // Track optimistic message IDs to remove them when confirmed
+  const optimisticMessageIds = useRef<Set<string>>(new Set());
+
+  // Fetch messages from database
+  const { data: messagesData, refetch: refetchMessages, isLoading: isLoadingMessages } = trpc.chat.getMessages.useQuery(
+    { conversationId: conversationId! },
+    { 
+      enabled: !!conversationId,
+      refetchOnWindowFocus: false,
+      refetchOnMount: true,
+      staleTime: 0,
     }
-    return null
-  })
+  );
 
-  useEffect(() => {
-    setSelectedContext({ type: initialType, entityId: initialId, name: initialName })
-    setActiveConversationId(null)
-  }, [initialType, initialId, initialName])
-
-  const {
-    conversations,
-    isLoadingConversations,
-    messages,
-    isLoadingMessages,
-    createConversation,
-    sendMessage,
-    renameConversation,
-    isSending,
-    pendingAssistantMessage,
-    isCreatingConversation,
-  } = useChats({
-    contextType: selectedContext.type,
-    entityId: selectedContext.entityId,
-    activeConversationId,
-  })
-
-  const utils = trpc.useUtils()
-  const deleteMutation = trpc.chat.delete.useMutation()
-  const archiveMutation = trpc.chat.archive.useMutation()
-
-  // Save active conversation to localStorage whenever it changes
-  useEffect(() => {
-    if (activeConversationId && selectedContext.entityId) {
-      localStorage.setItem(storageKey, activeConversationId)
-    } else if (!activeConversationId && selectedContext.entityId) {
-      localStorage.removeItem(storageKey)
+  const { data: agentData, isLoading: isLoadingAgent, refetch: refetchAgent } = trpc.agent.get.useQuery(
+    { id: resolvedAgentId! },
+    {
+      enabled: !!resolvedAgentId,
+      initialData: agent,
     }
-  }, [activeConversationId, storageKey, selectedContext.entityId])
+  );
 
-  // Set first conversation as active if none is selected
+  const initializeMutation = trpc.agent.executor .initialize.useMutation({
+    onSuccess: async (data) => {
+      setConversationId(data.conversationId);
+      setConversationState(data.conversationState);
+      setUserContext(data.userContext);
+      setAgentDraft(data.conversationState.agentDraft);
+      
+      if (resolvedAgentId) {
+        await refetchAgent();
+      }
+      
+      // Refetch messages to get latest from DB
+      const result = await refetchMessages();
+      
+      // Load follow-ups from message metadata (persisted) and from API response
+      if (result.data?.messages) {
+        const followupsMapFromDB = new Map<string, MessageFollowup[]>();
+        
+        // First, load follow-ups from persisted metadata
+        result.data.messages.forEach(msg => {
+          const followupsFromMetadata = (msg as any).followups;
+          if (followupsFromMetadata && Array.isArray(followupsFromMetadata)) {
+            followupsMapFromDB.set(msg.id, followupsFromMetadata);
+          }
+        });
+        
+        // Then, add follow-ups from API response if provided (for new welcome messages)
+        if (data.followups?.length) {
+          const assistantMessages = result.data.messages.filter(m => m.role === 'ASSISTANT');
+          const latestAssistant = assistantMessages[assistantMessages.length - 1];
+          if (latestAssistant) {
+            followupsMapFromDB.set(latestAssistant.id, data.followups);
+          }
+        }
+        
+        setFollowupsMap(followupsMapFromDB);
+      }
+
+      setIsInitializing(false);
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to initialize conversation');
+      setIsInitializing(false);
+    },
+  });
+
+  const launchMutation = trpc.agent.builder.launch.useMutation({
+    onSuccess: async (data) => {
+      toast.success('Agent launched successfully!');
+      if (resolvedAgentId) {
+        await refetchAgent();
+      }
+      setShowAgentProfile(true);
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to launch agent');
+    },
+  });
+
+  const messageMutation = trpc.agent.executor .message.useMutation({
+    onSuccess: async (data) => {
+      setIsSending(false);
+      setConversationState(data.conversationState);
+      setAgentDraft(data.agentDraft);
+      
+      // Refetch agent data to get updated configuration from executor  updates
+      if (resolvedAgentId) {
+        await refetchAgent();
+      }
+      
+      // Refetch messages to get the confirmed messages from DB
+      const result = await refetchMessages();
+      
+      // Clear optimistic messages since we now have confirmed DB messages
+      if (result.data?.messages) {
+        optimisticMessageIds.current.clear();
+        
+        const allMessages = result.data.messages;
+        
+        const dbMessages: RenderedMessage[] = allMessages.map((msg, index) => {
+          // Get follow-ups from message data (persisted in metadata)
+          const followupsFromMetadata = (msg as any).followups;
+          
+          // Only show follow-ups if:
+          // 1. The message has follow-ups in metadata
+          // 2. The follow-ups haven't been consumed (check metadata.followupsConsumed)
+          // 3. This is the LAST assistant message (no user messages after it)
+          let followups: MessageFollowup[] | undefined = undefined;
+          
+          if (msg.role === 'ASSISTANT') {
+            // Check if follow-ups are consumed in metadata (persisted state)
+            const metadata = (msg as any).metadata || {};
+            const followupsConsumed = metadata.followupsConsumed === true;
+            
+            // Check if there are any user messages after this assistant message
+            const hasUserMessageAfter = allMessages.slice(index + 1).some(m => m.role === 'USER');
+            
+            // ✅ CRITICAL: Only show follow-ups if not consumed AND no user message after AND has follow-ups in metadata
+            if (!followupsConsumed && !hasUserMessageAfter && followupsFromMetadata && Array.isArray(followupsFromMetadata)) {
+              followups = followupsFromMetadata;
+            }
+          }
+          
+          return {
+            id: msg.id,
+            role: msg.role as MessageRole,
+            content: msg.content,
+            createdAt: msg.createdAt,
+            followups,
+          };
+        });
+        
+        setMessages(dbMessages);
+        
+        // ✅ Update followupsMap based on what's actually shown
+        const newFollowupsMap = new Map<string, MessageFollowup[]>();
+        dbMessages.forEach(msg => {
+          if (msg.followups) {
+            newFollowupsMap.set(msg.id, msg.followups);
+          }
+        });
+        setFollowupsMap(newFollowupsMap);
+      }
+      
+      // ✅ ONLY attach NEW followups from the API response (for the latest assistant message)
+      if (data.followups?.length && result.data?.messages) {
+        const assistantMessages = result.data.messages.filter(m => m.role === 'ASSISTANT');
+        const latestAssistant = assistantMessages[assistantMessages.length - 1];
+        
+        if (latestAssistant) {
+          // Check if this message already has follow-ups marked as consumed
+          const metadata = (latestAssistant as any).metadata || {};
+          const followupsConsumed = metadata.followupsConsumed === true;
+          
+          // Only add follow-ups if they haven't been consumed
+          if (!followupsConsumed) {
+            setFollowupsMap(prev => {
+              const newMap = new Map(prev);
+              newMap.set(latestAssistant.id, data.followups!);
+              return newMap;
+            });
+            
+            // Update messages to include followups immediately
+            setMessages(prev => prev.map(msg => 
+              msg.id === latestAssistant.id 
+                ? { ...msg, followups: data.followups }
+                : msg
+            ));
+          }
+        }
+      }
+      
+      // Switch to profile view if agent is ready or active
+      const isReady = data.agentDraft.status === 'ready';
+      const isActive = agentData?.status === 'ACTIVE' && agentData?.isActive;
+      if ((isReady || isActive) && !showAgentProfile) {
+        setTimeout(() => setShowAgentProfile(true), 500);
+      }
+    },
+    onError: (error) => {
+      setIsSending(false);
+      
+      // Clear the optimistic message on error
+      setMessages(prev => prev.filter(msg => !optimisticMessageIds.current.has(msg.id)));
+      optimisticMessageIds.current.clear();
+      
+      toast.error(error.message || 'Failed to process message');
+      
+      // Add error message
+      setMessages(prev => [...prev, {
+        id: `error_${Date.now()}`,
+        role: 'ASSISTANT' as MessageRole,
+        content: `Error: ${error.message}. Please try again.`,
+        createdAt: new Date(),
+      }]);
+    },
+  });
+
+  // Sync messages from database (only when not sending to avoid conflicts)
   useEffect(() => {
-    if (!activeConversationId && conversations.length > 0) {
-      setActiveConversationId(conversations[0].id)
+    if (messagesData?.messages && conversationId && !isSending) {
+      const allMessages = messagesData.messages;
+      
+      const dbMessages: RenderedMessage[] = allMessages.map((msg, index) => {
+        // Get follow-ups from message data (persisted in metadata)
+        const followupsFromMetadata = (msg as any).followups;
+        
+        // Only show follow-ups if:
+        // 1. The message has follow-ups in metadata
+        // 2. The follow-ups haven't been consumed (check metadata.followupsConsumed)
+        // 3. This is the LAST assistant message (no user messages after it)
+        let followups: MessageFollowup[] | undefined = undefined;
+        
+        if (msg.role === 'ASSISTANT') {
+          // Check if follow-ups are consumed in metadata (persisted state)
+          const metadata = (msg as any).metadata || {};
+          const followupsConsumed = metadata.followupsConsumed === true;
+          
+          // Check if there are any user messages after this assistant message
+          const hasUserMessageAfter = allMessages.slice(index + 1).some(m => m.role === 'USER');
+          
+          // ✅ CRITICAL: Only show follow-ups if not consumed AND no user message after AND has follow-ups in metadata
+          if (!followupsConsumed && !hasUserMessageAfter && followupsFromMetadata && Array.isArray(followupsFromMetadata)) {
+            followups = followupsFromMetadata;
+          }
+        }
+        
+        return {
+          id: msg.id,
+          role: msg.role as MessageRole,
+          content: msg.content,
+          createdAt: msg.createdAt,
+          followups,
+        };
+      });
+      
+      if (dbMessages.length > 0) {
+        setMessages(dbMessages);
+        // Clear optimistic messages since we have DB messages
+        optimisticMessageIds.current.clear();
+        
+        // ✅ Update followupsMap to only include follow-ups that are actually shown
+        const newFollowupsMap = new Map<string, MessageFollowup[]>();
+        dbMessages.forEach(msg => {
+          if (msg.followups) {
+            newFollowupsMap.set(msg.id, msg.followups);
+          }
+        });
+        setFollowupsMap(newFollowupsMap);
+      }
     }
-  }, [activeConversationId, conversations])
+  }, [messagesData, conversationId, isSending]);
 
-  const activeConversation = useMemo(
-    () => conversations.find((conversation) => conversation.id === activeConversationId),
-    [activeConversationId, conversations]
-  )
+  // Show AgentProfile when agent is ACTIVE
+  useEffect(() => {
+    if (agentData && agentData.status === 'ACTIVE' && agentData.isActive && !showAgentProfile) {
+      setShowAgentProfile(true);
+    }
+  }, [agentData, showAgentProfile]);
 
-  if (!selectedContext.entityId) {
-  return (
-      <div className="flex h-full items-center justify-center">
-        <div className="text-center text-muted-foreground">
-          <p>Select a {selectedContext.type} to start chatting with the AI assistant.</p>
+  // Initialize conversation - use ref to prevent multiple calls
+  const hasInitialized = useRef(false);
+  
+  useEffect(() => {
+    if (conversationId || initializeMutation.isPending || hasInitialized.current) return;
+
+    if (resolvedAgentId) {
+      if (isLoadingAgent) return;
+
+      const storedConversationId = agentData?.conversations?.[0]?.id;
+
+      hasInitialized.current = true;
+
+      if (storedConversationId) {
+        console.log('[AgentChatBuilder] Loading existing conversation:', storedConversationId);
+        initializeMutation.mutate({
+          conversationId: storedConversationId,
+          agentId: resolvedAgentId,
+        });
+      } else {
+        console.log('[AgentChatBuilder] Creating new conversation for agent:', resolvedAgentId);
+        initializeMutation.mutate({
+          agentId: resolvedAgentId,
+        });
+      }
+    } else {
+      hasInitialized.current = true;
+      initializeMutation.mutate({});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolvedAgentId, agentData, isLoadingAgent, conversationId]);
+
+  // Mutation to mark follow-ups as consumed
+  const markFollowupsConsumedMutation = trpc.chat.markFollowupsConsumed.useMutation();
+
+  const handleSendMessage = useCallback(async (message: string) => {
+    if (!message.trim() || isSending || !conversationId || !resolvedAgentId) return;
+
+    setMessages(prev => prev.map(msg => ({ ...msg, followups: undefined })));
+    setFollowupsMap(new Map());
+
+    const assistantMessages = messages.filter(msg => msg.role === 'ASSISTANT');
+    
+    const consumePromises = assistantMessages.map(msg => 
+      markFollowupsConsumedMutation.mutateAsync({ messageId: msg.id }).catch(err => {
+        console.error('Failed to mark follow-ups as consumed:', err);
+      })
+    );
+    
+    await Promise.all(consumePromises);
+    
+    const optimisticId = `optimistic_${Date.now()}`;
+    const userMessage: RenderedMessage = {
+      id: optimisticId,
+      role: 'USER' as MessageRole,
+      content: message,
+      createdAt: new Date(),
+    };
+    
+    optimisticMessageIds.current.add(optimisticId);
+    
+    setMessages(prev => [...prev, userMessage]);
+    setIsSending(true);
+    messageMutation.mutate({ conversationId, agentId: resolvedAgentId, message });
+  }, [messageMutation, conversationId, resolvedAgentId, isSending, messages, markFollowupsConsumedMutation]);
+
+  // ✅ Update handleFollowupClick to wait for mutation
+  const handleFollowupClick = useCallback(async (messageId: string, followup: MessageFollowup) => {
+    // ✅ IMMEDIATELY remove follow-ups from UI (optimistic update)
+    setMessages(prev => prev.map(msg => 
+      msg.id === messageId ? { ...msg, followups: undefined } : msg
+    ));
+    
+    // Remove from state map
+    setFollowupsMap(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(messageId);
+      return newMap;
+    });
+    
+    // ✅ Wait for mutation to complete before sending message
+    try {
+      await markFollowupsConsumedMutation.mutateAsync({ messageId });
+    } catch (error) {
+      console.error('Failed to mark follow-ups as consumed:', error);
+    }
+    
+    // Send the follow-up message
+    handleSendMessage(followup.label);
+  }, [handleSendMessage, markFollowupsConsumedMutation]);
+
+  const handleActionClick = useCallback((messageId: string, action: MessageAction) => {
+    if (action.id === 'launch-agent' && agentDraft?.status === 'ready' && conversationId) {
+      launchMutation.mutate({ conversationId });
+      return;
+    }
+    if (action.label) handleSendMessage(action.label);
+  }, [handleSendMessage, launchMutation, conversationId, agentDraft]);
+
+  // Resize functionality - must be before early return to follow Rules of Hooks
+  const [profileWidth, setProfileWidth] = useState(480); // Initial width: 480px (w-96 = 384px, increased)
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeRef = useRef<HTMLDivElement>(null);
+
+  // Handle resize
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      
+      const containerWidth = window.innerWidth;
+      const minProfileWidth = 400; // Minimum width
+      const maxProfileWidth = containerWidth * 0.7; // Maximum 70% of container
+      
+      const newWidth = containerWidth - e.clientX;
+      const clampedWidth = Math.max(minProfileWidth, Math.min(maxProfileWidth, newWidth));
+      setProfileWidth(clampedWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing]);
+
+  if (isInitializing) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
+          <p className="text-sm text-muted-foreground">Initializing agent builder...</p>
         </div>
       </div>
-    )
+    );
   }
 
-  const handleCreateConversation = async () => {
-    const conversation = await createConversation({
-      title: `${selectedContext.name || contextType} chat ${conversations.length + 1}`,
-    })
-    setActiveConversationId(conversation.id)
-  }
-
-  const handleSendMessage = async (
-    message: string,
-    options?: { attachments?: any[]; webSearch?: boolean; contexts?: Array<{ type: string; id: string }> }
-  ) => {
-    const convId = activeConversationId || (await createConversation({
-      title: `${selectedContext.name || contextType} chat ${conversations.length + 1}`,
-    })).id
-
-    if (!activeConversationId) {
-      setActiveConversationId(convId)
-    }
-
-    // Include selected contexts from parent if provided
-    const finalOptions = {
-      ...options,
-      contexts: options?.contexts || selectedContexts.map(ctx => ({ type: ctx.type, id: ctx.id }))
-    }
-
-    await sendMessage(convId, message, finalOptions)
-  }
-
-  const handleRename = async (title: string) => {
-    if (!activeConversationId) return
-    await renameConversation(activeConversationId, title)
-  }
-
-  const handleDelete = async () => {
-    if (!activeConversationId) return
-    await deleteMutation.mutateAsync({ conversationId: activeConversationId })
-    setActiveConversationId(null)
-    await utils.chat.list.invalidate({
-      contextType: selectedContext.type,
-      entityId: selectedContext.entityId,
-    })
-  }
-
-  const handleArchive = async () => {
-    if (!activeConversationId) return
-    await archiveMutation.mutateAsync({ conversationId: activeConversationId, archived: true })
-    setActiveConversationId(null)
-    await utils.chat.list.invalidate({
-      contextType: selectedContext.type,
-      entityId: selectedContext.entityId,
-    })
-  }
-
-  const handleShare = () => {
-    if (!activeConversationId) return
-    const url = `${window.location.origin}${window.location.pathname}?chat=${activeConversationId}`
-    navigator.clipboard.writeText(url)
-    // You can add a toast notification here
-  }
-
-  const handleConversationRename = async (conversationId: string, title: string) => {
-    await renameConversation(conversationId, title)
-  }
-
-  const handleConversationDelete = async (conversationId: string) => {
-    await deleteMutation.mutateAsync({ conversationId })
-    if (activeConversationId === conversationId) {
-      setActiveConversationId(null)
-    }
-    await utils.chat.list.invalidate({
-      contextType: selectedContext.type,
-      entityId: selectedContext.entityId,
-    })
-  }
-
-  const handleConversationArchive = async (conversationId: string) => {
-    await archiveMutation.mutateAsync({ conversationId, archived: true })
-    if (activeConversationId === conversationId) {
-      setActiveConversationId(null)
-    }
-    await utils.chat.list.invalidate({
-      contextType: selectedContext.type,
-      entityId: selectedContext.entityId,
-    })
-  }
-
-  const handleConversationShare = (conversationId: string) => {
-    const url = `${window.location.origin}${window.location.pathname}?chat=${conversationId}`
-    navigator.clipboard.writeText(url)
-    // You can add a toast notification here
-  }
+  // Merge messages with followups (messages already have follow-ups set correctly from useEffect)
+  // Prefer follow-ups from the message object (which respects consumed state) over the map
+  const messagesWithFollowups = messages.map(msg => ({
+    ...msg,
+    followups: msg.followups || followupsMap.get(msg.id),
+  }));
 
   return (
-    <div className="flex h-[calc(100vh-18rem)] flex-col gap-4">
-      <div className="grid flex-1 grid-cols-[320px_1fr] gap-6">
-        <div className="h-full">
-          {isLoadingConversations ? (
-            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading chats...
-            </div>
-          ) : (
-            <ConversationList
-              conversations={conversations}
-              activeConversationId={activeConversationId}
-              onSelect={(id) => setActiveConversationId(id)}
-              onCreate={handleCreateConversation}
-              isCreating={isCreatingConversation}
-              onRename={handleConversationRename}
-              onDelete={handleConversationDelete}
-              onArchive={handleConversationArchive}
-              onShare={handleConversationShare}
+    <div className="flex h-full">
+      {/* Chat Interface */}
+      <div 
+        className="flex flex-col px-6 overflow-hidden transition-all"
+        style={{ width: `calc(100% - ${profileWidth}px)` }}
+      >
+        <Card className="flex h-full flex-col overflow-hidden border-0 bg-white shadow-none lg:rounded-2xl lg:border lg:shadow-2xl">
+          <ChatHeader title="Create AI Agent" />
+          
+          <div className="relative flex-1 overflow-hidden">
+            <ChatMessageList
+              messages={messagesWithFollowups}
+              pendingAssistantMessage={isSending ? 'Thinking...' : null}
+              onFollowupClick={handleFollowupClick}
+              onActionClick={handleActionClick}
             />
-          )}
+          </div>
+
+          <div className="border-t p-4">
+            <ChatComposer
+              onSend={handleSendMessage}
+              isSending={isSending}
+              disabled={isSending || !conversationId}
+            />
+          </div>
+        </Card>
       </div>
 
-        <div className="h-full">
-          {isLoadingMessages && !pendingAssistantMessage ? (
-            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading conversation...
-          </div>
-          ) : (
-            <ChatPanel
-            title={activeConversation?.title ?? selectedContext.name ?? 'AI Chat'}
-            messages={messages}
-            onSendMessage={handleSendMessage}
-            isSending={isSending}
-            pendingAssistantMessage={pendingAssistantMessage}
-            onRename={handleRename}
-            onDelete={handleDelete}
-            onArchive={handleArchive}
-            onShare={handleShare}
-            onContextClick={onContextClick}
-            contextCount={contextCount}
-            contextType={selectedContext.type as any}
-            entityId={selectedContext.entityId}
+      {/* Resize Handle */}
+      <div
+        ref={resizeRef}
+        onMouseDown={(e) => {
+          e.preventDefault();
+          setIsResizing(true);
+        }}
+        className="w-1 bg-border hover:bg-primary/50 cursor-col-resize transition-colors flex-shrink-0"
+        style={{ minWidth: '4px' }}
+      />
+
+      {/* Preview Panel */}
+      <div 
+        className="border-l bg-gradient-to-b from-background to-muted/20 flex-shrink-0 overflow-hidden"
+        style={{ width: `${profileWidth}px`, minWidth: '400px' }}
+      >
+          <AgentProfile
+            agent={{
+              id: agentData.id,
+              name: agentData.name || agentDraft?.name || 'Unnamed Agent',
+              description: agentData.description ?? agentDraft?.description ?? null,
+              avatar: agentData.avatar ?? agentDraft?.avatar ?? null,
+              status: (agentData.status === 'ACTIVE' ? 'ACTIVE' : agentData.status === 'DRAFT' ? 'DRAFT' : agentData.status === 'BUILDING' ? 'BUILDING' : agentData.status === 'RECONFIGURING' ? 'RECONFIGURING' : agentData.status === 'EXECUTING' ? 'EXECUTING' : 'INACTIVE') as "ACTIVE" | "DRAFT" | "INACTIVE" | "BUILDING" | "RECONFIGURING" | "EXECUTING",
+              isActive: agentData.isActive ?? false,
+              agentType: agentData.agentType ?? agentDraft?.agentType ?? null,
+              systemPrompt: agentData.systemPrompt ?? agentDraft?.systemPrompt ?? null,
+              capabilities: agentData.capabilities ?? agentDraft?.capabilities ?? null,
+              constraints: agentData.constraints ?? agentDraft?.constraints ?? null,
+              createdAt: agentData.createdAt ?? new Date(),
+              updatedAt: agentData.updatedAt ?? new Date(),
+              metadata: (agentData.metadata as any) ?? {},
+              triggers: (agentData.triggers || []).map(t => ({
+                id: t.id,
+                triggerType: t.triggerType,
+                triggerConfig: t.triggerConfig as any,
+                name: t.name,
+                description: t.description,
+                isActive: t.isActive,
+                priority: t.priority,
+                tags: t.tags,
+              })),
+              tools: (agentData.tools || []).map(t => ({
+                id: t.id,
+                name: t.name,
+                description: t.description,
+                category: t.category,
+                toolType: t.toolType,
+                isActive: t.isActive,
+              })),
+              schedules: (agentData.schedules || []).map(s => ({
+                id: s.id,
+                name: s.name,
+                description: s.description,
+                repeatTime: s.repeatTime,
+                startTime: s.startTime,
+                endTime: s.endTime,
+                timezone: s.timezone,
+                instructions: s.instructions,
+                isActive: s.isActive,
+                priority: s.priority,
+              })),
+            }}
+            isReconfiguring={agentData.status === 'RECONFIGURING' || (agentData.status === 'ACTIVE' && conversationState?.stage && ['review', 'testing'].includes(conversationState.stage))}
+            onEdit={() => toast.info('Edit agent configuration...')}
+            onConfigure={() => setShowAgentProfile(false)}
           />
-          )}
-        </div>
       </div>
     </div>
-  )
-}
+  );
+};

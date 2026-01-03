@@ -38,9 +38,13 @@ export class AgentsController {
         { RPM: 30, RPD: 500 }
       );
 
-      if (rateLimited && typeof rateLimited === 'object' && 'status' in rateLimited && 'text' in rateLimited) {
-        const text = await (rateLimited as any).text();
-        return res.status((rateLimited as any).status).type('application/json').send(text);
+      if (rateLimited && 
+          typeof rateLimited === 'object' && 
+          'status' in rateLimited && 
+          'text' in rateLimited && 
+          rateLimited instanceof Response) {
+        const text = await rateLimited.text();
+        return res.status(rateLimited.status).type('application/json').send(text);
       }
 
       const schema = z.object({
@@ -410,6 +414,73 @@ export class AgentsController {
   }
 
   // Agent Operator endpoints
+  @Post('operator/initialize')
+  async initializeOperator(@Req() req: AuthenticatedRequest, @Res() res: Response) {
+    try {
+      const schema = z.object({
+        conversationId: z.string().optional(),
+        agentId: z.string().optional(),
+        skipWelcome: z.boolean().optional(),
+      });
+
+      const body = schema.parse(req.body);
+      const userId = req.userId!;
+
+      if (!body.agentId) {
+        return res.status(400).json({ error: 'agentId is required for operator initialization' });
+      }
+
+      const result = await agentOperatorService.initializeConversation(
+        userId,
+        body.agentId,
+        body.conversationId,
+        body.skipWelcome
+      );
+
+      return res.json(result);
+    } catch (error) {
+      console.error('[AgentOperator] Error initializing operator:', error);
+      const statusCode = error instanceof Error && error.message.includes('not found') ? 404 :
+                        error instanceof Error && error.message.includes('Unauthorized') ? 403 : 500;
+      return res.status(statusCode).json({
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  @Post('operator/message')
+  async operatorMessage(@Req() req: AuthenticatedRequest, @Res() res: Response) {
+    try {
+      const schema = z.object({
+        conversationId: z.string(),
+        agentId: z.string().min(1),
+        message: z.string().min(1),
+      });
+
+      const body = schema.parse(req.body);
+      const userId = req.userId!;
+
+      const result = await agentOperatorService.processMessage(
+        body.conversationId,
+        body.agentId,
+        body.message,
+        userId
+      );
+
+      return res.json(result);
+    } catch (error) {
+      console.error('[AgentOperator] Error processing operator message:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: 'Invalid request', details: error.errors });
+      }
+      return res.status(500).json({
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
   @Post('operator/chat')
   async operatorChat(@Req() req: AuthenticatedRequest, @Res() res: Response) {
     try {
@@ -424,14 +495,32 @@ export class AgentsController {
       const body = schema.parse(req.body);
       const userId = req.userId!;
 
-      const result = await agentOperatorService.operatorChat(
-        body.agentId,
-        userId,
-        body.message,
-        { workspaceId: body.workspaceId, conversationId: body.conversationId, ...body.context }
-      );
-
-      return res.json(result);
+      // If conversationId is provided, use processMessage; otherwise initialize first
+      if (body.conversationId) {
+        const result = await agentOperatorService.processMessage(
+          body.conversationId,
+          body.agentId,
+          body.message,
+          userId
+        );
+        return res.json(result);
+      } else {
+        // Initialize conversation first, then process message
+        const initResult = await agentOperatorService.initializeConversation(
+          userId,
+          body.agentId,
+          undefined,
+          true // Skip welcome for chat
+        );
+        
+        const result = await agentOperatorService.processMessage(
+          initResult.conversationId,
+          body.agentId,
+          body.message,
+          userId
+        );
+        return res.json(result);
+      }
     } catch (error) {
       console.error('[AgentOperator] Error in operator chat:', error);
       if (error instanceof z.ZodError) {

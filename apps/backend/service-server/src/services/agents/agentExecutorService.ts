@@ -13,7 +13,7 @@ import { AgentBuilderError } from './agentBuilderService';
 import { checkAgentTokenLimit, updateAgentUsage, estimateTokens, countAgentTokens } from '@/utils/ai/agentUsageTracking';
 import { TokenBudgetManager } from './optimization/tokenBudgetManager';
 import { agentBuilderContextService, UserContext } from './agentBuilderContextService';
-import { AI_OPERATOR_FLOW_GUIDE } from './aiOperatorFlowGuide';
+import { AI_EXECUTOR_FLOW_GUIDE } from './aiExecutorFlowGuide';
 import { EntityScopeInferrer } from './context/entityScopeInferrer';
 import { ConfigurationExtractor } from './extraction/configurationExtractor';
 import { ConfigurationMerger } from './extraction/configurationMerger';
@@ -28,40 +28,28 @@ import {
 } from './agentBuilderStateService';
 import { QuickAction } from './agentBuilderQuickActions';
 
-interface SuggestedAction {
-  type: 'execute' | 'update' | 'info';
-  label: string;
-  payload?: Record<string, unknown>;
-}
-
-interface OperatorResponse {
-  response: string;
-  suggestedActions: SuggestedAction[];
-  patch?: Record<string, unknown>;
-}
-
-const OperatorResponseSchema = z.object({
+const ExecutorResponseSchema = z.object({
   response: z.string(),
   suggestedActions: z
     .array(
       z.object({
         type: z.enum(['execute', 'update', 'info']),
         label: z.string().max(120),
-        payload: z.record(z.unknown()).optional(),
+        payload: z.any().optional(),
       })
     )
     .default([]),
-  patch: z.record(z.unknown()).optional(),
-}) satisfies z.ZodType<OperatorResponse>;
+  patch: z.record(z.any()).optional(),
+});
 
-const OperatorWelcomeResponseSchema = z.object({
+const ExecutorWelcomeResponseSchema = z.object({
   welcomeMessage: z.string(),
 });
 
-export class AgentOperatorService {
+export class AgentExecutorService {
   // Lock timeout in seconds (1 minute)
   private readonly LOCK_TIMEOUT = 60;
-  private readonly LOCK_KEY_PREFIX = 'agent_operator:lock:';
+  private readonly LOCK_KEY_PREFIX = 'agent_executor:lock:';
   
   private readonly circuitBreaker = new CircuitBreaker({ 
     failureThreshold: 5, 
@@ -90,9 +78,9 @@ export class AgentOperatorService {
     } catch (error) {
       const classification = this.errorClassifier.classify(error as Error);
       const errorId = randomUUID();
-      console.error('[AgentOperator] LLM failed', { errorId, context, classification, error });
+      console.error('[AgentExecutor] LLM failed', { errorId, context, classification, error });
       throw new AgentBuilderError(
-        'AGENT_OPERATOR_COMPLETION_FAILED',
+        'AGENT_EXECUTOR_COMPLETION_FAILED',
         `LLM call failed: ${classification.type}`,
         'I could not process that request. Please try again shortly.',
         { errorId, classification }
@@ -108,7 +96,7 @@ export class AgentOperatorService {
       const result = await redis.set(lockKey, '1', 'EX', this.LOCK_TIMEOUT, 'NX');
       return result === 'OK';
     } catch (error) {
-      console.error(`[AgentOperator] Failed to acquire lock for ${lockKey}:`, error);
+      console.error(`[AgentExecutor] Failed to acquire lock for ${lockKey}:`, error);
       // If Redis fails, allow processing (fail open)
       return true;
     }
@@ -121,7 +109,7 @@ export class AgentOperatorService {
     try {
       await redis.del(lockKey);
     } catch (error) {
-      console.error(`[AgentOperator] Failed to release lock for ${lockKey}:`, error);
+      console.error(`[AgentExecutor] Failed to release lock for ${lockKey}:`, error);
       // Don't throw - lock will expire anyway
     }
   }
@@ -153,7 +141,7 @@ export class AgentOperatorService {
         userId
       );
     } catch (error) {
-      console.error('[AgentOperator] Failed to infer entity scope for operator initialization:', error);
+      console.error('[AgentExecutor] Failed to infer entity scope for executor initialization:', error);
     }
 
     // If conversationId is provided, load existing state
@@ -168,16 +156,16 @@ export class AgentOperatorService {
         const retryLock = await this.acquireLock(lockKey);
         if (!retryLock) {
           // Still locked, just load and return existing state
-          console.log(`[AgentOperator] Conversation ${conversationId} is being initialized, loading existing state`);
+          console.log(`[AgentExecutor] Conversation ${conversationId} is being initialized, loading existing state`);
         }
       }
 
       try {
-        console.log(`[AgentOperator] Loading existing conversation: ${conversationId}`);
+        console.log(`[AgentExecutor] Loading existing conversation: ${conversationId}`);
         const existingState = await agentBuilderStateService.getConversationState(conversationId);
         if (!existingState) {
           throw new AgentBuilderError(
-            'AGENT_OPERATOR_CONVERSATION_NOT_FOUND',
+            'AGENT_EXECUTOR_CONVERSATION_NOT_FOUND',
             `Conversation ${conversationId} not found`,
             'This conversation could not be found. Please start a new conversation.',
             { conversationId, userId }
@@ -185,7 +173,7 @@ export class AgentOperatorService {
         }
         if (existingState.userId !== userId) {
           throw new AgentBuilderError(
-            'AGENT_OPERATOR_UNAUTHORIZED',
+            'AGENT_EXECUTOR_UNAUTHORIZED',
             `Unauthorized: Conversation ${conversationId} does not belong to user ${userId}`,
             'You do not have access to this conversation.',
             { conversationId, userId }
@@ -202,7 +190,7 @@ export class AgentOperatorService {
         const hasMessages = messageCount > 0;
 
         if (!hasMessages && !skipWelcome) {
-          console.log(`[AgentOperator] Conversation ${conversationId} is empty, generating welcome message`);
+          console.log(`[AgentExecutor] Conversation ${conversationId} is empty, generating welcome message`);
 
           // Generate welcome message for empty existing conversation
           const welcomeMessage = await this.generateWelcomeMessage(userContext, agent, userId);
@@ -218,7 +206,7 @@ export class AgentOperatorService {
           const refreshedState = await agentBuilderStateService.getConversationState(conversationId);
           if (!refreshedState) {
             throw new AgentBuilderError(
-              'AGENT_OPERATOR_STATE_REFRESH_FAILED',
+              'AGENT_EXECUTOR_STATE_REFRESH_FAILED',
               `Failed to refresh conversation state for ${conversationId}`,
               'Failed to load conversation state. Please try again.',
               { conversationId, userId }
@@ -236,7 +224,7 @@ export class AgentOperatorService {
         }
 
         // Conversation has messages - load existing conversation without new welcome
-        console.log(`[AgentOperator] Successfully loaded existing conversation: ${conversationId}, messages: ${conversationState.conversationHistory.length}`);
+        console.log(`[AgentExecutor] Successfully loaded existing conversation: ${conversationId}, messages: ${conversationState.conversationHistory.length}`);
         return {
           conversationId: conversationState.conversationId,
           conversationState,
@@ -257,18 +245,18 @@ export class AgentOperatorService {
     if (agentId && !conversationId) {
       const agentWithConversations = await prisma.aiAgent.findUnique({
         where: { id: agentId },
-        include: { conversations: { where: { conversationType: 'AGENT_OPERATOR' }, orderBy: { createdAt: 'desc' }, take: 1 } },
+        include: { conversations: { where: { conversationType: 'AGENT_EXECUTOR' }, orderBy: { createdAt: 'desc' }, take: 1 } },
       });
 
       if (agentWithConversations?.conversations?.[0]) {
         // Agent has existing conversation - recursively call with conversationId
-        console.log(`[AgentOperator] Agent ${agentId} has existing conversation ${agentWithConversations.conversations[0].id}, loading it`);
+        console.log(`[AgentExecutor] Agent ${agentId} has existing conversation ${agentWithConversations.conversations[0].id}, loading it`);
         return this.initializeConversation(userId, agentId, agentWithConversations.conversations[0].id);
       }
     }
 
     // Create new conversation state
-    console.log(`[AgentOperator] Creating new conversation for agent ${agentId}`);
+    console.log(`[AgentExecutor] Creating new conversation for agent ${agentId}`);
     conversationState = await agentBuilderStateService.createConversationState(
       userId,
       agentId
@@ -286,11 +274,11 @@ export class AgentOperatorService {
 
       if (messageCount > 0) {
         // Messages already exist, refresh state and return
-        console.log(`[AgentOperator] Messages already exist for new conversation ${conversationState.conversationId}`);
+        console.log(`[AgentExecutor] Messages already exist for new conversation ${conversationState.conversationId}`);
         const refreshedState = await agentBuilderStateService.getConversationState(conversationState.conversationId);
         if (!refreshedState) {
           throw new AgentBuilderError(
-            'AGENT_OPERATOR_STATE_REFRESH_FAILED',
+            'AGENT_EXECUTOR_STATE_REFRESH_FAILED',
             `Failed to refresh conversation state for ${conversationState.conversationId}`,
             'Failed to load conversation state. Please try again.',
             { conversationId: conversationState.conversationId, userId }
@@ -318,7 +306,7 @@ export class AgentOperatorService {
         const refreshedState = await agentBuilderStateService.getConversationState(conversationState.conversationId);
         if (!refreshedState) {
           throw new AgentBuilderError(
-            'AGENT_OPERATOR_STATE_REFRESH_FAILED',
+            'AGENT_EXECUTOR_STATE_REFRESH_FAILED',
             `Failed to refresh conversation state for ${conversationState.conversationId}`,
             'Failed to load conversation state. Please try again.',
             { conversationId: conversationState.conversationId, userId }
@@ -362,13 +350,13 @@ export class AgentOperatorService {
     const messages = [
       {
         role: 'system' as const,
-        content: `You are the Xovira Agent Operator assistant.
+        content: `You are the Xovira Agent Executor assistant.
 
-=== AI OPERATOR FLOW GUIDE (REFERENCE) ===
-${AI_OPERATOR_FLOW_GUIDE}
+=== AI EXECUTOR FLOW GUIDE (REFERENCE) ===
+${AI_EXECUTOR_FLOW_GUIDE}
 === END OF FLOW GUIDE ===
 
-Generate a short, friendly welcome message for the operator panel for this agent.
+Generate a short, friendly welcome message for the executor panel for this agent.
 
 Requirements:
 - Mention the agent by name.
@@ -407,7 +395,7 @@ Return strictly JSON with shape: { "welcomeMessage": string }.`,
     const tokenCheck = await checkAgentTokenLimit(userId, estimatedTokens);
     if (!tokenCheck.allowed) {
       throw new AgentBuilderError(
-        'AGENT_OPERATOR_INSUFFICIENT_TOKENS',
+        'AGENT_EXECUTOR_INSUFFICIENT_TOKENS',
         `Insufficient tokens: ${tokenCheck.remaining} remaining, need ${estimatedTokens}`,
         `You have ${tokenCheck.remaining} tokens remaining, but need approximately ${estimatedTokens} tokens. Please upgrade your plan or purchase more tokens.`,
         { userId, remaining: tokenCheck.remaining, required: estimatedTokens }
@@ -421,36 +409,36 @@ Return strictly JSON with shape: { "welcomeMessage": string }.`,
         temperature: 0.3,
         max_tokens: 300,
       },
-      { operation: 'operator_initialize', agentId: agent.id, userId }
+      { operation: 'executor_initialize', agentId: agent.id, userId }
     );
 
     const content = completion.choices?.[0]?.message?.content;
     if (!content) {
       throw new AgentBuilderError(
-        'AGENT_OPERATOR_WELCOME_FAILED',
-        'Failed to generate operator welcome message',
-        'I could not prepare the operator view. Please try again.',
+        'AGENT_EXECUTOR_WELCOME_FAILED',
+        'Failed to generate executor welcome message',
+        'I could not prepare the executor view. Please try again.',
         { agentId: agent.id, userId }
       );
     }
 
     let parsed;
     try {
-      parsed = OperatorWelcomeResponseSchema.safeParse(JSON.parse(content));
+      parsed = ExecutorWelcomeResponseSchema.safeParse(JSON.parse(content));
     } catch (error) {
       throw new AgentBuilderError(
-        'AGENT_OPERATOR_WELCOME_PARSE_FAILED',
-        'Failed to parse operator welcome response',
-        'I could not prepare the operator view. Please try again.',
+        'AGENT_EXECUTOR_WELCOME_PARSE_FAILED',
+        'Failed to parse executor welcome response',
+        'I could not prepare the executor view. Please try again.',
         { agentId: agent.id, userId, error: error instanceof Error ? error.message : String(error) }
       );
     }
 
     if (!parsed.success) {
       throw new AgentBuilderError(
-        'AGENT_OPERATOR_WELCOME_INVALID',
-        'Operator welcome response did not match schema',
-        'I could not prepare the operator view. Please try again.',
+        'AGENT_EXECUTOR_WELCOME_INVALID',
+        'Executor welcome response did not match schema',
+        'I could not prepare the executor view. Please try again.',
         { agentId: agent.id, userId, issues: parsed.error.issues }
       );
     }
@@ -474,7 +462,7 @@ Return strictly JSON with shape: { "welcomeMessage": string }.`,
           user?.email || undefined
         );
       } catch (error) {
-        console.error('Failed to update agent usage for operator initialization:', error);
+        console.error('Failed to update agent usage for executor initialization:', error);
       }
     }).catch(() => {});
 
@@ -482,7 +470,7 @@ Return strictly JSON with shape: { "welcomeMessage": string }.`,
   }
 
   /**
-   * Process operator message - similar to agentBuilderService.processMessage
+   * Process executor message - similar to agentBuilderService.processMessage
    * Handles configuration extraction, automation inference, and updates
    */
   async processMessage(
@@ -506,7 +494,7 @@ Return strictly JSON with shape: { "welcomeMessage": string }.`,
     const lockAcquired = await this.acquireLock(conversationId);
     if (!lockAcquired) {
       throw new AgentBuilderError(
-        'AGENT_OPERATOR_CONVERSATION_LOCKED',
+        'AGENT_EXECUTOR_CONVERSATION_LOCKED',
         `Conversation ${conversationId} is being processed by another request`,
         'This conversation is currently being processed. Please wait a moment and try again.',
         { conversationId, userId }
@@ -520,7 +508,7 @@ Return strictly JSON with shape: { "welcomeMessage": string }.`,
 
       if (!conversationState) {
         throw new AgentBuilderError(
-          'AGENT_OPERATOR_CONVERSATION_NOT_FOUND',
+          'AGENT_EXECUTOR_CONVERSATION_NOT_FOUND',
           `Conversation ${conversationId} not found`,
           'This conversation could not be found. Please start a new conversation.',
           { conversationId, userId }
@@ -530,7 +518,7 @@ Return strictly JSON with shape: { "welcomeMessage": string }.`,
       // Verify user owns this conversation
       if (conversationState.userId !== userId) {
         throw new AgentBuilderError(
-          'AGENT_OPERATOR_UNAUTHORIZED',
+          'AGENT_EXECUTOR_UNAUTHORIZED',
           `Unauthorized: Conversation ${conversationId} does not belong to user ${userId}`,
           'You do not have access to this conversation.',
           { conversationId, userId }
@@ -555,7 +543,7 @@ Return strictly JSON with shape: { "welcomeMessage": string }.`,
           userId
         );
       } catch (error) {
-        console.error('[AgentOperator] Failed to infer entity scope for operator chat:', error);
+        console.error('[AgentExecutor] Failed to infer entity scope for executor chat:', error);
       }
 
       // Add user message to history
@@ -571,7 +559,7 @@ Return strictly JSON with shape: { "welcomeMessage": string }.`,
 
       if (!refreshedState) {
         throw new AgentBuilderError(
-          'AGENT_OPERATOR_STATE_REFRESH_FAILED',
+          'AGENT_EXECUTOR_STATE_REFRESH_FAILED',
           `Failed to refresh conversation state for ${conversationId}`,
           'Failed to load conversation state. Please try again.',
           { conversationId, userId }
@@ -612,7 +600,7 @@ Return strictly JSON with shape: { "welcomeMessage": string }.`,
             conversationId
           );
         } catch (error) {
-          console.error('[AgentOperator] Configuration extraction failed:', error);
+          console.error('[AgentExecutor] Configuration extraction failed:', error);
         }
       }
 
@@ -672,7 +660,7 @@ Return strictly JSON with shape: { "welcomeMessage": string }.`,
             }
           });
         } catch (error) {
-          console.error('[AgentOperator] Failed to merge configuration:', error);
+          console.error('[AgentExecutor] Failed to merge configuration:', error);
         }
       }
 
@@ -707,11 +695,11 @@ Return strictly JSON with shape: { "welcomeMessage": string }.`,
             userId
           );
         } catch (error) {
-          console.error('[AgentOperator] Automation inference failed:', error);
+          console.error('[AgentExecutor] Automation inference failed:', error);
         }
       }
 
-      // Build operator response
+      // Build executor response
       const model = await fetchModel();
       const guardrails = `QUALITY
 - Be concise, factual, and accurate to this agent's stored configuration.
@@ -720,7 +708,7 @@ Return strictly JSON with shape: { "welcomeMessage": string }.`,
 - When suggesting an execution, include a suggested input payload under payload.
 - Keep at most 3 suggestedActions; labels < 80 chars.`;
 
-      const systemPrompt = `You are an Agent Operator assistant for Xovira.
+      const systemPrompt = `You are an Agent Executor assistant for Xovira.
 You can: (1) answer questions about the agent, (2) infer and propose safe configuration updates as a minimal JSON patch, (3) suggest running the agent with an input.
 Use the agent data, workspace context, and recent executions exactly as given. When inferring configuration, keep changes minimal and aligned with the existing intent of the agent.
 For executions, suggest clear input payloads that this agent can handle based on its tools and triggers.
@@ -768,8 +756,8 @@ ${guardrails}`;
       const tokenCheck = await checkAgentTokenLimit(userId, estimatedTokens);
       if (!tokenCheck.allowed) {
         throw new AgentBuilderError(
-          'AGENT_OPERATOR_TOKEN_LIMIT',
-          'Token limit exceeded for operator chat',
+          'AGENT_EXECUTOR_TOKEN_LIMIT',
+          'Token limit exceeded for executor chat',
           'You are over the current token budget. Please wait or upgrade your plan.',
           { remaining: tokenCheck.remaining, estimatedTokens }
         );
@@ -785,7 +773,7 @@ ${guardrails}`;
             {
               type: 'function',
               function: {
-                name: 'operator_response',
+                name: 'executor_response',
                 description: 'Respond to the user with actions and optional patch',
                 parameters: {
                   type: 'object',
@@ -810,16 +798,16 @@ ${guardrails}`;
               },
             },
           ],
-          tool_choice: { type: 'function', function: { name: 'operator_response' } },
+          tool_choice: { type: 'function', function: { name: 'executor_response' } },
         },
-        { operation: 'operator_chat', agentId: agent.id, userId }
+        { operation: 'executor_chat', agentId: agent.id, userId }
       );
 
       const toolCall = completion.choices[0]?.message?.tool_calls?.[0];
-      if (!toolCall || toolCall.function.name !== 'operator_response') {
+      if (!toolCall || toolCall.function.name !== 'executor_response') {
         throw new AgentBuilderError(
-          'AGENT_OPERATOR_NO_RESPONSE',
-          'Operator did not return a structured response',
+          'AGENT_EXECUTOR_NO_RESPONSE',
+          'Executor did not return a structured response',
           'I was unable to craft an answer. Please try again.',
           { agentId: agent.id, userId }
         );
@@ -844,15 +832,15 @@ ${guardrails}`;
             user?.email || undefined
           );
         } catch (error) {
-          console.error('Failed to update agent usage for operator chat:', error);
+          console.error('Failed to update agent usage for executor chat:', error);
         }
       }).catch(() => {});
 
-      const parsed = OperatorResponseSchema.safeParse(JSON.parse(toolCall.function.arguments));
+      const parsed = ExecutorResponseSchema.safeParse(JSON.parse(toolCall.function.arguments));
       if (!parsed.success) {
         throw new AgentBuilderError(
-          'AGENT_OPERATOR_PARSE_FAILED',
-          'Failed to parse operator response',
+          'AGENT_EXECUTOR_PARSE_FAILED',
+          'Failed to parse executor response',
           'I could not parse the result. Please try again.',
           { issues: parsed.error.issues }
         );
@@ -861,7 +849,7 @@ ${guardrails}`;
       const sandboxed = await this.promptSandbox.validatePrompt(parsed.data.response);
       if (!sandboxed.valid) {
         throw new AgentBuilderError(
-          'AGENT_OPERATOR_SAFETY',
+          'AGENT_EXECUTOR_SAFETY',
           'Response failed safety validation',
           'The generated response did not pass safety checks.',
           { violations: sandboxed.errors }
@@ -875,7 +863,7 @@ ${guardrails}`;
       // Apply merged configuration updates from extracted config (similar to agentBuilderService)
       if (Object.keys(mergedUpdates).length > 0) {
         try {
-          console.log('[AgentOperator] Applying merged configuration updates:', Object.keys(mergedUpdates));
+          console.log('[AgentExecutor] Applying merged configuration updates:', Object.keys(mergedUpdates));
           await this.agentUpdateService.updateAgent({
             agentId,
             updates: mergedUpdates,
@@ -883,9 +871,9 @@ ${guardrails}`;
           });
           // Refresh agent to get updated state before execution
           const updatedAgent = await this.assertAgentAccess(agentId, userId);
-          console.log('[AgentOperator] Agent updated successfully with merged configuration');
+          console.log('[AgentExecutor] Agent updated successfully with merged configuration');
         } catch (error) {
-          console.error('[AgentOperator] Failed to apply merged configuration updates:', error);
+          console.error('[AgentExecutor] Failed to apply merged configuration updates:', error);
           // Continue execution even if update fails
         }
       }
@@ -895,7 +883,7 @@ ${guardrails}`;
         try {
           await this.applySuggestedChanges(agentId, userId, patch);
         } catch (error) {
-          console.error('[AgentOperator] Failed to apply suggested changes:', error);
+          console.error('[AgentExecutor] Failed to apply suggested changes:', error);
         }
       }
 
@@ -909,7 +897,7 @@ ${guardrails}`;
               userId,
               action.payload || {},
               {
-                source: 'operator',
+                source: 'executor',
                 conversationId,
                 message: sanitizedMessage,
                 label: action.label,
@@ -917,7 +905,7 @@ ${guardrails}`;
               }
             );
           } catch (error) {
-            console.error('[AgentOperator] Failed to trigger execution from operator chat:', error);
+            console.error('[AgentExecutor] Failed to trigger execution from executor chat:', error);
           }
         }
       }
@@ -966,7 +954,7 @@ ${guardrails}`;
     const agent = await this.assertAgentAccess(agentId, userId, true);
     if (!agent.isActive) {
       throw new AgentBuilderError(
-        'AGENT_OPERATOR_INACTIVE',
+        'AGENT_EXECUTOR_INACTIVE',
         'Agent is not active',
         'Activate the agent before running executions.',
         { agentId }
@@ -1024,4 +1012,4 @@ ${guardrails}`;
   }
 }
 
-export const agentOperatorService = new AgentOperatorService();
+export const agentExecutorService = new AgentExecutorService();

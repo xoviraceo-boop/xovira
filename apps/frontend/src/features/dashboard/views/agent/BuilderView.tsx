@@ -13,16 +13,17 @@ import { ChatHeader } from '@/entities/chats/components/ChatHeader';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import { MessageRole } from '@xovira/database/src/generated/prisma/client';
-import { AgentPreview } from './AgentBuilderPreview';
-import { AgentProfile } from './AgentProfile';
+import { AgentProfile } from '@/entities/agents/components/AgentProfile';
 import type { QuickAction, AgentDraft, UserContext, ConversationState } from '@/entities/agents/types';
 
 interface BuilderViewProps {
   agentId?: string;
+  agent?: any;
 }
 
 export const BuilderView: React.FC<BuilderViewProps> = ({
   agentId,
+  agent,
 }) => {
   const [messages, setMessages] = useState<RenderedMessage[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -33,6 +34,7 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
   const [isSending, setIsSending] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [showAgentProfile, setShowAgentProfile] = useState(false);
+  const resolvedAgentId = agentId ?? agent?.id;
   
   // Track optimistic message IDs to remove them when confirmed
   const optimisticMessageIds = useRef<Set<string>>(new Set());
@@ -48,22 +50,22 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
     }
   );
 
-  // Load agent data if agentId provided
   const { data: agentData, isLoading: isLoadingAgent, refetch: refetchAgent } = trpc.agent.get.useQuery(
-    { id: agentId! },
-    { enabled: !!agentId }
+    { id: resolvedAgentId! },
+    {
+      enabled: !!resolvedAgentId,
+      initialData: agent,
+    }
   );
 
-  // Mutations
-  const initializeMutation = trpc.agent.builder.initialize.useMutation({
+  const initializeMutation = trpc.agent.operator.initialize.useMutation({
     onSuccess: async (data) => {
       setConversationId(data.conversationId);
       setConversationState(data.conversationState);
       setUserContext(data.userContext);
       setAgentDraft(data.conversationState.agentDraft);
       
-      // Refetch agent data to get updated conversations list
-      if (agentId) {
+      if (resolvedAgentId) {
         await refetchAgent();
       }
       
@@ -102,11 +104,29 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
     },
   });
 
-  const messageMutation = trpc.agent.builder.message.useMutation({
+  const launchMutation = trpc.agent.builder.launch.useMutation({
+    onSuccess: async (data) => {
+      toast.success('Agent launched successfully!');
+      if (resolvedAgentId) {
+        await refetchAgent();
+      }
+      setShowAgentProfile(true);
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to launch agent');
+    },
+  });
+
+  const messageMutation = trpc.agent.operator.message.useMutation({
     onSuccess: async (data) => {
       setIsSending(false);
       setConversationState(data.conversationState);
       setAgentDraft(data.agentDraft);
+      
+      // Refetch agent data to get updated configuration from operator updates
+      if (resolvedAgentId) {
+        await refetchAgent();
+      }
       
       // Refetch messages to get the confirmed messages from DB
       const result = await refetchMessages();
@@ -282,63 +302,51 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
   const hasInitialized = useRef(false);
   
   useEffect(() => {
-    // Prevent multiple initializations
     if (conversationId || initializeMutation.isPending || hasInitialized.current) return;
 
-    // If agentId is provided, wait for agent data to load before initializing
-    if (agentId) {
-      // Still loading agent data, wait
+    if (resolvedAgentId) {
       if (isLoadingAgent) return;
-      
-      // Agent data loaded, check for existing conversation
+
       const storedConversationId = agentData?.conversations?.[0]?.id;
-      
+
       hasInitialized.current = true;
-      
+
       if (storedConversationId) {
-        // Load existing conversation
         console.log('[AgentChatBuilder] Loading existing conversation:', storedConversationId);
-        initializeMutation.mutate({ 
+        initializeMutation.mutate({
           conversationId: storedConversationId,
-          agentId: agentId
+          agentId: resolvedAgentId,
         });
       } else {
-        // No existing conversation, create a new one and link to agent
-        console.log('[AgentChatBuilder] Creating new conversation for agent:', agentId);
-        initializeMutation.mutate({ 
-          agentId: agentId
+        console.log('[AgentChatBuilder] Creating new conversation for agent:', resolvedAgentId);
+        initializeMutation.mutate({
+          agentId: resolvedAgentId,
         });
       }
     } else {
-      // No agentId provided, create new conversation
       hasInitialized.current = true;
       initializeMutation.mutate({});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agentId, agentData, isLoadingAgent, conversationId]);
+  }, [resolvedAgentId, agentData, isLoadingAgent, conversationId]);
 
   // Mutation to mark follow-ups as consumed
   const markFollowupsConsumedMutation = trpc.chat.markFollowupsConsumed.useMutation();
 
-  // ✅ Update handleSendMessage to wait for mutation before clearing
   const handleSendMessage = useCallback(async (message: string) => {
-    if (!message.trim() || isSending || !conversationId) return;
+    if (!message.trim() || isSending || !conversationId || !resolvedAgentId) return;
 
-    // ✅ IMMEDIATELY clear follow-ups from UI (optimistic update)
     setMessages(prev => prev.map(msg => ({ ...msg, followups: undefined })));
-    setFollowupsMap(new Map()); // Clear all followups from state
+    setFollowupsMap(new Map());
 
-    // Mark all existing assistant messages' follow-ups as consumed in the database (background operation)
     const assistantMessages = messages.filter(msg => msg.role === 'ASSISTANT');
     
-    // ✅ Wait for all follow-up consumption mutations to complete
     const consumePromises = assistantMessages.map(msg => 
       markFollowupsConsumedMutation.mutateAsync({ messageId: msg.id }).catch(err => {
         console.error('Failed to mark follow-ups as consumed:', err);
       })
     );
     
-    // Wait for all to complete before sending message
     await Promise.all(consumePromises);
     
     const optimisticId = `optimistic_${Date.now()}`;
@@ -349,13 +357,12 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
       createdAt: new Date(),
     };
     
-    // Track this optimistic message
     optimisticMessageIds.current.add(optimisticId);
     
     setMessages(prev => [...prev, userMessage]);
     setIsSending(true);
-    messageMutation.mutate({ conversationId, message });
-  }, [messageMutation, conversationId, isSending, messages, markFollowupsConsumedMutation]);
+    messageMutation.mutate({ conversationId, agentId: resolvedAgentId, message });
+  }, [messageMutation, conversationId, resolvedAgentId, isSending, messages, markFollowupsConsumedMutation]);
 
   // ✅ Update handleFollowupClick to wait for mutation
   const handleFollowupClick = useCallback(async (messageId: string, followup: MessageFollowup) => {

@@ -7,7 +7,15 @@ export const onboardingRouter = router({
 		const userId = ctx.session!.user!.id;
 		const user = await prisma.user.findUnique({
 			where: { id: userId },
-			select: { onboardingCompleted: true, onboardingStep: true },
+			select: {
+				onboardingCompleted: true,
+				onboardingStep: true,
+				name: true,
+				role: true,
+				usagePurpose: true,
+				managementGoals: true,
+				referralSource: true
+			},
 		});
 		return user;
 	}),
@@ -17,6 +25,11 @@ export const onboardingRouter = router({
 			z.object({
 				completed: z.boolean().optional(),
 				step: z.number().int().min(0).max(10).optional(),
+				name: z.string().optional(),
+				role: z.string().optional(),
+				usagePurpose: z.string().optional(),
+				managementGoals: z.array(z.string()).optional(),
+				referralSource: z.string().optional(),
 			})
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -26,8 +39,21 @@ export const onboardingRouter = router({
 				data: {
 					onboardingCompleted: input.completed ?? undefined,
 					onboardingStep: input.step ?? undefined,
+					name: input.name ?? undefined,
+					role: input.role ?? undefined,
+					usagePurpose: input.usagePurpose ?? undefined,
+					managementGoals: input.managementGoals ?? undefined,
+					referralSource: input.referralSource ?? undefined,
 				},
-				select: { onboardingCompleted: true, onboardingStep: true },
+				select: {
+					onboardingCompleted: true,
+					onboardingStep: true,
+					name: true,
+					role: true,
+					usagePurpose: true,
+					managementGoals: true,
+					referralSource: true
+				},
 			});
 			return updated;
 		}),

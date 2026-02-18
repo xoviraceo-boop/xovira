@@ -2,12 +2,11 @@ import { z } from "zod";
 import { protectedProcedure, router } from "@/trpc/init";
 import { prisma } from "@/lib/prisma";
 import { LimitGuard } from "@/features/usage/utils/limitGuard";
-import { SubscriptionManager } from "@/features/billing/utils/subscriptionManager";
 
 export const billingRouter = router({
   currentPlan: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session!.user!.id;
-    await LimitGuard.ensureCycle(userId);
+    await LimitGuard.ensureCycle(userId, ctx.session);
     const subscription = await prisma.subscription.findFirst({
       where: { userId, status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] } },
       orderBy: { updatedAt: "desc" },
@@ -17,7 +16,7 @@ export const billingRouter = router({
   }),
 
   listPlans: protectedProcedure
-    .input(z.object({ planType: z.enum(["FREE","BASIC","PROFESSIONAL","BUSINESS","ENTERPRISE","CUSTOM"]).optional() }))
+    .input(z.object({ planType: z.enum(["FREE", "BASIC", "PROFESSIONAL", "BUSINESS", "ENTERPRISE", "CUSTOM"]).optional() }))
     .query(async ({ input }) => {
       return prisma.plan.findMany({
         where: {
@@ -30,7 +29,7 @@ export const billingRouter = router({
     }),
 
   listPackages: protectedProcedure
-    .input(z.object({ packageType: z.enum(["SMALL","MEDIUM","LARGE", "ENTERPRISE","CUSTOM"]).optional() }))
+    .input(z.object({ packageType: z.enum(["SMALL", "MEDIUM", "LARGE", "ENTERPRISE", "CUSTOM"]).optional() }))
     .query(async ({ input }) => {
       return prisma.creditPackage.findMany({
         where: {
@@ -79,7 +78,7 @@ export const billingRouter = router({
 
   summary: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session!.user!.id;
-    await LimitGuard.ensureCycle(userId);
+    await LimitGuard.ensureCycle(userId, ctx.session);
     const [subscription, quota, paymentsCount, purchasesCount] = await Promise.all([
       prisma.subscription.findFirst({ where: { userId }, include: { plan: true } }),
       prisma.userQuota.findUnique({ where: { userId } }),

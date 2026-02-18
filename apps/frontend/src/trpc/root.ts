@@ -27,7 +27,13 @@ import { resourceRouter } from "@/trpc/routers/resource";
 import { marketplaceRouter } from "@/trpc/routers/marketplace";
 import { payoutRouter } from "@/trpc/routers/payout";
 import { listRouter } from "@/trpc/routers/list";
+import { folderRouter } from "@/trpc/routers/folder";
 import { agentRouter } from "@/trpc/routers/agent";
+import { documentRouter } from "@/trpc/routers/document";
+import { documentActivityRouter } from "@/trpc/routers/documentActivity";
+import { organizationRouter } from "@/trpc/routers/organization";
+import { viewRouter } from "@/trpc/routers/view";
+import { customFieldsRouter } from "@/trpc/routers/customFields";
 
 export const appRouter = router({
   proposal: proposalRouter,
@@ -58,7 +64,13 @@ export const appRouter = router({
   payout: payoutRouter,
   resource: resourceRouter,
   list: listRouter,
+  folder: folderRouter,
   agent: agentRouter,
+  document: documentRouter,
+  documentActivity: documentActivityRouter,
+  organization: organizationRouter,
+  view: viewRouter,
+  customFields: customFieldsRouter,
 });
 
 export type AppRouter = typeof appRouter;

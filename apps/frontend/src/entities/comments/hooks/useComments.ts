@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { trpc } from '@/lib/trpc';
 import { useSocket } from '@/components/providers/SocketProvider';
 import { useEffect, useRef, useCallback, useMemo } from 'react';
@@ -41,7 +41,7 @@ export function useComments(postId: string) {
   // ✅ Fetch with optimized settings
   const { data: commentsResp, isLoading } = trpc.comments.list.useQuery(
     { postId, page: 1, pageSize: 100 },
-    { 
+    {
       enabled: !!postId,
       staleTime: Infinity,
       gcTime: 300000,
@@ -49,6 +49,7 @@ export function useComments(postId: string) {
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       refetchOnMount: false,
+      placeholderData: keepPreviousData,
     }
   );
 
@@ -62,17 +63,17 @@ export function useComments(postId: string) {
   useEffect(() => {
     if (!socket || !isConnected || !postId || subscribedRef.current) return;
 
-    socket.emit('feed:subscribe', { 
-      feedType: 'project', 
-      feedId: postId 
+    socket.emit('feed:subscribe', {
+      feedType: 'project',
+      feedId: postId
     });
     subscribedRef.current = true;
 
     return () => {
       if (socket && subscribedRef.current) {
-        socket.emit('feed:unsubscribe', { 
-          feedType: 'project', 
-          feedId: postId 
+        socket.emit('feed:unsubscribe', {
+          feedType: 'project',
+          feedId: postId
         });
         subscribedRef.current = false;
       }
@@ -114,10 +115,10 @@ export function useComments(postId: string) {
       items.map((comment) =>
         comment.id === data.commentId
           ? {
-              ...comment,
-              content: data.content,
-              isEdited: data.isEdited
-            }
+            ...comment,
+            content: data.content,
+            isEdited: data.isEdited
+          }
           : comment
       )
     );
@@ -134,9 +135,9 @@ export function useComments(postId: string) {
   // ✅ Handle comment voted
   const handleCommentVoted = useCallback((data: any) => {
     updateCommentCache((items) =>
-      items.map((comment) => 
-        comment.id === data.commentId 
-          ? { ...comment, upvotes: data.upvotes, downvotes: data.downvotes } 
+      items.map((comment) =>
+        comment.id === data.commentId
+          ? { ...comment, upvotes: data.upvotes, downvotes: data.downvotes }
           : comment
       )
     );
@@ -226,12 +227,12 @@ export function useComments(postId: string) {
 
   // ✅ Vote comment with optimistic update
   const voteComment = useMutation({
-    mutationFn: async ({ 
-      commentId, 
-      voteType 
-    }: { 
-      commentId: string; 
-      voteType: 'UPVOTE' | 'DOWNVOTE' 
+    mutationFn: async ({
+      commentId,
+      voteType
+    }: {
+      commentId: string;
+      voteType: 'UPVOTE' | 'DOWNVOTE'
     }) => {
       // ✅ Optimistic update
       const previousData = queryClient.getQueryData(queryKey);

@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, AlertCircle, Loader2 } from "lucide-react";
 import { useSession } from "next-auth/react";
+import { billingService } from "@/services/billing.service";
 
 interface StatusData {
   exists: boolean;
@@ -38,14 +39,13 @@ export default function BillingStatusPage() {
       }
 
       try {
-        const params = new URLSearchParams({
+        const response = await billingService.status.get({
           method,
           status,
           ...(subId ? { subId } : {}),
           ...(orderId ? { orderId } : {})
         });
 
-        const response = await fetch(`/api/billing/status?${params}`);
         const data = await response.json();
 
         if (!response.ok) {
@@ -67,19 +67,16 @@ export default function BillingStatusPage() {
   const handleDismissModal = async () => {
     if (statusData) {
       try {
-        await fetch('/api/billing/status', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            method: statusData.method,
-            ...(statusData.method === 'subscription' ? { subId: statusData.id } : { orderId: statusData.id })
-          })
+        await billingApi.status.update({
+          type: statusData.method === 'subscription' ? 'subscription' : 'order',
+          id: statusData.id,
+          metadata: { modalDismissed: true }
         });
       } catch (err) {
         console.error('Error dismissing modal:', err);
       }
     }
-    
+
     router.push('/dashboard/billing');
   };
 
@@ -202,16 +199,16 @@ export default function BillingStatusPage() {
               </div>
             )}
             <div className="space-y-2">
-              <Button 
-                onClick={handleDismissModal} 
+              <Button
+                onClick={handleDismissModal}
                 className="w-full"
                 variant={status === 'success' ? 'primary' : 'outline'}
               >
                 {status === 'success' ? 'Continue to Dashboard' : 'Try Again'}
               </Button>
-              <Button 
-                onClick={() => router.push('/dashboard/billing')} 
-                variant="ghost" 
+              <Button
+                onClick={() => router.push('/dashboard/billing')}
+                variant="ghost"
                 className="w-full"
               >
                 Back to Billing

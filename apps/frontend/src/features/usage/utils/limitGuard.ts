@@ -1,9 +1,9 @@
 import { prisma } from '@/lib/prisma';
-import { SubscriptionManager } from '@/features/billing/utils/subscriptionManager';
+import { billingService } from '@/services/billing.service';
 
 type ServiceKey = 'PROJECT' | 'TEAM' | 'PROPOSAL' | 'REQUEST';
 
-type ChatContextType = 'project' | 'profile' | 'proposal' | 'team' | 'workspace' | 'space' | 'channel';
+type ChatContextType = 'project' | 'profile' | 'proposal' | 'team' | 'workspace' | 'space' | 'channel' | 'task' | 'list' | 'folder';
 
 interface PlanLimits {
   maxProjects: number;
@@ -24,11 +24,12 @@ interface ResourceCounts {
 }
 
 export class LimitGuard {
-  private constructor() {}
+  private constructor() { }
 
-  static async ensureCycle(userId: string): Promise<void> {
+  static async ensureCycle(userId: string, session?: any): Promise<void> {
     try {
-      await SubscriptionManager.handleCycleTransition(userId);
+      // Call backend to handle cycle transition if needed
+      await billingService.subscriptions.checkCycle(userId, session);
     } catch (err) {
       // Non-blocking; log only
       console.warn('Cycle transition check failed:', err);
@@ -125,7 +126,7 @@ export class LimitGuard {
         // For profile chats, we check conversations where userId matches (user chatting about their own profile)
         // Note: If you add a profileId field to AiConversation schema, update this query
         currentCount = await db.aiConversation.count({
-          where: { 
+          where: {
             userId,
             projectId: null,
             proposalId: null,
@@ -145,6 +146,24 @@ export class LimitGuard {
           where: { userId, teamId: entityId },
         });
         limit = limits.maxChatsPerTeam;
+        break;
+      case 'task':
+        currentCount = await db.aiConversation.count({
+          where: { userId, taskId: entityId },
+        });
+        limit = limits.maxChatsPerProject; // reuse project limit for task chats
+        break;
+      case 'list':
+        currentCount = await db.aiConversation.count({
+          where: { userId, listId: entityId },
+        });
+        limit = limits.maxChatsPerProject;
+        break;
+      case 'folder':
+        currentCount = await db.aiConversation.count({
+          where: { userId, folderId: entityId },
+        });
+        limit = limits.maxChatsPerProject;
         break;
     }
 

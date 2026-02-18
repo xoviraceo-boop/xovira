@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { useRouter } from "next/navigation";
 import React, { useCallback, useMemo, useState } from "react";
+
+import { DASHBOARD_ROUTES, MARKETPLACE_ROUTES } from '@/constants/routes.config';
 import { TeamCreationModal } from "@/entities/teams/components/TeamCreationModal";
 
 export default function TeamsPage() {
@@ -48,16 +50,16 @@ export default function TeamsPage() {
 		setQuery("");
 		setFilters((f: any) => ({ ...f, industries: [], status: "" as any }));
 	};
-	
+
 	const handleOpen = (id: string) => {
-	  if (!id) return;
-	  router.push(`/dashboard/teams/${id}`);
+		if (!id) return;
+		router.push(DASHBOARD_ROUTES.TEAM(id));
 	};
 
 	const handleTeamCreated = useCallback(
 		(id: string) => {
 			setShowCreateModal(false);
-			router.push(`/dashboard/teams/${id}`);
+			router.push(DASHBOARD_ROUTES.TEAM(id));
 		},
 		[router]
 	);
@@ -69,19 +71,19 @@ export default function TeamsPage() {
 				<div className="order-2 lg:order-1 flex-1 lg:pr-4 space-y-6">
 					{/* Enhanced Header Component */}
 					<PageHeader
-					  title="Teams"
-					  description="Create new Teams, filter, and manage your submissions."
-					  actions={
-					    <Button
-					      onClick={() => setShowCreateModal(true)}
-					      className="max-w-16 group relative overflow-hidden bg-gradient-to-br from-cyan-500 via-cyan-600 to-blue-600 text-white hover:shadow-xl transition-all duration-300 font-semibold px-5 py-2.5 !rounded-full whitespace-nowrap"
-					    >
-					      <span className="relative z-10 flex items-center gap-2">
-					        <Plus className="h-4 w-4 transition-transform group-hover:rotate-90 duration-300" />
-					      </span>
-					      <div className="absolute inset-0 bg-gradient-to-br from-cyan-400 via-cyan-500 to-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-					    </Button>
-					  }
+						title="Teams"
+						description="Create new Teams, filter, and manage your submissions."
+						actions={
+							<Button
+								onClick={() => setShowCreateModal(true)}
+								className="max-w-16 group relative overflow-hidden bg-gradient-to-br from-cyan-500 via-cyan-600 to-blue-600 text-white hover:shadow-xl transition-all duration-300 font-semibold px-5 py-2.5 !rounded-full whitespace-nowrap"
+							>
+								<span className="relative z-10 flex items-center gap-2">
+									<Plus className="h-4 w-4 transition-transform group-hover:rotate-90 duration-300" />
+								</span>
+								<div className="absolute inset-0 bg-gradient-to-br from-cyan-400 via-cyan-500 to-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+							</Button>
+						}
 					/>
 
 					<SearchSection
@@ -96,7 +98,7 @@ export default function TeamsPage() {
 						showFilters={true}
 						showSort={false}
 					/>
-					
+
 					{/* Filter Chips */}
 					{chips.length > 0 && (
 						<div className="flex flex-wrap items-center gap-2">

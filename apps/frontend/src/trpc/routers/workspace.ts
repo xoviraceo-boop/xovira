@@ -3,14 +3,14 @@ import { protectedProcedure, router } from "@/trpc/init";
 import { prisma } from "@/lib/prisma";
 import { WorkspaceRole } from '@xovira/database/src/generated/prisma/client';
 
-type WorkspaceScope = "owned" | "member" | "all";
+type WorkspaceScope = "owned" | "member" | "all" | "editable";
 
 const listInputSchema = z.object({
 	query: z.string().optional(),
-	scope: z.enum(["owned", "member", "all"]).optional().default("owned"),
+	scope: z.enum(["owned", "member", "all", "editable"]).optional().default("owned"),
 	status: z.enum(["active", "archived"]).optional(),
 	page: z.number().int().min(1).optional().default(1),
-	pageSize: z.number().int().min(1).max(50).optional().default(12),
+	pageSize: z.number().int().min(1).max(100).optional().default(12),
 	includeCounts: z.boolean().optional(),
 });
 
@@ -26,6 +26,21 @@ export const workspaceRouter = router({
 			where.members = { some: { userId } };
 		} else if (scope === "all") {
 			where.OR = [{ ownerId: userId }, { members: { some: { userId } } }];
+		} else if (scope === "editable") {
+			where.OR = [
+				{ ownerId: userId },
+				{
+					members: {
+						some: {
+							userId,
+							OR: [
+								{ role: { in: [WorkspaceRole.OWNER, WorkspaceRole.ADMIN] } },
+								{ canCreateSpaces: true }
+							]
+						}
+					}
+				}
+			];
 		}
 
 		if (input.status) {
@@ -77,26 +92,58 @@ export const workspaceRouter = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			const userId = ctx.session!.user!.id;
-			const ws = await prisma.workspace.create({
-				data: {
-					ownerId: userId,
-					name: input.name,
-					description: input.description,
-					isActive: input.isActive ?? true,
-					members: { create: { userId, role: WorkspaceRole.OWNER } },
-				},
-				include: {
-					members: {
-						select: {
-							id: true,
-							role: true,
-							user: { select: { id: true, name: true, email: true, image: true } },
-						},
+
+			return prisma.$transaction(async (tx) => {
+				// Create the workspace
+				const ws = await tx.workspace.create({
+					data: {
+						owner: { connect: { id: userId } },
+						name: input.name,
+						description: input.description,
+						isActive: input.isActive ?? true,
+						members: { create: { userId, role: WorkspaceRole.OWNER } },
 					},
-					_count: { select: { projects: true, teams: true, tasks: true } },
-				},
+					include: {
+						members: {
+							select: {
+								id: true,
+								role: true,
+								user: { select: { id: true, name: true, email: true, image: true } },
+							},
+						},
+						_count: { select: { projects: true, teams: true, tasks: true } },
+					},
+				});
+
+				// Create default task types
+				const { generateKeyBetween } = await import('fractional-indexing');
+
+				const defaultTaskTypes = [
+					{ name: 'Task', icon: '📋', color: '#3b82f6', isDefault: true },
+					{ name: 'Milestone', icon: '🏁', color: '#8b5cf6', isDefault: false },
+					{ name: 'Form Response', icon: '📝', color: '#10b981', isDefault: false },
+					{ name: 'Meeting Note', icon: '📅', color: '#f59e0b', isDefault: false },
+				];
+
+				let prevPosition: string | null = null;
+				for (const taskType of defaultTaskTypes) {
+					const position = generateKeyBetween(prevPosition, null);
+					await tx.taskType.create({
+						data: {
+							workspaceId: ws.id,
+							name: taskType.name,
+							icon: taskType.icon,
+							color: taskType.color,
+							isDefault: taskType.isDefault,
+							isActive: true,
+							position,
+						},
+					});
+					prevPosition = position;
+				}
+
+				return ws;
 			});
-			return ws;
 		}),
 
 	get: protectedProcedure
@@ -131,38 +178,40 @@ export const workspaceRouter = router({
 							name: true,
 							description: true,
 							isActive: true,
+							icon: true,
+							color: true,
 							updatedAt: true,
 							_count: { select: { members: true, tools: true, materials: true } },
 						},
 					},
-                    projects: {
-                        orderBy: { updatedAt: "desc" },
-                        select: {
-                            id: true,
-                            name: true,
-                            description: true,
-                            stage: true,
-                            status: true,
-                            spaceId: true,
-                            updatedAt: true,
-                            _count: { select: { tasks: true, proposals: true } },
-                        },
-                    },
-                    teams: {
-                        orderBy: { updatedAt: "desc" },
-                        select: {
-                            id: true,
-                            name: true,
-                            description: true,
-                            status: true,
-                            size: true,
-                            maxSize: true,
-                            isHiring: true,
-                            spaceId: true,
-                            updatedAt: true,
-                            _count: { select: { members: true, tasks: true } },
-                        },
-                    },
+					projects: {
+						orderBy: { updatedAt: "desc" },
+						select: {
+							id: true,
+							name: true,
+							description: true,
+							stage: true,
+							status: true,
+							spaceId: true,
+							updatedAt: true,
+							_count: { select: { tasks: true, proposals: true } },
+						},
+					},
+					teams: {
+						orderBy: { updatedAt: "desc" },
+						select: {
+							id: true,
+							name: true,
+							description: true,
+							status: true,
+							size: true,
+							maxSize: true,
+							isHiring: true,
+							spaceId: true,
+							updatedAt: true,
+							_count: { select: { members: true, tasks: true } },
+						},
+					},
 					tasks: {
 						orderBy: { updatedAt: "desc" },
 						take: 20,

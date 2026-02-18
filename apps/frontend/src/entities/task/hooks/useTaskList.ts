@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { keepPreviousData } from "@tanstack/react-query";
 
 export type TaskScope = "owned" | "assigned" | "all";
 
@@ -41,7 +42,10 @@ export function useTaskList(initialScope: TaskScope = "owned") {
 			status: parsedStatuses,
 			includeRelations: true,
 		} as any,
-		{ staleTime: 30_000 },
+		{
+			staleTime: 30_000,
+			placeholderData: keepPreviousData
+		},
 	);
 
 	const utils = trpc.useUtils();

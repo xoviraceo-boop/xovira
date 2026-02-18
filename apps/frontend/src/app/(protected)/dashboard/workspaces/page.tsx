@@ -9,6 +9,7 @@ import { WorkspaceCard, WorkspaceFilterSidebar, useWorkspaceList, WorkspaceCreat
 import { PageHeader } from "@/entities/shared/components/PageHeader";
 import { SearchSection } from "@/entities/shared/components/SearchSection";
 import { useToast } from "@/hooks/useToast";
+import { DASHBOARD_ROUTES } from "@/constants/routes.config";
 
 export default function WorkspacesPage() {
 	const router = useRouter();
@@ -26,7 +27,7 @@ export default function WorkspacesPage() {
 		setScope,
 		filters,
 		setFilters,
-    } = useWorkspaceList();
+	} = useWorkspaceList();
 
 	const [showFilters, setShowFilters] = useState(false);
 
@@ -53,8 +54,8 @@ export default function WorkspacesPage() {
 		setFilters({ status: "" });
 	};
 
-    const [showCreateModal, setShowCreateModal] = useState(false);
-    const handleCreateWorkspace = () => setShowCreateModal(true);
+	const [showCreateModal, setShowCreateModal] = useState(false);
+	const handleCreateWorkspace = () => setShowCreateModal(true);
 
 	return (
 		<Shell>
@@ -62,27 +63,25 @@ export default function WorkspacesPage() {
 				<div className="order-2 space-y-6 lg:order-1 lg:pr-4">
 					<PageHeader
 						title="Workspaces"
-						description="Create, explore and manage your collaboration spaces."
+						description="Manage your collaboration spaces."
 						actions={
-                            <Button
-                                onClick={handleCreateWorkspace}
-                                className="group relative overflow-hidden bg-gradient-to-r from-sky-500 via-cyan-600 to-blue-600 px-5 py-2.5 text-white shadow-sm transition-all duration-300 hover:shadow-md"
-                            >
-								<span className="relative z-10 flex items-center gap-2">
-									<Plus className="h-4 w-4 transition-transform duration-300 group-hover:rotate-90" />
-								</span>
-								<span className="absolute inset-0 bg-gradient-to-r from-sky-400 via-cyan-500 to-blue-500 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+							<Button
+								onClick={handleCreateWorkspace}
+								className="h-7 bg-zinc-900 px-2.5 text-xs font-medium text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+							>
+								<Plus className="mr-1.5 h-3 w-3" />
+								New Workspace
 							</Button>
 						}
 					/>
 
 					<SearchSection
 						searchValue={query}
-						searchPlaceholder="Search workspaces by name or description..."
+						searchPlaceholder="Search workspaces..."
 						resultsCount={data?.total ?? 0}
 						onSearchChange={setQuery}
 						onSearchSubmit={() => setPage(1)}
-                        onCreateNew={handleCreateWorkspace}
+						onCreateNew={handleCreateWorkspace}
 						onFilterToggle={() => setShowFilters(true)}
 						createButtonText="New workspace"
 						showFilters
@@ -95,45 +94,48 @@ export default function WorkspacesPage() {
 								<button
 									key={chip.id}
 									onClick={chip.onRemove}
-									className="group inline-flex items-center gap-2 rounded-lg border-2 border-cyan-200 bg-cyan-50 px-3 py-1.5 text-sm font-medium text-cyan-700 transition-all hover:border-cyan-300 hover:bg-cyan-100 hover:shadow"
+									className="group inline-flex items-center gap-1.5 rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs font-medium text-zinc-700 transition-all hover:border-zinc-300 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"
 								>
 									<span>{chip.label}</span>
-									<X className="h-3.5 w-3.5 transition-transform group-hover:rotate-90" />
+									<X className="h-3 w-3 text-zinc-400 group-hover:text-zinc-600" />
 								</button>
 							))}
-							<Button variant="ghost" onClick={clearFilters}>
+							<Button
+								variant="ghost"
+								onClick={clearFilters}
+								className="h-7 px-2 text-xs text-zinc-500 hover:text-zinc-900"
+							>
 								Clear all
 							</Button>
-                </div>
+						</div>
 					)}
 
 					{isLoading ? (
-						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+						<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
 							{Array.from({ length: 6 }).map((_, index) => (
-								<div key={index} className="min-h-[220px] animate-pulse rounded-lg border bg-muted/30" />
+								<div key={index} className="h-[200px] animate-pulse rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900" />
 							))}
 						</div>
 					) : data?.items && data.items.length > 0 ? (
-						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+						<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
 							{data.items.map((item) => (
 								<WorkspaceCard
 									key={item.id}
 									item={item}
-									onOpen={(id) => router.push(`/dashboard/workspaces/${id}`)}
+									onOpen={(id) => router.push(DASHBOARD_ROUTES.WORKSPACE(id))}
 								/>
 							))}
 						</div>
 					) : (
-						<div className="flex min-h-[320px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted bg-muted/10 p-8 text-center">
-							<div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-sky-100 to-blue-100">
-								<Plus className="h-8 w-8 text-sky-600" />
+						<div className="flex min-h-[320px] flex-col items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 p-8 text-center dark:border-zinc-800 dark:bg-zinc-900/50">
+							<div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+								<Plus className="h-6 w-6 text-zinc-400" />
 							</div>
-							<h3 className="mt-4 text-lg font-semibold text-foreground">No workspaces yet</h3>
-							<p className="mt-2 text-sm text-muted-foreground">
-								{query ? "Try a different search or reset your filters." : "Create your first workspace to get started."}
+							<h3 className="mt-4 text-base font-medium text-zinc-900 dark:text-zinc-50">No workspaces found</h3>
+							<p className="mt-1 text-sm text-zinc-500">
+								{query ? "Try adjusting your search or filters." : "Get started by creating a new workspace."}
 							</p>
-							<Button onClick={handleCreateWorkspace} variant="outline" className="mt-4">
-								<Plus className="mr-2 h-4 w-4" />
+							<Button onClick={handleCreateWorkspace} size="sm" variant="outline" className="mt-8 border-zinc-200 bg-white hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 max-w-40">
 								Create workspace
 							</Button>
 						</div>
@@ -183,17 +185,17 @@ export default function WorkspacesPage() {
 						</div>
 					</>
 				)}
-            </div>
-            <WorkspaceCreationModal
-                open={showCreateModal}
-                onOpenChange={setShowCreateModal}
-                onCreated={(id) => {
-                    toast({ title: "Workspace created", description: "Redirecting to workspace overview…" });
-                    router.push(`/dashboard/workspaces/${id}`);
-                }}
-            />
-        </Shell>
-    );
+			</div>
+			<WorkspaceCreationModal
+				open={showCreateModal}
+				onOpenChange={setShowCreateModal}
+				onCreated={(id) => {
+					toast({ title: "Workspace created", description: "Redirecting to workspace overview…" });
+					router.push(DASHBOARD_ROUTES.WORKSPACE(id));
+				}}
+			/>
+		</Shell>
+	);
 }
 
 

@@ -1,10 +1,12 @@
 import { z } from "zod";
 import { protectedProcedure, router } from "@/trpc/init";
 import { prisma } from "@/lib/prisma";
-import { SubscriptionManager } from "@/features/billing/utils/subscriptionManager";
+import { billingService } from "@/services/billing.service";
+import { matchingService } from "@/services/matching.service";
 
-async function assertSubscribed(userId: string) {
-  const subscription = await SubscriptionManager.getCurrentSubscription(userId);
+async function assertSubscribed(userId: string, session: any) {
+  const response = await billingService.subscriptions.getCurrent(userId, session);
+  const subscription = await response.json();
   if (!subscription || subscription.plan?.planType === "FREE") {
     throw new Error("Advanced AI matching is available for paid plans only");
   }
@@ -15,7 +17,7 @@ export const marketplaceRouter = router({
     .input(z.object({ query: z.string().min(1), advancedAi: z.boolean().default(false), limit: z.number().int().min(1).max(50).default(20), filters: z.any().optional() }))
     .query(async ({ ctx, input }) => {
       const userId = ctx.session!.user!.id;
-      if (input.advancedAi) await assertSubscribed(userId);
+      if (input.advancedAi) await assertSubscribed(userId, ctx.session);
 
       if (!input.advancedAi) {
         return prisma.project.findMany({
@@ -25,32 +27,21 @@ export const marketplaceRouter = router({
         });
       }
 
-      // AI matching via service-server (not cron), immediate results
-      const baseUrl = process.env.SERVICE_SERVER_URL || process.env.NEXT_PUBLIC_SERVICE_SERVER_URL
-      if (!baseUrl) {
-        throw new Error("SERVICE_SERVER_URL is not configured");
+      // AI matching via service-server
+      const response = await matchingService.search({
+        userId,
+        type: "projects",
+        query: input.query,
+        limit: input.limit,
+        filters: input.filters,
+        advancedAi: true
+      }, ctx.session);
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || result.message || "Service matching failed");
       }
-      const resp = await fetch(`${baseUrl}/v1/matching/search`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": process.env.SERVICE_SERVER_API_KEY || "",
-        },
-        body: JSON.stringify({
-          userId,
-          type: "projects",
-          query: input.query,
-          limit: input.limit,
-          filters: input.filters,
-        }),
-        // Avoid Next.js caching on server
-        cache: "no-store",
-      });
-      if (!resp.ok) {
-        const text = await resp.text();
-        throw new Error(text || "Service matching failed");
-      }
-      return resp.json();
+      return result;
     }),
 });
 

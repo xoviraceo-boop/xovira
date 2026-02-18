@@ -9,6 +9,7 @@ import { useEntityForm } from "@/entities/shared/hooks/useEntityForm";
 import { useEntityMutations } from "@/entities/shared/hooks/useEntityMutations";
 import { FormActions } from "@/entities/shared/components/FormActions";
 import { teamFields } from "../constants";
+import { DASHBOARD_ROUTES } from "@/constants/routes.config";
 
 interface TeamFormProps {
   teamId: string;
@@ -32,7 +33,7 @@ export default function TeamForm({ teamId, mode = "create" }: TeamFormProps) {
   });
 
   const { data: projects } = trpc.project.list.useQuery({});
-  
+
   const publishMutation = trpc.team.publish.useMutation();
   const updateMutation = trpc.team.update.useMutation();
   const saveDraftMutation = trpc.team.saveDraft.useMutation();
@@ -56,7 +57,7 @@ export default function TeamForm({ teamId, mode = "create" }: TeamFormProps) {
     saveDraftMutation,
     deleteMutation,
     upsertAction: upsertTeam,
-    redirectPath: "/dashboard/teams",
+    redirectPath: DASHBOARD_ROUTES.TEAMS,
     setLastSaved,
     onValidationError: handleValidationError,
   });
@@ -66,9 +67,9 @@ export default function TeamForm({ teamId, mode = "create" }: TeamFormProps) {
       if (field.id === 'projectId') {
         return {
           ...field,
-          options: (projects?.items || []).map((p: any) => ({ 
-            value: p.id, 
-            label: p.name 
+          options: (projects?.items || []).map((p: any) => ({
+            value: p.id,
+            label: p.name
           }))
         };
       }
@@ -78,7 +79,7 @@ export default function TeamForm({ teamId, mode = "create" }: TeamFormProps) {
 
   const progress = useMemo(() => {
     const totalFields = formFields.length;
-    const filledFields = formFields.filter((field: any) => 
+    const filledFields = formFields.filter((field: any) =>
       formData[field.id] !== undefined && formData[field.id] !== ''
     ).length;
     return totalFields > 0 ? (filledFields / totalFields) * 100 : 0;
@@ -96,7 +97,7 @@ export default function TeamForm({ teamId, mode = "create" }: TeamFormProps) {
             error={errors[field.id]}
           />
         ))}
-        
+
         <FormActions
           mode={mode}
           onPublish={handlePublish}

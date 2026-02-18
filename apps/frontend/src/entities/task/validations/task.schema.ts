@@ -10,6 +10,12 @@ export const taskFormSchema = z.object({
 		.enum(["OPEN", "IN_PROGRESS", "COMPLETED", "BLOCKED"])
 		.default("OPEN")
 		.optional(),
+	// Newer List/Status system uses statusId (Status model id)
+	statusId: z.string().optional().nullable(),
+	priority: z.enum(["URGENT", "HIGH", "NORMAL", "LOW"]).optional().nullable(),
+	parentId: z.string().optional().nullable(),
+	dueDate: z.coerce.date().optional().nullable(),
+	startDate: z.coerce.date().optional().nullable(),
 	visibility: z.enum(["PRIVATE", "TEAM", "WORKSPACE", "PUBLIC"]).default("PRIVATE"),
 	isPublic: z.boolean().default(false),
 	workspaceId: z.string().optional().nullable(),
@@ -18,7 +24,10 @@ export const taskFormSchema = z.object({
 	projectId: z.string().optional().nullable(),
 	teamId: z.string().optional().nullable(),
 	assigneeId: z.string().optional().nullable(),
+	assigneeIds: z.array(z.string()).optional().default([]),
 	listId: z.string().optional().nullable(),
+	taskType: z.enum(["TASK", "MILESTONE", "FORM_RESPONSE", "MEETING_NOTE"]).default("TASK").optional(),
+	taskTypeId: z.string().optional(),
 });
 
 export type TaskFormValues = z.infer<typeof taskFormSchema>;

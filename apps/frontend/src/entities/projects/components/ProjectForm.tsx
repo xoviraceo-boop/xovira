@@ -10,6 +10,7 @@ import { useEntityForm } from "@/entities/shared/hooks/useEntityForm";
 import { useEntityMutations } from "@/entities/shared/hooks/useEntityMutations";
 import { FormActions } from "@/entities/shared/components/FormActions";
 import { supabase } from '@/lib/supabase/client';
+import { DASHBOARD_ROUTES } from "@/constants/routes.config";
 
 interface ProjectFormProps {
   projectId: string;
@@ -56,14 +57,14 @@ export default function ProjectForm({ projectId, mode = "create" }: ProjectFormP
     saveDraftMutation,
     deleteMutation,
     upsertAction: upsertProject,
-    redirectPath: "/dashboard/projects",
+    redirectPath: DASHBOARD_ROUTES.PROJECTS,
     setLastSaved,
     onValidationError: handleValidationError,
   });
 
   const progress = useMemo(() => {
     const totalFields = projectFields.length;
-    const filledFields = projectFields.filter((field: any) => 
+    const filledFields = projectFields.filter((field: any) =>
       formData[field.id] !== undefined && formData[field.id] !== ''
     ).length;
     return totalFields > 0 ? (filledFields / totalFields) * 100 : 0;
@@ -81,7 +82,7 @@ export default function ProjectForm({ projectId, mode = "create" }: ProjectFormP
             error={errors[field.id]}
           />
         ))}
-        
+
         <FormActions
           mode={mode}
           onPublish={handlePublish}

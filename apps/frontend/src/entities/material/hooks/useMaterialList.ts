@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { keepPreviousData } from "@tanstack/react-query";
 
 export type MaterialScope = "owned" | "all";
 
@@ -31,7 +32,10 @@ export function useMaterialList(initialScope: MaterialScope = "owned") {
 		[page, pageSize, scope, query, filters],
 	);
 
-	const queryResult = trpc.material.list.useQuery(listInput as any, { staleTime: 30_000 });
+	const queryResult = trpc.material.list.useQuery(listInput as any, {
+		staleTime: 30_000,
+		placeholderData: keepPreviousData
+	});
 	const utils = trpc.useUtils();
 
 	useEffect(() => {

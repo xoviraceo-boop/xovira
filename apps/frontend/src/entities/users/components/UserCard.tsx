@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { useRouter } from "next/navigation";
+import { UserProfileHoverCard } from "./UserProfileHoverCard";
 
 type UserCardProps = {
     id: string;
@@ -29,9 +30,11 @@ export default function UserCard({ id, title, subtitle, href, onClick, avatarTex
             onClick={handleClick}
             className="group flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-muted/50"
         >
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-semibold text-foreground/80">
-                {initials}
-            </div>
+            <UserProfileHoverCard userId={id}>
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-semibold text-foreground/80 cursor-pointer">
+                    {initials}
+                </div>
+            </UserProfileHoverCard>
             <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium">{title}</div>
                 {subtitle && <div className="truncate text-xs text-muted-foreground">{subtitle}</div>}

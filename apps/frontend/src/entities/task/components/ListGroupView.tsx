@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { FolderPlusIcon } from 'lucide-react'
 import { TaskContextType } from './TaskView'
 import { trpc } from '@/lib/trpc'
-import { TaskGroupCreationModal } from './TaskGroupCreationModal'
+import { ListCreationModal } from './ListCreationModal'
 
 interface ListGroupViewProps {
   context: TaskContextType
@@ -41,7 +41,7 @@ export function ListGroupView({ context, contextId, workspaceId }: ListGroupView
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Groups</h2>
-        <TaskGroupCreationModal context={context} contextId={contextId} workspaceId={workspaceId} />
+        <ListCreationModal context={context} contextId={contextId} workspaceId={workspaceId} />
       </div>
       {isLoading && <div className="text-sm text-muted-foreground">Loading...</div>}
       {!isLoading && Object.keys(groups).length === 0 && (

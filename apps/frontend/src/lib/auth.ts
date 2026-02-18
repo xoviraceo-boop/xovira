@@ -2,7 +2,11 @@ import NextAuth from "next-auth";
 import type { NextAuthConfig } from "next-auth";
 import { authConfig } from "@/config/auth.config";
 import { prisma } from "@/lib/prisma";
-import { SubscriptionManager } from "@/features/billing/utils";
+import { billingService } from "@/services/billing.service";
+
+// OPTIMIZATION: Cache user lookups briefly to prevent DB slamming on every JWT call during navigation
+const userCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL = 5000; // 5 seconds (enough for rapid redirects)
 
 export const authOptions: NextAuthConfig = {
   ...authConfig,
@@ -15,7 +19,7 @@ export const authOptions: NextAuthConfig = {
       if (!user?.id) return;
       await prisma.user.update({
         where: { id: user.id },
-        data: { onboardingStep: 1, onboardingCompleted: false },
+        data: { onboardingStep: 0, onboardingCompleted: false }, // Sync with new Step 0 index
       });
     },
   },
@@ -36,23 +40,41 @@ export const authOptions: NextAuthConfig = {
 
   callbacks: {
     // ✅ Attach user & accessToken to JWT
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, trigger, session }) {
       if (account && user) {
         token.id = user.id;
         token.accessToken = account.access_token;
       }
 
+      // Handle explicit session updates (e.g. from update() in client)
+      if (trigger === "update" && session) {
+        // Merge session updates into token
+        return { ...token, ...session };
+      }
+
       if (token.id) {
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id as string },
-          select: {
-            id: true,
-            userType: true,
-            isVerified: true,
-            onboardingCompleted: true,
-            onboardingStep: true,
-          },
-        });
+        const now = Date.now();
+        const cached = userCache.get(token.id as string);
+
+        let dbUser;
+
+        if (cached && (now - cached.timestamp < CACHE_TTL)) {
+          dbUser = cached.data;
+        } else {
+          dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: {
+              id: true,
+              userType: true,
+              isVerified: true,
+              onboardingCompleted: true,
+              onboardingStep: true,
+            },
+          });
+          if (dbUser) {
+            userCache.set(token.id as string, { data: dbUser, timestamp: now });
+          }
+        }
 
         if (dbUser) {
           token.userType = dbUser.userType;
@@ -79,7 +101,8 @@ export const authOptions: NextAuthConfig = {
     async signIn({ user }) {
       if (!user?.id) return true;
       try {
-        SubscriptionManager.createDefaultSubscription(user.id).catch((error) => {
+        // Pass user object as session context for token generation
+        billingService.subscriptions.createDefault(user.id, { user }).catch((error) => {
           console.error("Failed to create default subscription:", error);
         });
       } catch (error) {

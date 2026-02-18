@@ -10,8 +10,11 @@ import MessageListModal from "@/entities/messages/components/MessageListModal";
 import MessageItemModal from "@/entities/messages/components/MessageItemModal";
 import { useAppDispatch, useAppSelector } from "@/hooks/useReduxStore";
 import { openLauncher, closeLauncher, openModalWithUser, closeModal } from "@/stores/slices/messages.slice";
+import { CommandInterface } from "@/entities/command/CommandInterface";
+import { useSocketScopeSync } from "@/hooks/useSocketScopeSync";
 
 export default function AppFrame({ children }: { children: React.ReactNode }) {
+  useSocketScopeSync();
   const dispatch = useAppDispatch();
   const launcherOpen = useAppSelector((s) => s.messagesUI.launcherOpen);
   const modalUserId = useAppSelector((s) => s.messagesUI.modalUserId);
@@ -27,30 +30,33 @@ export default function AppFrame({ children }: { children: React.ReactNode }) {
   }, [data]);
 
   return (
-    <div className="min-h-screen grid grid-rows-[auto_1fr_auto]">
+    <div className="min-h-screen max-h-screen overflow-hidden grid grid-rows-[auto_1fr_auto]">
       <Header />
-      <main className="max-h-screen w-full overflow-x-none">{children}</main>
+      <main className="w-full h-full overflow-x-hidden overflow-y-auto">{children}</main>
 
       {/* Floating message launcher visible on all pages */}
-      <button
+      {/*<button
         aria-label="Open messages"
         onClick={() => dispatch(openLauncher())}
         className="fixed bottom-6 right-6 z-40 rounded-full bg-primary p-4 text-primary-foreground shadow-lg hover:opacity-90"
       >
         <MessageCircle className="h-6 w-6" />
       </button>
-
       {/* Conversations list modal */}
-      <MessageListModal
+      {/* <MessageListModal
         open={launcherOpen}
         onOpenChange={(o) => (o ? dispatch(openLauncher()) : dispatch(closeLauncher()))}
         onSelectUser={(id) => dispatch(openModalWithUser(id))}
       />
 
       {/* Per-user message modal (content + composer) */}
-      {modalUserId && (
+      {/* {modalUserId && (
         <MessageItemModal userId={modalUserId} open={!!modalUserId} onClose={() => dispatch(closeModal())} />
-      )}
+      )} 
+
+      {/* Global Command Interface */}
+      <CommandInterface />
+
     </div>
   );
 }

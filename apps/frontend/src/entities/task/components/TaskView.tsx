@@ -7,8 +7,8 @@ import { PlusIcon, FolderPlusIcon, LayoutGrid, Columns3, Table as TableIcon } fr
 import { TaskOverviewView } from './TaskOverviewView'
 import { TaskKanbanView } from './TaskKanbanView'
 import { TaskTableView } from './TaskTableView'
-import { TaskGroupCreationModal } from './TaskGroupCreationModal'
-import { CreateTaskModal } from './TaskCreationModal'
+import { ListCreationModal } from './ListCreationModal'
+import { TaskCreationModal } from './TaskCreationModal'
 import { trpc } from '@/lib/trpc'
 
 export type TaskContextType = 'SPACE' | 'PROJECT' | 'TEAM' | 'GENERAL'
@@ -42,15 +42,7 @@ export function TaskView({ context, contextId, workspaceId }: TaskViewProps) {
     { enabled: context === 'GENERAL' && !!effectiveWorkspaceId }
   )
 
-  const spaceData = trpcClient.space.get.useQuery({ id: context === 'SPACE' ? contextId || '' : '' }, { enabled: context === 'SPACE' && !!contextId })
-  const projectParticipants = trpcClient.project.getParticipants.useQuery({ projectId: contextId || '' }, { enabled: context === 'PROJECT' && !!contextId })
-  const teamParticipants = trpcClient.team.getParticipants.useQuery({ teamId: contextId || '' }, { enabled: context === 'TEAM' && !!contextId })
-  const projectData = trpcClient.project.get.useQuery({ id: contextId || '' }, { enabled: context === 'PROJECT' && !!contextId })
-  const teamData = trpcClient.team.get.useQuery({ id: contextId || '' }, { enabled: context === 'TEAM' && !!contextId })
-  const workspaceData = trpcClient.workspace.get.useQuery(
-    { id: effectiveWorkspaceId || '' },
-    { enabled: context === 'GENERAL' && !!effectiveWorkspaceId }
-  )
+
 
   const listQueryInput = React.useMemo(() => {
     if (!effectiveWorkspaceId) return undefined
@@ -131,8 +123,8 @@ export function TaskView({ context, contextId, workspaceId }: TaskViewProps) {
       <div className="flex items-center justify-between">
         {/* Left side: Action buttons */}
         <div className="flex items-center gap-3">
-          <TaskGroupCreationModal context={context} contextId={contextId} workspaceId={effectiveWorkspaceId} />
-          <CreateTaskModal
+          <ListCreationModal context={context} contextId={contextId} workspaceId={effectiveWorkspaceId} />
+          <TaskCreationModal
             context={context}
             contextId={contextId}
             workspaceId={effectiveWorkspaceId}

@@ -4,20 +4,22 @@
 @source '../../node_modules/@llamaindex/chat-ui/**/*.{ts,tsx}';
 
 @keyframes fadeIn {
-  0% { 
-    opacity: 0; 
+  0% {
+    opacity: 0;
   }
-  100% { 
-    opacity: 1; 
+
+  100% {
+    opacity: 1;
   }
 }
 
 @keyframes fadeInUp {
-  0% { 
+  0% {
     opacity: 0;
     transform: translateY(30px);
   }
-  100% { 
+
+  100% {
     opacity: 1;
     transform: translateY(0);
   }
@@ -27,17 +29,19 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
 }
 
 @keyframes fadeInDown {
-  0% { 
+  0% {
     opacity: 0;
     transform: translateY(-30px);
   }
-  100% { 
+
+  100% {
     opacity: 1;
     transform: translateY(0);
   }
@@ -47,12 +51,15 @@
   0% {
     transform: translate(0px, 0px) scale(1);
   }
+
   33% {
     transform: translate(30px, -50px) scale(1.1);
   }
+
   66% {
     transform: translate(-20px, 20px) scale(0.9);
   }
+
   100% {
     transform: translate(0px, 0px) scale(1);
   }
@@ -64,20 +71,38 @@
     opacity: 0;
     transform-origin: top;
   }
+
   40% {
     transform: perspective(400px) rotateX(10deg);
     transform-origin: top;
   }
+
   70% {
     transform: perspective(400px) rotateX(-5deg);
     transform-origin: top;
   }
+
   100% {
     transform: perspective(400px) rotateX(0deg);
     opacity: 1;
     transform-origin: top;
   }
 }
+
+@keyframes loading-progress {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  50% {
+    transform: translateX(200%);
+  }
+
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
 
 @custom-variant dark (&:is(.dark *));
 
@@ -122,16 +147,63 @@
 }
 
 /* shadcn-like minimal UI primitives */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;border-radius:.5rem;padding:.625rem 1rem;font-weight:600}
-.btn-primary{background-color:#111827;color:#fff}
-.btn-primary:hover{background-color:#0b1220}
-.btn-outline{border:1px solid #e5e7eb;color:#111827;background:#fff}
-.btn-outline:hover{background-color:#f9fafb}
-.input{display:block;width:100%;border:1px solid #e5e7eb;border-radius:.5rem;padding:.625rem .75rem}
-.label{display:block;font-size:.875rem;font-weight:600;margin-bottom:.375rem}
-.card{border:1px solid #e5e7eb;border-radius:.75rem;background:#fff}
-.card-body{padding:1rem}
-.muted{color:#6b7280}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  border-radius: .5rem;
+  padding: .625rem 1rem;
+  font-weight: 600
+}
+
+.btn-primary {
+  background-color: #111827;
+  color: #fff
+}
+
+.btn-primary:hover {
+  background-color: #0b1220
+}
+
+.btn-outline {
+  border: 1px solid #e5e7eb;
+  color: #111827;
+  background: #fff
+}
+
+.btn-outline:hover {
+  background-color: #f9fafb
+}
+
+.input {
+  display: block;
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: .5rem;
+  padding: .625rem .75rem
+}
+
+.label {
+  display: block;
+  font-size: .875rem;
+  font-weight: 600;
+  margin-bottom: .375rem
+}
+
+.card {
+  border: 1px solid #e5e7eb;
+  border-radius: .75rem;
+  background: #fff
+}
+
+.card-body {
+  padding: 1rem
+}
+
+.muted {
+  color: #6b7280
+}
 
 :root {
   --radius: 0.625rem;
@@ -204,24 +276,36 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     font-variant-numeric: oldstyle-nums;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: auto;
   }
-  
+
   /* Smooth scrolling */
   html {
     scroll-behavior: smooth;
   }
-  
-  /* Better text rendering */
-  * {
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
+
+  /* Fix for text selection and cursor placement */
+  ::selection {
+    background-color: oklch(0.488 0.243 264.376 / 0.3) !important;
+    color: inherit !important;
+  }
+
+  input,
+  textarea,
+  [contenteditable="true"] {
+    cursor: text !important;
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    pointer-events: auto !important;
   }
 }

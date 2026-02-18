@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { keepPreviousData } from "@tanstack/react-query";
 
 export type ResourceScope = "owned" | "public" | "all";
 
@@ -14,7 +15,7 @@ export function useResourceList(initialScope: ResourceScope = "owned") {
 	const [page, setPage] = useState(1);
 	const pageSize = 12;
 	const [query, setQuery] = useState("");
-    const [scope, setScope] = useState<ResourceScope>(initialScope);
+	const [scope, setScope] = useState<ResourceScope>(initialScope);
 	const [filters, setFilters] = useState<FilterState>({});
 
 	const listInput = useMemo(
@@ -31,7 +32,10 @@ export function useResourceList(initialScope: ResourceScope = "owned") {
 		[page, pageSize, scope, query, filters],
 	);
 
-    const queryResult = trpc.resource.list.useQuery(listInput as any, { staleTime: 30_000 });
+	const queryResult = trpc.resource.list.useQuery(listInput as any, {
+		staleTime: 30_000,
+		placeholderData: keepPreviousData
+	});
 	const utils = trpc.useUtils();
 
 	useEffect(() => {
@@ -53,14 +57,14 @@ export function useResourceList(initialScope: ResourceScope = "owned") {
 	}, [query, scope, filters.category, filters.isPublic, filters.priceRange, page]);
 
 	useEffect(() => {
-        utils.resource.list.prefetch({ ...listInput, page: 1 } as any);
-    }, [utils, listInput.scope, listInput.category, listInput.isPublic, listInput.minPrice, listInput.maxPrice, listInput.query]);
+		utils.resource.list.prefetch({ ...listInput, page: 1 } as any);
+	}, [utils, listInput.scope, listInput.category, listInput.isPublic, listInput.minPrice, listInput.maxPrice, listInput.query]);
 
 	useEffect(() => {
 		if ((queryResult.data?.items?.length || 0) === pageSize) {
-            utils.resource.list.prefetch({ ...listInput, page: page + 1 } as any);
-        }
-    }, [utils, queryResult.data?.items?.length, pageSize, page, listInput]);
+			utils.resource.list.prefetch({ ...listInput, page: page + 1 } as any);
+		}
+	}, [utils, queryResult.data?.items?.length, pageSize, page, listInput]);
 
 	return {
 		...queryResult,

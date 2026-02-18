@@ -2,14 +2,16 @@
 import { trpc } from "@/lib/trpc";
 import UserForm from "@/entities/users/components/UserForm";
 import { useState } from "react";
+import { useInterfaceSettings } from "@/hooks/useInterfaceSettings";
 
 export default function MyProfilePage() {
   const { data: me, isLoading } = trpc.user.me.useQuery();
   const [editing, setEditing] = useState(false);
   const deleteMutation = trpc.user.delete.useMutation();
+  const { t } = useInterfaceSettings();
 
   const handleDelete = async () => {
-    const confirmed = window.confirm("This will permanently delete your account. Continue?");
+    const confirmed = window.confirm(t("profile.delete_confirm"));
     if (!confirmed) return;
     await deleteMutation.mutateAsync();
     if (typeof window !== 'undefined') {
@@ -20,13 +22,13 @@ export default function MyProfilePage() {
   return (
     <div className="max-w-3xl space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">My Profile</h1>
+        <h1 className="text-2xl font-bold text-foreground">{t("profile.title")}</h1>
         <div className="flex items-center gap-2">
-          <button className="rounded-md border px-3 py-2 text-sm" onClick={() => setEditing((v) => !v)}>
-            {editing ? "View" : "Edit"}
+          <button className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground hover:bg-muted" onClick={() => setEditing((v) => !v)}>
+            {editing ? t("profile.action.view") : t("profile.action.edit")}
           </button>
-          <button className="rounded-md border px-3 py-2 text-sm text-red-600" onClick={handleDelete} disabled={deleteMutation.isPending}>
-            Delete
+          <button className="rounded-md border border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-900/20 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/20" onClick={handleDelete} disabled={deleteMutation.isPending}>
+            {t("profile.action.delete")}
           </button>
         </div>
       </div>
@@ -40,18 +42,18 @@ export default function MyProfilePage() {
       ) : editing ? (
         <UserForm />
       ) : me ? (
-        <div className="space-y-2 text-sm">
-          <div><span className="text-muted-foreground">Name:</span> {me.firstName} {me.lastName}</div>
-          <div><span className="text-muted-foreground">Username:</span> {me.username}</div>
-          <div><span className="text-muted-foreground">Email:</span> {me.email}</div>
-          <div><span className="text-muted-foreground">Phone:</span> {me.phone}</div>
-          <div><span className="text-muted-foreground">Website:</span> {me.website}</div>
-          <div><span className="text-muted-foreground">Location:</span> {me.location}</div>
-          <div><span className="text-muted-foreground">Timezone:</span> {me.timezone}</div>
-          {me.bio && <div className="pt-2"><span className="text-muted-foreground">Bio:</span><div className="whitespace-pre-wrap">{me.bio}</div></div>}
+        <div className="space-y-2 text-sm text-foreground">
+          <div><span className="text-muted-foreground">{t("profile.field.name")}:</span> {me.firstName} {me.lastName}</div>
+          <div><span className="text-muted-foreground">{t("profile.field.username")}:</span> {me.username}</div>
+          <div><span className="text-muted-foreground">{t("profile.field.email")}:</span> {me.email}</div>
+          <div><span className="text-muted-foreground">{t("profile.field.phone")}:</span> {me.phone}</div>
+          <div><span className="text-muted-foreground">{t("profile.field.website")}:</span> {me.website}</div>
+          <div><span className="text-muted-foreground">{t("profile.field.location")}:</span> {me.location}</div>
+          <div><span className="text-muted-foreground">{t("profile.field.timezone")}:</span> {me.timezone}</div>
+          {me.bio && <div className="pt-2"><span className="text-muted-foreground">{t("profile.field.bio")}:</span><div className="whitespace-pre-wrap">{me.bio}</div></div>}
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">Unable to load profile.</p>
+        <p className="text-sm text-muted-foreground">{t("profile.loading")}</p>
       )}
     </div>
   );

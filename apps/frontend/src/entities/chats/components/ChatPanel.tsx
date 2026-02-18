@@ -1,14 +1,25 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
 import { Card } from '@/components/ui/card'
-import { ChatMessageList, RenderedMessage } from './MessageList'
+import { ChatMessageList, RenderedMessage, MessageFollowup } from './MessageList'
 import { ChatComposer } from './ChatComposer'
 import { ChatHeader } from './ChatHeader'
+import { ChatThinkingIndicator } from './ChatThinkingIndicator'
+import { QuickActionsBar } from './QuickActionsBar'
 import { Sparkles, Menu, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ConversationList, ConversationListItem } from './ConversationList'
 import { cn } from '@/lib/utils'
+
+interface QuickAction {
+  id: string
+  label: string
+  action: string
+  icon?: string
+  variant?: 'default' | 'primary' | 'secondary' | 'destructive'
+}
 
 interface ChatPanelProps {
   title?: string | null
@@ -17,8 +28,8 @@ interface ChatPanelProps {
   conversationId?: string | null
   isSending: boolean
   disabled?: boolean
-  pendingAssistantMessage?: string | null
-  contextType: 'project' | 'profile' | 'proposal' | 'team' | 'workspace' | 'space' | 'channel'
+  pendingAssistantMessage?: string | React.ReactNode | null
+  contextType: 'project' | 'profile' | 'proposal' | 'team' | 'workspace' | 'space' | 'channel' | 'task' | 'list' | 'folder'
   entityId: string
   onRename?: (title: string) => Promise<void>
   onDelete?: () => Promise<void>
@@ -26,6 +37,10 @@ interface ChatPanelProps {
   onShare?: () => void
   onContextClick?: () => void
   contextCount?: number
+  // New props for enhanced features
+  onFollowupClick?: (messageId: string, followup: MessageFollowup) => void
+  quickActions?: QuickAction[]
+  onQuickActionClick?: (action: QuickAction) => void
   // Conversation list props
   conversations?: ConversationListItem[]
   onSelectConversation?: (conversationId: string) => void
@@ -53,6 +68,9 @@ export function ChatPanel({
   onShare,
   onContextClick,
   contextCount = 0,
+  onFollowupClick,
+  quickActions = [],
+  onQuickActionClick,
   conversations = [],
   onSelectConversation,
   onCreateConversation,
@@ -98,7 +116,13 @@ export function ChatPanel({
           <div className="relative flex-1 overflow-hidden">
             {hasConversation ? (
               <div className="h-full">
-                <ChatMessageList messages={messages} pendingAssistantMessage={pendingAssistantMessage} />
+                <ChatMessageList
+                  messages={messages}
+                  pendingAssistantMessage={
+                    (isSending ? <ChatThinkingIndicator contextType={contextType} /> : pendingAssistantMessage) as string | ReactNode | null | undefined
+                  }
+                  onFollowupClick={onFollowupClick}
+                />
               </div>
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-6 px-4 text-center sm:gap-8 sm:px-8">
@@ -148,6 +172,14 @@ export function ChatPanel({
               </div>
             )}
           </div>
+
+          {/* Quick Actions Bar */}
+          {quickActions.length > 0 && onQuickActionClick && (
+            <QuickActionsBar
+              actions={quickActions}
+              onActionClick={onQuickActionClick}
+            />
+          )}
 
           {/* Composer Area */}
           <div className="border-t border-slate-200/80 bg-white/95 p-4 backdrop-blur-sm sm:px-6 sm:py-5">

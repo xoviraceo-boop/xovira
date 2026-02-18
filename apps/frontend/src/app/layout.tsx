@@ -1,7 +1,7 @@
 import React from "react";
 import type { Metadata } from "next";
 import { Inter } from 'next/font/google';
-import Head from "next/head";
+
 import Providers from "@/components/providers/Providers";
 import { mergeOpenGraph } from '@/utils/utilities//mergeOpenGraph';
 import { getServerSideURL } from '@/utils/utilities/getURL';
@@ -11,13 +11,13 @@ import '@llamaindex/chat-ui/styles/pdf.css'
 import '@llamaindex/chat-ui/styles/editor.css'
 import "./globals.css";
 
-const inter = Inter({ 
-  subsets: ['latin'], 
+const inter = Inter({
+  subsets: ['latin'],
   variable: '--font-inter',
   display: 'swap',
 });
 
-const metadata: Metadata = {
+export const metadata: Metadata = {
   metadataBase: new URL(getServerSideURL()),
   openGraph: mergeOpenGraph(),
   twitter: {
@@ -34,17 +34,18 @@ const metadata: Metadata = {
     apple: "/images/logo.png",
     shortcut: "/images/logo.png",
   },
+  manifest: "/site.webmanifest",
+  alternates: {
+    canonical: "https://shopify-app.doc2product.com",
+  },
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
   return (
     <html lang="en" suppressHydrationWarning>
-      <Head>
-        <link rel="manifest" href="/site.webmanifest" />
-        <link rel="canonical" href="https://shopify-app.doc2product.com" />
-      </Head>
-      <body className={`${inter.variable} font-sans antialiased`}>
+
+      <body className={`${inter.variable} font-sans antialiased`} suppressHydrationWarning>
         <React.StrictMode>
           <Providers session={session}>
             {children}

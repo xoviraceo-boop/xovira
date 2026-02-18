@@ -137,9 +137,9 @@ export default function AgentCreatePage() {
 
   const handleCardClick = async (card: Omit<AgentSuggestionCardProps | AgentTemplateCardProps, 'onClick' | 'disabled'>) => {
     if (isCreating) return;
-    
+
     setIsCreating(true);
-    
+
     try {
       // Step 1: Create a new agent
       const agent = await createAgentMutation.mutateAsync({
@@ -160,6 +160,7 @@ export default function AgentCreatePage() {
       await messageMutation.mutateAsync({
         conversationId: builderData.conversationId,
         message: card.message,
+        agentId: agent.id,
       });
 
       // Step 4: Redirect to the agent builder page
@@ -176,9 +177,9 @@ export default function AgentCreatePage() {
     options?: { attachments?: any[]; webSearch?: boolean; contexts?: Array<{ type: string; id: string }> }
   ) => {
     if (!messageText.trim() || isCreating) return;
-    
+
     setIsCreating(true);
-    
+
     try {
       // Step 1: Create a new agent
       const agent = await createAgentMutation.mutateAsync({
@@ -199,6 +200,7 @@ export default function AgentCreatePage() {
       await messageMutation.mutateAsync({
         conversationId: builderData.conversationId,
         message: messageText,
+        agentId: agent.id,
       });
 
       // Step 4: Redirect to the agent builder page
@@ -212,9 +214,9 @@ export default function AgentCreatePage() {
 
   const handleGetStarted = async () => {
     if (isCreating) return;
-    
+
     setIsCreating(true);
-    
+
     try {
       // Create a new agent - conversation and message initialization will be handled by AgentChatBuilder
       const agent = await createAgentMutation.mutateAsync({

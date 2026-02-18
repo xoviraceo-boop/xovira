@@ -17,6 +17,8 @@ import { trpc } from "@/lib/trpc";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/useToast";
 import { useSocket } from "@/components/providers/SocketProvider";
+import { Protect } from "@/features/permissions/components/Protect";
+import { Capability } from "@/features/permissions/capabilities";
 
 interface RequestModalProps {
   proposalId: string;
@@ -53,7 +55,7 @@ export default function RequestModal({
   const [selectedProjectId, setSelectedProjectId] = useState<string>(projectId || "");
   const [selectedTeamId, setSelectedTeamId] = useState<string>(teamId || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { socket, isConnected } = useSocket();
@@ -80,7 +82,7 @@ export default function RequestModal({
   // Load owned projects/teams for selection when required
   const { data: projectList, isLoading: isLoadingProjects } = trpc.project.list.useQuery(
     { scope: 'owned', page: 1, pageSize: 100 },
-    { 
+    {
       enabled: requiresProject,
       staleTime: 60000, // Cache for 1 minute
     }
@@ -88,7 +90,7 @@ export default function RequestModal({
 
   const { data: teamList, isLoading: isLoadingTeams } = trpc.team.list.useQuery(
     { scope: 'owned', page: 1, pageSize: 100 },
-    { 
+    {
       enabled: requiresTeam,
       staleTime: 60000, // Cache for 1 minute
     }
@@ -140,14 +142,14 @@ export default function RequestModal({
 
     try {
       const s = await waitForConnection();
-      
+
       return new Promise<void>((resolve, reject) => {
         const timeoutId = setTimeout(() => {
           reject(new Error('Notification send timeout'));
         }, 5000);
 
-        s.emit('notification:send', 
-          { userId: proposalOwnerId, notificationId }, 
+        s.emit('notification:send',
+          { userId: proposalOwnerId, notificationId },
           (err: any) => {
             clearTimeout(timeoutId);
             if (err) {
@@ -184,8 +186,8 @@ export default function RequestModal({
       }
 
       // Refresh sender "sent" list immediately
-      queryClient.invalidateQueries({ 
-        queryKey: [["request", "list"], { scope: "sent" }] as any 
+      queryClient.invalidateQueries({
+        queryKey: [["request", "list"], { scope: "sent" }] as any
       });
 
       onClose();
@@ -234,11 +236,11 @@ export default function RequestModal({
   // Submit handler
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     setIsSubmitting(true);
-    
+
     try {
       await sendRequestMutation.mutateAsync({
         proposalId,
@@ -294,105 +296,114 @@ export default function RequestModal({
             Send a request to the owner of "{proposalTitle}"
           </DialogDescription>
         </DialogHeader>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {requiresProject && (
-            <div className="space-y-2">
-              <Label htmlFor="project">
-                Project <span className="text-destructive">*</span>
-              </Label>
-              <select
-                id="project"
-                className="w-full border rounded-md h-9 px-3 bg-background disabled:opacity-50 disabled:cursor-not-allowed"
-                value={selectedProjectId}
-                onChange={(e) => setSelectedProjectId(e.target.value)}
-                disabled={isLoadingProjects || isSubmitting}
-                required
-              >
-                <option value="">
-                  {isLoadingProjects ? "Loading projects..." : "Select a project"}
-                </option>
-                {(projectList?.items || []).map((p: any) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
 
-          {requiresTeam && (
-            <div className="space-y-2">
-              <Label htmlFor="team">
-                Team <span className="text-destructive">*</span>
-              </Label>
-              <select
-                id="team"
-                className="w-full border rounded-md h-9 px-3 bg-background disabled:opacity-50 disabled:cursor-not-allowed"
-                value={selectedTeamId}
-                onChange={(e) => setSelectedTeamId(e.target.value)}
-                disabled={isLoadingTeams || isSubmitting}
-                required
-              >
-                <option value="">
-                  {isLoadingTeams ? "Loading teams..." : "Select a team"}
-                </option>
-                {(teamList?.items || []).map((t: any) => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-              </select>
+        <Protect
+          permission={Capability.MARKETPLACE_REQUEST_JOIN}
+          fallback={
+            <div className="p-4 text-center text-muted-foreground">
+              You do not have permission to send requests. Please upgrade your account or contact support.
             </div>
-          )}
+          }
+        >
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {requiresProject && (
+              <div className="space-y-2">
+                <Label htmlFor="project">
+                  Project <span className="text-destructive">*</span>
+                </Label>
+                <select
+                  id="project"
+                  className="w-full border rounded-md h-9 px-3 bg-background disabled:opacity-50 disabled:cursor-not-allowed"
+                  value={selectedProjectId}
+                  onChange={(e) => setSelectedProjectId(e.target.value)}
+                  disabled={isLoadingProjects || isSubmitting}
+                  required
+                >
+                  <option value="">
+                    {isLoadingProjects ? "Loading projects..." : "Select a project"}
+                  </option>
+                  {(projectList?.items || []).map((p: any) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
-          <div className="space-y-2">
-            <Label htmlFor="title">
-              Request Title <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="title"
-              placeholder="Enter a brief title for your request"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              maxLength={100}
-              disabled={isSubmitting}
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="message">
-              Message <span className="text-destructive">*</span>
-            </Label>
-            <Textarea
-              id="message"
-              placeholder="Explain your interest and what you're looking for..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={4}
-              maxLength={1000}
-              disabled={isSubmitting}
-              required
-            />
-            <p className="text-xs text-muted-foreground">
-              {message.length}/1000 characters
-            </p>
-          </div>
-          
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting || !isFormValid}
-            >
-              {isSubmitting ? "Sending..." : "Send Request"}
-            </Button>
-          </DialogFooter>
-        </form>
+            {requiresTeam && (
+              <div className="space-y-2">
+                <Label htmlFor="team">
+                  Team <span className="text-destructive">*</span>
+                </Label>
+                <select
+                  id="team"
+                  className="w-full border rounded-md h-9 px-3 bg-background disabled:opacity-50 disabled:cursor-not-allowed"
+                  value={selectedTeamId}
+                  onChange={(e) => setSelectedTeamId(e.target.value)}
+                  disabled={isLoadingTeams || isSubmitting}
+                  required
+                >
+                  <option value="">
+                    {isLoadingTeams ? "Loading teams..." : "Select a team"}
+                  </option>
+                  {(teamList?.items || []).map((t: any) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="title">
+                Request Title <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="title"
+                placeholder="Enter a brief title for your request"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                maxLength={100}
+                disabled={isSubmitting}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="message">
+                Message <span className="text-destructive">*</span>
+              </Label>
+              <Textarea
+                id="message"
+                placeholder="Explain your interest and what you're looking for..."
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                rows={4}
+                maxLength={1000}
+                disabled={isSubmitting}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                {message.length}/1000 characters
+              </p>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSubmitting || !isFormValid}
+              >
+                {isSubmitting ? "Sending..." : "Send Request"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Protect>
       </DialogContent>
     </Dialog>
   );

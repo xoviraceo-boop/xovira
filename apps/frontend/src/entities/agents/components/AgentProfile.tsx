@@ -11,11 +11,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { 
-  Bot, 
-  Settings, 
-  CheckCircle2, 
-  Clock, 
+import {
+  Bot,
+  Settings,
+  CheckCircle2,
+  Clock,
   AlertCircle,
   Loader2,
   Sparkles,
@@ -84,23 +84,25 @@ interface AgentProfileProps {
       priority: number;
     }>;
   };
+  conversationType?: string;
   isReconfiguring?: boolean;
   onEdit?: () => void;
   onConfigure?: () => void;
 }
 
-export function AgentProfile({ 
-  agent, 
+export function AgentProfile({
+  agent,
+  conversationType,
   isReconfiguring = false,
   onEdit,
-  onConfigure 
+  onConfigure
 }: AgentProfileProps) {
   const [activeTab, setActiveTab] = useState("instructions");
   const router = useRouter();
 
   // Refetch agent data on update
   const { refetch: refetchAgent } = trpc.agent.get.useQuery(
-    { id: agent.id },
+    { id: agent.id, conversationType },
     { enabled: false }
   );
 
@@ -109,17 +111,17 @@ export function AgentProfile({
   const isBuilding = agent.status === "BUILDING";
   const isReconfiguringStatus = agent.status === "RECONFIGURING";
   const isExecuting = agent.status === "EXECUTING";
-  
+
   // Check if agent is being reconfigured
   const metadata = agent.metadata || {};
-  
+
   const hasActiveReconfiguration = Boolean(
-    isLive && 
-    metadata?.stage && 
+    isLive &&
+    metadata?.stage &&
     typeof metadata.stage === 'string' &&
     ['review', 'testing'].includes(metadata.stage)
   );
-  
+
   const isActuallyReconfiguring = Boolean(isReconfiguring || hasActiveReconfiguration);
 
   // Check if agent has schedules
@@ -150,7 +152,7 @@ export function AgentProfile({
         </Badge>
       );
     }
-    
+
     if (isReconfiguringStatus || isActuallyReconfiguring) {
       return (
         <Badge variant="secondary" className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20">
@@ -159,7 +161,7 @@ export function AgentProfile({
         </Badge>
       );
     }
-    
+
     if (isBuilding) {
       return (
         <Badge variant="secondary" className="bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20">
@@ -168,7 +170,7 @@ export function AgentProfile({
         </Badge>
       );
     }
-    
+
     if (isLive) {
       return (
         <Badge variant="default" className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
@@ -177,7 +179,7 @@ export function AgentProfile({
         </Badge>
       );
     }
-    
+
     if (isDraft) {
       return (
         <Badge variant="secondary">
@@ -186,7 +188,7 @@ export function AgentProfile({
         </Badge>
       );
     }
-    
+
     return (
       <Badge variant="outline">
         <AlertCircle className="w-3 h-3 mr-1.5" />
@@ -209,7 +211,7 @@ export function AgentProfile({
   };
 
   return (
-    <div className="space-y-6 h-full flex flex-col">      
+    <div className="space-y-6 h-full flex flex-col">
 
       {/* Agent Header Card */}
       <Card>
@@ -217,15 +219,13 @@ export function AgentProfile({
           <div className="flex items-start gap-4">
             <div className="flex-shrink-0 relative">
               {agent.avatar ? (
-                <div className={`w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-2xl ${
-                  isActuallyReconfiguring ? 'animate-pulse' : ''
-                }`}>
+                <div className={`w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-2xl ${isActuallyReconfiguring ? 'animate-pulse' : ''
+                  }`}>
                   {agent.avatar}
                 </div>
               ) : (
-                <div className={`w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center ${
-                  isActuallyReconfiguring ? 'animate-pulse' : ''
-                }`}>
+                <div className={`w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center ${isActuallyReconfiguring ? 'animate-pulse' : ''
+                  }`}>
                   <Bot className="w-8 h-8 text-primary" />
                 </div>
               )}

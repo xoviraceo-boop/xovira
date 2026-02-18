@@ -10,7 +10,7 @@ export const chatRouter = router({
   list: protectedProcedure
     .input(
       z.object({
-        contextType: z.enum(['project', 'profile', 'proposal', 'team', 'workspace', 'space', 'channel']),
+        contextType: z.enum(['project', 'profile', 'proposal', 'team', 'workspace', 'space', 'channel', 'task', 'list', 'folder']),
         entityId: z.string(),
       })
     )
@@ -40,6 +40,15 @@ export const chatRouter = router({
         case 'channel':
           where.channelId = input.entityId
           break
+        case 'task':
+          where.taskId = input.entityId
+          break
+        case 'list':
+          where.listId = input.entityId
+          break
+        case 'folder':
+          where.folderId = input.entityId
+          break
         case 'profile':
           where.userId = input.entityId
           where.projectId = null
@@ -48,6 +57,9 @@ export const chatRouter = router({
           where.workspaceId = null
           where.spaceId = null
           where.channelId = null
+          where.taskId = null
+          where.listId = null
+          where.folderId = null
           break
       }
 
@@ -65,6 +77,9 @@ export const chatRouter = router({
           workspaceId: true,
           spaceId: true,
           channelId: true,
+          taskId: true,
+          listId: true,
+          folderId: true,
           conversationType: true,
           lastMessageAt: true,
           createdAt: true,
@@ -211,7 +226,7 @@ export const chatRouter = router({
   create: protectedProcedure
     .input(
       z.object({
-        contextType: z.enum(['project', 'profile', 'proposal', 'team', 'workspace', 'space', 'channel']),
+        contextType: z.enum(['project', 'profile', 'proposal', 'team', 'workspace', 'space', 'channel', 'task', 'list', 'folder']),
         entityId: z.string(),
         modelId: z.string(),
         title: z.string().optional(),
@@ -260,6 +275,18 @@ export const chatRouter = router({
           break
         case 'channel':
           data.channelId = input.entityId
+          data.conversationType = input.conversationType ?? ConversationType.GENERAL
+          break
+        case 'task':
+          data.taskId = input.entityId
+          data.conversationType = input.conversationType ?? ConversationType.GENERAL
+          break
+        case 'list':
+          data.listId = input.entityId
+          data.conversationType = input.conversationType ?? ConversationType.GENERAL
+          break
+        case 'folder':
+          data.folderId = input.entityId
           data.conversationType = input.conversationType ?? ConversationType.GENERAL
           break
         case 'profile':

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { keepPreviousData } from "@tanstack/react-query";
 
 export type WorkspaceScope = "owned" | "member" | "all";
 export type WorkspaceStatusFilter = "active" | "archived" | "";
@@ -33,7 +34,10 @@ export function useWorkspaceList(initialScope: WorkspaceScope = "owned") {
 		};
 	}, [page, pageSize, scope, query, filters.status]);
 
-	const queryResult = trpc.workspace.list.useQuery(listInput, { staleTime: 30_000 });
+	const queryResult = trpc.workspace.list.useQuery(listInput, {
+		staleTime: 30_000,
+		placeholderData: keepPreviousData
+	});
 	const utils = trpc.useUtils();
 
 	useEffect(() => {

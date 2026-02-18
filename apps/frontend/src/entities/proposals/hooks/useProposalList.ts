@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { keepPreviousData } from "@tanstack/react-query";
 
 export type ProposalScope = "all" | "owned" | "saved" | "interested";
 
@@ -44,6 +45,7 @@ export function useProposalList() {
 
   const { data, isLoading, isFetching } = trpc.proposal.list.useQuery(listInput, {
     staleTime: 30_000,
+    placeholderData: keepPreviousData,
   });
   const utils = trpc.useUtils();
 

@@ -15,7 +15,7 @@ export default function AgentCreationPage() {
 
   // Fetch agent
   const { data: agent, isLoading, error } = trpc.agent.get.useQuery(
-    { id: agentId },
+    { id: agentId, conversationType: 'AGENT_BUILDER' },
     { enabled: !!agentId }
   );
 
@@ -52,7 +52,7 @@ export default function AgentCreationPage() {
   return (
     <Shell>
       <div className="h-[calc(100vh-8rem)]">
-        <AgentChatBuilder 
+        <AgentChatBuilder
           agentId={agentId}
           onAgentCreated={handleAgentCreated}
         />

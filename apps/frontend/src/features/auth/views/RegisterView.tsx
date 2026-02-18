@@ -1,13 +1,17 @@
 "use client";
 import React, { useState, useCallback } from "react";
-import { Mail, Lock, User, Eye, EyeOff } from "lucide-react";
+import NextImage from "next/image";
+import { ArrowRight, Check, X, Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { AuthMessage, MessageType } from "../components/AuthMessage";
+import { SignInWithGoogle, RegisterUser } from "@/services/auth.service";
 import { AuthContainer } from "../components/AuthContainer";
-import { AuthMessage } from "../components/AuthMessage";
-import { SignInWithGoogle, SignInWithCredentials, SignInWithMagicLink, RegisterUser } from "@/actions/auth";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { motion } from "framer-motion";
+import { AUTH_MESSAGES, getUserFriendlyMessage } from "../constants/authMessages";
 
 export const RegisterView = () => {
   const router = useRouter();
@@ -15,35 +19,63 @@ export const RegisterView = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState<MessageType>("error");
   const [showPassword, setShowPassword] = useState(false);
+  const [touchedPassword, setTouchedPassword] = useState(false);
 
-  const labelClass = "block text-sm font-medium text-gray-700 mb-1";
-  const inputClass =
-    "w-full px-4 py-3 bg-white/70 border border-gray-300/50 rounded-lg text-gray-800 transition duration-200 " +
-    "focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 focus:bg-white shadow-sm outline-none";
+  // Validation States
+  const validations = {
+    hasMinLength: password.length >= 8,
+    hasUpperCase: /[A-Z]/.test(password),
+    hasLowerCase: /[a-z]/.test(password),
+    hasNumber: /[0-9]/.test(password),
+  };
+
+  const isPasswordValid = Object.values(validations).every(Boolean);
+
+  const inputClass = "h-12 bg-white border-gray-300 focus:border-black focus:ring-1 focus:ring-black placeholder:text-gray-400 transition-all rounded-lg text-base";
+  const labelClass = "text-sm font-medium text-gray-700 mb-2 block";
+
+  const clearMessage = useCallback(() => {
+    setMessage("");
+  }, []);
 
   const handleRegister = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
+      setTouchedPassword(true);
+
+      if (!isPasswordValid) {
+        setMessageType("warning");
+        setMessage(AUTH_MESSAGES.WARNING.WEAK_PASSWORD);
+        return;
+      }
+
       setLoading(true);
       setMessage("");
+
       try {
-        const res = await RegisterUser(email, password);
-        if (!res.success) {
-          setMessage(res.message || "Registration failed");
-          return;
+        const result = await RegisterUser(email, password);
+
+        if (result.success) {
+          setMessageType("success");
+          setMessage(AUTH_MESSAGES.SUCCESS.REGISTER);
+          // Force hard navigate to ensure cookies are set
+          setTimeout(() => {
+            window.location.href = `/auth/verify-request?type=register&email=${encodeURIComponent(email)}`;
+          }, 500);
+        } else {
+          setMessageType("error");
+          setMessage(getUserFriendlyMessage(result.error?.code, AUTH_MESSAGES.ERROR.REGISTRATION_FAILED));
+          setLoading(false);
         }
-        setMessage("Success! Account created and signed in.");
-        router.refresh();
       } catch (error: any) {
-        setMessage(
-          error.message || "An unexpected error occurred during registration."
-        );
-      } finally {
+        setMessageType("error");
+        setMessage(getUserFriendlyMessage(error.message, AUTH_MESSAGES.ERROR.REGISTRATION_FAILED));
         setLoading(false);
       }
     },
-    [email, password]
+    [email, password, isPasswordValid]
   );
 
   const handleGoogle = useCallback(async () => {
@@ -51,117 +83,129 @@ export const RegisterView = () => {
     setMessage("");
     try {
       await SignInWithGoogle();
-      setMessage("Success! Google login complete.");
     } catch (error: any) {
-      setMessage(error.message || "Google sign-in failed. Please try again.");
+      setMessageType("error");
+      setMessage(AUTH_MESSAGES.ERROR.GOOGLE_CONNECT_FAILED);
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   return (
-    <AuthContainer>
-      <div className="max-w-lg mx-auto">
-        <h2 className="text-3xl font-extrabold text-gray-800 mb-2 text-center">
-          Create an account
-        </h2>
-        <p className="text-gray-500 mb-8 text-center">
+    <AuthContainer
+      title="Create your account"
+      subtitle={
+        <span className="flex items-center gap-1">
           Already have an account?
-          <button
-            onClick={() => router.push("/login")}
-            className="ml-1 font-semibold text-indigo-600 hover:text-indigo-700 transition duration-150"
-          >
+          <Link href="/login" className="font-medium text-black hover:underline transition-all">
             Log in
-          </button>
-        </p>
+          </Link>
+        </span> as any
+      }
+    >
 
-        <AuthMessage message={message} />
+      <AuthMessage message={message} type={messageType} onDismiss={clearMessage} />
 
-        <form onSubmit={handleRegister} className="space-y-4">
-          <div>
-            <Label htmlFor="email" className={labelClass}>
-              Email
-            </Label>
+      <div className="space-y-4 mb-5">
+        <Button
+          variant="outline"
+          onClick={handleGoogle}
+          disabled={loading}
+          className="w-full h-12 justify-center px-4 bg-white text-gray-700 font-medium hover:bg-gray-50 border border-gray-200 shadow-sm transition-all"
+        >
+          <NextImage
+            src="/images/google-logo.png"
+            alt="Google"
+            width={20}
+            height={20}
+            className="mr-3"
+          />
+          <span className="text-base">Continue with Google</span>
+        </Button>
+      </div>
+
+      <div className="relative my-5">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-gray-200" />
+        </div>
+        <div className="relative flex justify-center">
+          <span className="bg-white px-4 text-xs font-semibold text-gray-500 uppercase tracking-widest">
+            Or register with
+          </span>
+        </div>
+      </div>
+
+      <form onSubmit={handleRegister} className="space-y-5">
+        <div>
+          <Label htmlFor="email" className={labelClass}>
+            Email
+          </Label>
+          <Input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className={inputClass}
+            placeholder="name@example.com"
+          />
+        </div>
+        <div>
+          <Label htmlFor="password" className={labelClass}>
+            Password
+          </Label>
+          <div className="relative">
             <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              id="password"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (!touchedPassword) setTouchedPassword(true);
+              }}
               required
-              placeholder="Enter your email address"
-              className={inputClass}
+              className={`${inputClass} pr-10 ${touchedPassword && !isPasswordValid ? 'border-red-300 focus:border-red-300 focus:ring-red-200' : ''}`}
+              placeholder="Create a strong password"
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+            >
+              {showPassword ? (
+                <EyeOff className="h-5 w-5" />
+              ) : (
+                <Eye className="h-5 w-5" />
+              )}
+            </button>
           </div>
-          <div>
-            <Label htmlFor="password" className={labelClass}>
-              Password
-            </Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="Create a password"
-                className={inputClass}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? (
-                  <EyeOff className="w-5 h-5" />
-                ) : (
-                  <Eye className="w-5 h-5" />
-                )}
-              </button>
-            </div>
-          </div>
+        </div>
 
-          <div className="flex items-center">
+        <div className="flex items-start gap-2 mt-2">
+          <div className="h-5 flex items-center">
             <input
               type="checkbox"
               id="terms"
               required
-              className="h-4 w-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500"
+              className="h-4 w-4 text-black border-gray-300 rounded focus:ring-black"
             />
-            <Label
-              htmlFor="terms"
-              className="ml-2 mt-0 text-gray-600 font-normal"
-            >
-              I agree to the{" "}
-              <a href="#" className="text-indigo-600 hover:underline">
-                Terms & Conditions
-              </a>
-            </Label>
           </div>
-
-          <Button type="submit" disabled={loading} icon={User}>
-            Create account
-          </Button>
-        </form>
-
-        <div className="flex items-center my-6">
-          <div className="flex-grow border-t border-gray-300"></div>
-          <span className="flex-shrink mx-4 text-gray-500 text-sm font-medium">
-            Or register with
-          </span>
-          <div className="flex-grow border-t border-gray-300"></div>
-        </div>
-
-        <div className="space-y-4">
-          <Button
-            variant="google"
-            onClick={handleGoogle}
-            disabled={loading}
-            icon={Mail}
+          <Label
+            htmlFor="terms"
+            className="text-gray-500 font-normal text-sm leading-tight normal-case"
           >
-            Continue with Google
-          </Button>
+            I agree to the <Link href="/terms" className="text-gray-900 underline">Terms of Service</Link> and <Link href="/privacy" className="text-gray-900 underline">Privacy Policy</Link>.
+          </Label>
         </div>
-      </div>
+
+        <Button
+          type="submit"
+          disabled={loading}
+          className="w-full h-11 bg-black hover:bg-gray-800 text-white font-medium rounded-md transition-all mt-3"
+        >
+          {loading ? "Creating account..." : "Create Account"}
+          {!loading && <ArrowRight className="ml-2 w-4 h-4" />}
+        </Button>
+      </form>
     </AuthContainer>
   );
 };

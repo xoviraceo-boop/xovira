@@ -5,7 +5,7 @@ import { getJson, setJson } from '@/lib/redis'
 
 export const CHAT_CONTEXT_TTL_SECONDS = 60 * 60 * 12 // 12 hours
 
-export type ChatContextType = 'project' | 'profile' | 'proposal' | 'team' | 'workspace' | 'space' | 'channel'
+export type ChatContextType = 'project' | 'profile' | 'proposal' | 'team' | 'workspace' | 'space' | 'channel' | 'task' | 'list' | 'folder'
 
 export type ChatContextCache = {
   contextType: ChatContextType
@@ -235,6 +235,52 @@ export async function ensureChatContext(
               role: true,
             },
           },
+        },
+      })
+      entityName = entityData?.name
+      break
+    }
+    case 'task': {
+      entityData = await db.task.findUnique({
+        where: { id: entityId },
+        include: {
+          status: { select: { id: true, name: true, color: true } },
+          list: { select: { id: true, name: true } },
+          space: { select: { id: true, name: true } },
+          project: { select: { id: true, name: true } },
+          assignees: {
+            include: {
+              user: { select: { id: true, name: true, email: true } },
+            },
+          },
+        },
+      })
+      entityName = entityData?.title
+      break
+    }
+    case 'list': {
+      entityData = await db.list.findUnique({
+        where: { id: entityId },
+        include: {
+          folder: { select: { id: true, name: true } },
+          space: { select: { id: true, name: true } },
+          project: { select: { id: true, name: true } },
+          workspace: { select: { id: true, name: true } },
+          statuses: { select: { id: true, name: true, color: true } },
+        },
+      })
+      entityName = entityData?.name
+      break
+    }
+    case 'folder': {
+      entityData = await db.folder.findUnique({
+        where: { id: entityId },
+        include: {
+          space: { select: { id: true, name: true } },
+          project: { select: { id: true, name: true } },
+          team: { select: { id: true, name: true } },
+          workspace: { select: { id: true, name: true } },
+          lists: { select: { id: true, name: true } },
         },
       })
       entityName = entityData?.name

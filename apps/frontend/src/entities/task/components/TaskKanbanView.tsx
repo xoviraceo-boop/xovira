@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { PlusIcon } from 'lucide-react'
 import { TaskContextType } from './TaskView'
 import { trpc } from '@/lib/trpc'
-import { CreateTaskModal } from './TaskCreationModal'
+import { TaskCreationModal } from './TaskCreationModal'
 import { TaskCard } from './TaskCard'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
@@ -76,7 +76,7 @@ export function TaskKanbanView({
       BLOCKED: [],
     }
     tasks.forEach((task: any) => {
-      const status = (task.status || 'OPEN') as TaskStatus
+      const status = (task.status?.name || task.statusId || task.status || 'OPEN') as TaskStatus
       if (byStatus[status]) {
         byStatus[status].push(task)
       } else {
@@ -152,7 +152,7 @@ export function TaskKanbanView({
                   </Badge>
                 </div>
                 {selectedGroup && (
-                  <CreateTaskModal
+                  <TaskCreationModal
                     context={context}
                     contextId={contextId}
                     workspaceId={workspaceId}
@@ -196,7 +196,7 @@ export function TaskKanbanView({
       {/* Global create task button */}
       {!selectedGroup && (
         <div className="flex justify-center">
-          <CreateTaskModal
+          <TaskCreationModal
             context={context}
             contextId={contextId}
             workspaceId={workspaceId}

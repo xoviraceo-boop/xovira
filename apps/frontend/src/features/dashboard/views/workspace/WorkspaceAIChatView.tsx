@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ChatView } from "@/features/dashboard/views/project/ChatView";
 import { useWorkspaceDetail } from "@/entities/workspace";
 import { ChatContextModal, type ContextEntity } from "@/features/dashboard/components/modals/ChatContextModal";
@@ -12,10 +12,10 @@ interface WorkspaceAIChatViewProps {
 	onAIChatSelect?: (aiChatId: string) => void;
 }
 
-export default function WorkspaceAIChatView({ 
-	workspaceId, 
-	selectedAIChatId, 
-	onAIChatSelect 
+export default function WorkspaceAIChatView({
+	workspaceId,
+	selectedAIChatId,
+	onAIChatSelect
 }: WorkspaceAIChatViewProps) {
 	const { data: workspace } = useWorkspaceDetail(workspaceId);
 	const [contextModalOpen, setContextModalOpen] = useState(false);
@@ -98,28 +98,17 @@ export default function WorkspaceAIChatView({
 
 	return (
 		<div className="flex h-full flex-col">
-			{/* Header */}
-			<div className="border-b border-slate-200 bg-white px-6 py-4">
-				<h1 className="text-2xl font-bold text-foreground">AI Workspace Assistant</h1>
-				<p className="mt-1 text-sm text-muted-foreground">
-					Ask questions, summarize progress, or plan next steps with contextual awareness across your workspace.
-				</p>
-			</div>
-
-			{/* Chat View */}
-			<div className="flex-1 overflow-y-auto px-6 py-6">
-				<ChatView
-					contextType="WORKSPACE"
-					contextId={workspace?.id}
-					contextName={workspace?.name}
-					contextOptions={chatContextOptions}
-					onContextClick={() => setContextModalOpen(true)}
-					contextCount={selectedContexts.length}
-					selectedContexts={selectedContexts}
-					chatId={activeChatId}
-					onChatIdChange={setActiveChatId}
-				/>
-			</div>
+			<ChatView
+				contextType="WORKSPACE"
+				contextId={workspace?.id}
+				contextName={workspace?.name}
+				contextOptions={chatContextOptions}
+				onContextClick={() => setContextModalOpen(true)}
+				contextCount={selectedContexts.length}
+				selectedContexts={selectedContexts}
+				chatId={activeChatId}
+				onChatIdChange={setActiveChatId}
+			/>
 
 			<ChatContextModal
 				workspaceId={workspaceId}

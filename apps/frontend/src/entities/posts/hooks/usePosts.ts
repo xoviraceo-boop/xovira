@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { trpc } from '@/lib/trpc';
 import { useSocket } from '@/components/providers/SocketProvider';
 import { useEffect, useRef, useCallback, useMemo } from 'react';
@@ -33,10 +33,10 @@ export function usePosts(feedType: 'global' | 'user' | 'project' | 'team', feedI
       teamId: src.teamId ?? src.team_id ?? undefined,
       user: src.user
         ? {
-            id: src.user.id,
-            name: src.user.name ?? null,
-            image: src.user.image ?? src.user.avatar ?? null,
-          }
+          id: src.user.id,
+          name: src.user.name ?? null,
+          image: src.user.image ?? src.user.avatar ?? null,
+        }
         : undefined,
     };
   }, []);
@@ -52,6 +52,7 @@ export function usePosts(feedType: 'global' | 'user' | 'project' | 'team', feedI
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       refetchOnMount: false,
+      placeholderData: keepPreviousData,
     }
   );
 

@@ -4,7 +4,10 @@ import { prisma } from "@/lib/prisma";
 
 export const messagesRouter = router({
   listConversations: protectedProcedure
-    .input(z.object({ page: z.number().int().min(1).optional().default(1), pageSize: z.number().int().min(1).max(50).optional().default(20) }))
+    .input(z.object({
+      page: z.number().int().min(1).optional().default(1),
+      pageSize: z.number().int().min(1).max(50).optional().default(20)
+    }))
     .query(async ({ ctx, input }) => {
       const userId = ctx.session!.user!.id;
       const skip = (input.page - 1) * input.pageSize;
@@ -17,33 +20,29 @@ export const messagesRouter = router({
           u.email as email,
           u.username as username,
           u.avatar as avatar,
-          MAX(m."created_at") as last_at,
-          SUM(
-            CASE 
-              WHEN m."receiver_id" = ${userId} AND m."is_read" = false 
-              THEN 1 ELSE 0 
-            END
-          ) as unread
-        FROM "messages" m
-        JOIN "users" u 
-          ON (
-            CASE 
-              WHEN m."sender_id" = ${userId} 
-              THEN m."receiver_id" 
-              ELSE m."sender_id" 
-            END
-          ) = u.id
-        WHERE m."sender_id" = ${userId} OR m."receiver_id" = ${userId}
-        GROUP BY u.id, u.name, u.username, u.avatar
+          MAX(m.created_at) as last_at,
+          COUNT(CASE 
+            WHEN m.receiver_id = ${userId} AND m.is_read = false 
+            THEN 1 
+          END)::int as unread
+        FROM messages m
+        JOIN users u ON (
+          CASE 
+            WHEN m.sender_id = ${userId} THEN m.receiver_id
+            ELSE m.sender_id
+          END
+        ) = u.id
+        WHERE (m.sender_id = ${userId} OR m.receiver_id = ${userId})
+        GROUP BY u.id, u.name, u.email, u.username, u.avatar
         ORDER BY last_at DESC
         LIMIT ${take}
-        OFFSET ${skip};
+        OFFSET ${skip}
       `;
 
-      return { items, page: input.page, pageSize: input.pageSize } as const;
+      return { items, page: input.page, pageSize: input.pageSize };
     }),
 
-    listWithUser: protectedProcedure
+  listWithUser: protectedProcedure
     .input(
       z.object({
         userId: z.string(),
@@ -53,17 +52,17 @@ export const messagesRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const me = ctx.session!.user!.id;
-  
+
       const where = {
         OR: [
           { senderId: me, receiverId: input.userId },
           { senderId: input.userId, receiverId: me },
         ],
       };
-  
+
       const skip = (input.page - 1) * input.pageSize;
       const take = input.pageSize;
-  
+
       const [total, items] = await Promise.all([
         prisma.message.count({ where }),
         prisma.message.findMany({
@@ -72,7 +71,6 @@ export const messagesRouter = router({
           skip,
           take,
           include: {
-            // 👇 include reply target message and its sender (optional)
             replyTo: {
               include: {
                 sender: {
@@ -89,14 +87,14 @@ export const messagesRouter = router({
           },
         }),
       ]);
-  
+
       return {
         items,
         total,
         page: input.page,
         pageSize: input.pageSize,
       } as const;
-    }),  
+    }),
 
   send: protectedProcedure
     .input(z.object({ toUserId: z.string(), content: z.string().min(1).max(4000), attachments: z.array(z.string()).optional() }))

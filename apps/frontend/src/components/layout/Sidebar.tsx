@@ -1,233 +1,176 @@
 "use client";
 import React, { useState } from 'react';
-import { useSession, signOut } from 'next-auth/react';
-import { 
-  Home, 
-  LayoutDashboard, 
-  Store, 
-  Users, 
-  FolderOpen, 
-  FileText, 
-  ChevronLeft, 
-  ChevronRight,
-  ChevronDown,
-  ChevronUp,
-  User,
-  LogOut,
-  Filter,
-  Building,
-  MapPin,
-  DollarSign,
-  Calendar,
-  X
+import { useSession } from 'next-auth/react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import {
+  Home,
+  LayoutDashboard,
+  Store,
+  Users,
+  FolderOpen,
+  FileText,
+  MoreHorizontal,
+  Settings,
+  Sparkles,
+  Layers,
+  Box,
+  Building2,
+  Link2,
+  User
 } from 'lucide-react';
-
-const mainNav = [
-  { label: "Home", href: "/", icon: Home },
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Marketplace", href: "/marketplace", icon: Store },
-];
-
-const secondaryNav = [
-  { label: "Workspaces", href: "/dashboard/workspaces", icon: FolderOpen },
-  { label: "Spaces", href: "/dashboard/spaces", icon: FolderOpen },
-  { label: "Teams", href: "/dashboard/teams", icon: Users },
-  { label: "Projects", href: "/dashboard/projects", icon: FolderOpen },
-  { label: "Tasks", href: "/dashboard/tasks", icon: FolderOpen },
-  { label: "Proposals", href: "/dashboard/proposals", icon: FileText },
-  { label: "Tools", href: "/dashboard/tools", icon: FolderOpen },
-  { label: "Materials", href: "/dashboard/materials", icon: FolderOpen },
-];
+import { cn } from '@/lib/utils';
+import { useInterfaceSettings } from '@/hooks/useInterfaceSettings';
+import { AppSidebar, SidebarItem } from './AppSidebar';
+import { DASHBOARD_ROUTES, MARKETPLACE_ROUTES } from '@/constants/routes.config';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export default function MainSidebar({ mode = "inline", onClose }: { mode?: "inline" | "overlay"; onClose?: () => void }) {
-  const [isMainCollapsed, setIsMainCollapsed] = useState(false);
   const { data: session } = useSession();
-  const [isFilterCollapsed, setIsFilterCollapsed] = useState(false);
-  const [activeItem, setActiveItem] = useState("/marketplace");
-  const [selectedIndustries, setSelectedIndustries] = useState(["AI / ML"]);
-  const [selectedStages, setSelectedStages] = useState(["Seed"]);
-  const [fundingRange, setFundingRange] = useState([0, 500000]);
+  const { t } = useInterfaceSettings();
 
-  const industries = ["AI / ML", "Fintech", "Healthcare", "Education"];
-  const stages = ["Pre-Seed", "Seed", "Series A", "Series B", "Growth"];
+  const mainNav: SidebarItem[] = [
+    { label: t("sidebar.home"), href: "/", icon: Home },
+    { label: t("sidebar.dashboard"), href: DASHBOARD_ROUTES.ROOT, icon: LayoutDashboard },
+    { label: t("sidebar.marketplace"), href: MARKETPLACE_ROUTES.ROOT, icon: Store },
+  ];
 
-  const handleItemClick = (href: string) => {
-    setActiveItem(href);
+  const secondaryNav = [
+    { label: "Personal", href: DASHBOARD_ROUTES.PERSONAL, icon: User },
+    { label: t("sidebar.workspaces"), href: DASHBOARD_ROUTES.WORKSPACES, icon: Box },
+    { label: t("sidebar.spaces"), href: DASHBOARD_ROUTES.SPACES, icon: Layers },
+    { label: t("sidebar.teams"), href: DASHBOARD_ROUTES.TEAMS, icon: Users },
+    { label: t("sidebar.projects"), href: DASHBOARD_ROUTES.PROJECTS, icon: FolderOpen },
+    { label: t("sidebar.tasks"), href: DASHBOARD_ROUTES.TASKS, icon: FileText },
+    { label: t("sidebar.documents"), href: DASHBOARD_ROUTES.DOCUMENTS, icon: FileText },
+    { label: t("sidebar.proposals"), href: DASHBOARD_ROUTES.PROPOSALS, icon: FileText },
+    { label: t("sidebar.tools"), href: DASHBOARD_ROUTES.TOOLS, icon: Settings },
+    { label: t("sidebar.integrations"), href: DASHBOARD_ROUTES.INTEGRATIONS, icon: Link2 },
+    { label: t("sidebar.materials"), href: DASHBOARD_ROUTES.MATERIALS, icon: Box },
+    { label: t("sidebar.resources"), href: DASHBOARD_ROUTES.RESOURCES, icon: Box },
+  ];
+
+  const [isMainCollapsed, setIsMainCollapsed] = useState(false);
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const pathname = usePathname();
+
+  const handleCollapseChange = (collapsed: boolean) => {
+    setIsMainCollapsed(collapsed);
+    const width = collapsed ? '4rem' : '16rem';
+    // AppSidebar sets the CSS variable. We just need to dispatch event if needed.
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('sidebar:main-collapsed', { detail: { collapsed, width } }));
+    }
   };
 
-  const toggleIndustry = (industry: string) => {
-    setSelectedIndustries(prev => 
-      prev.includes(industry) 
-        ? prev.filter(i => i !== industry)
-        : [...prev, industry]
-    );
+  const handleItemClick = () => {
+    if (mode === 'overlay' && onClose) {
+      onClose();
+    }
+    setIsMoreOpen(false);
   };
 
-  const toggleStage = (stage: string) => {
-    setSelectedStages(prev => 
-      prev.includes(stage) 
-        ? prev.filter(s => s !== stage)
-        : [...prev, stage]
-    );
-  };
+  const visibleSecondary = secondaryNav.slice(0, 3);
+  const hiddenSecondary = secondaryNav.slice(3);
 
-  const Aside = (
-    <aside 
-      className={`${isMainCollapsed ? 'w-16' : 'w-64'} ${mode === 'overlay' ? 'h-full' : ''} z-50 bg-gradient-to-b from-slate-800 via-slate-900 to-slate-800 text-white transition-all duration-300 ease-in-out flex flex-col border-r border-cyan-900/20 shadow-xl`}
-      onTransitionEnd={() => {
-        const width = isMainCollapsed ? '4rem' : '16rem';
-        if (typeof document !== 'undefined') {
-          document.documentElement.style.setProperty('--main-sidebar-width', width);
-        }
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('sidebar:main-collapsed', { detail: { collapsed: isMainCollapsed, width } }));
-        }
-      }}
-    >
-      {/* Cyan accent line */}
-      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-cyan-500 via-cyan-400 to-blue-500 opacity-60"></div>
-      
-      {/* Header with Collapse Button */}
-      <div className="p-4 border-b border-cyan-900/30 flex items-center justify-between bg-slate-800/50">
-        {!isMainCollapsed && (
-          <h2 className="text-lg font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
-            Navigation
-          </h2>
-        )}
-        <div className="flex items-center gap-2">
-          {mode === 'overlay' && (
-            <button
-              aria-label="Close sidebar"
-              onClick={() => {
-                if (onClose) onClose();
-              }}
-              className="p-1.5 rounded-lg border border-cyan-700/50 hover:bg-cyan-900/30 hover:border-cyan-600 transition-all"
-            >
-              <X size={18} />
-            </button>
-          )}
-          <button
-            onClick={() => {
-              const next = !isMainCollapsed;
-              setIsMainCollapsed(next);
-              const width = next ? '4rem' : '16rem';
-              if (typeof document !== 'undefined') {
-                document.documentElement.style.setProperty('--main-sidebar-width', width);
-              }
-              if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('sidebar:main-collapsed', { detail: { collapsed: next, width } }));
-              }
-            }}
-            className="p-1.5 rounded-lg hover:bg-cyan-900/30 transition-colors border border-transparent hover:border-cyan-700/50"
-          >
-            {isMainCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-          </button>
-        </div>
+  const customHeader = (collapsed: boolean) => (
+    <div className={cn("flex items-center gap-2 overflow-hidden transition-all", collapsed ? "w-0 opacity-0" : "w-auto opacity-100")}>
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600">
+        <Sparkles className="h-4 w-4 text-white" />
       </div>
+      <span className="font-semibold text-zinc-900">Xovira</span>
+    </div>
+  );
 
-      {/* Main Navigation */}
-      <nav className={`flex-1 p-4 overflow-y-auto ${
-            isMainCollapsed 
-              ? 'p-2' 
-              : 'p-4'
-          }`}>
-        <div className="space-y-1.5">
-          {mainNav.map((item) => {
-            const IconComponent = item.icon;
-            const isActive = activeItem === item.href;
-            return (
-              <button
-                key={item.href}
-                onClick={() => handleItemClick(item.href)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative group ${
-                  isActive 
-                    ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-900/50' 
-                    : 'text-slate-300 hover:bg-slate-700/50 hover:text-cyan-400'
-                }`}
-                title={isMainCollapsed ? item.label : ''}
-              >
-                {isActive && <div className="absolute left-0 w-1 h-full bg-white rounded-r"></div>}
-                <IconComponent size={20} className={isActive ? '' : 'group-hover:scale-110 transition-transform'} />
-                {!isMainCollapsed && <span className="font-medium">{item.label}</span>}
-              </button>
-            );
-          })}
-        </div>
-
+  return (
+    <AppSidebar
+      items={mainNav}
+      mode={mode}
+      onClose={onClose}
+      cssVarName="--main-sidebar-width"
+      onCollapseChange={handleCollapseChange}
+      onItemClick={handleItemClick}
+      renderHeader={customHeader}
+    >
+      <div className="space-y-1 mt-6">
         {!isMainCollapsed && (
-          <>
-            <div className="mt-6 pt-4 border-t border-cyan-900/30">
-              <p className="text-xs font-semibold text-cyan-400 mb-3 px-1">SHORTCUTS</p>
-              <div className="space-y-1">
-                {secondaryNav.map((item) => {
-                  const IconComponent = item.icon;
-                  const isActive = activeItem === item.href;
+          <div className="px-2 pb-2 text-[10px] font-semibold tracking-wider text-zinc-400 uppercase">
+            {t("sidebar.workspace_header")}
+          </div>
+        )}
+        {visibleSecondary.map((item) => {
+          const Icon = item.icon;
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={handleItemClick}
+              className={cn(
+                "group flex w-full items-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-all duration-200 outline-none",
+                isActive
+                  ? "bg-primary/10 text-primary"
+                  : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900",
+                isMainCollapsed && "justify-center px-2"
+              )}
+              title={isMainCollapsed ? item.label : undefined}
+            >
+              <Icon size={18} className={cn("shrink-0", isActive ? "text-primary" : "text-zinc-400 group-hover:text-zinc-900")} />
+              {!isMainCollapsed && <span>{item.label}</span>}
+            </Link>
+          )
+        })}
+
+        {/* More Button */}
+        <Dialog open={isMoreOpen} onOpenChange={setIsMoreOpen}>
+          <DialogTrigger asChild>
+            <button
+              className={cn(
+                "group flex w-full items-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-all duration-200 outline-none mt-2",
+                isMainCollapsed ? "justify-center" : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+              )}
+              title={t("sidebar.more")}
+            >
+              <MoreHorizontal size={18} className="shrink-0 text-zinc-400 group-hover:text-zinc-900" />
+              {!isMainCollapsed && <span>{t("sidebar.more")}</span>}
+            </button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl bg-white border-zinc-200 text-zinc-900 p-0 overflow-hidden gap-0">
+            <DialogHeader className="p-6 pb-2">
+              <DialogTitle className="text-lg font-medium text-zinc-900">{t("sidebar.all_apps")}</DialogTitle>
+            </DialogHeader>
+
+            <div className="p-4 pt-2 pb-6">
+              <div className="grid grid-cols-3 gap-2">
+                {hiddenSecondary.map((item) => {
+                  const Icon = item.icon;
+                  const active = pathname === item.href;
                   return (
-                    <button
+                    <Link
                       key={item.href}
-                      onClick={() => handleItemClick(item.href)}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 group ${
-                        isActive 
-                          ? 'bg-cyan-900/40 text-cyan-400 border border-cyan-700/50' 
-                          : 'text-slate-400 hover:bg-slate-700/50 hover:text-cyan-300'
-                      }`}
+                      href={item.href}
+                      onClick={handleItemClick}
+                      className={cn(
+                        "flex flex-col items-center justify-center gap-3 rounded-lg border border-zinc-100 bg-zinc-50 p-4 transition-all hover:bg-zinc-100 hover:border-zinc-200",
+                        active && "ring-1 ring-primary border-primary/50 bg-primary/5"
+                      )}
                     >
-                      <IconComponent size={16} className="group-hover:scale-110 transition-transform" />
-                      <span className="font-medium">{item.label}</span>
-                    </button>
-                  );
+                      <Icon size={24} className={cn(active ? "text-primary" : "text-zinc-400")} />
+                      <span className="text-sm font-medium text-zinc-700">{item.label}</span>
+                    </Link>
+                  )
                 })}
               </div>
             </div>
-          </>
-        )}
-      </nav>
-
-      {/* User Profile and Logout */}
-      <div className="p-4 border-t border-cyan-900/30 bg-slate-800/50">
-        {!isMainCollapsed ? (
-          <div className="space-y-2">
-            <button 
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-cyan-900/30 hover:text-cyan-400 transition-all border border-transparent hover:border-cyan-700/50 group" 
-              onClick={() => { if (typeof window !== 'undefined') window.location.href = '/dashboard/my-profile'; }}
-            >
-              <div className="h-9 w-9 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center text-white text-sm font-bold shadow-md">
-                {session?.user?.name?.charAt(0).toUpperCase() || <User size={18} />}
-              </div>
-              <div className="flex-1 text-left min-w-0">
-                <p className="text-sm font-semibold truncate">{session?.user?.name || 'My Profile'}</p>
-                <p className="text-xs text-slate-500 truncate">{session?.user?.email || ''}</p>
-              </div>
-            </button>
-            <button 
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-red-900/20 hover:text-red-400 transition-all border border-transparent hover:border-red-700/50" 
-              onClick={() => signOut()}
-            >
-              <LogOut size={20} />
-              <span className="font-medium">Logout</span>
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <button 
-              className="w-full flex justify-center p-2.5 rounded-xl text-slate-300 hover:bg-cyan-900/30 hover:text-cyan-400 transition-all border border-transparent hover:border-cyan-700/50"
-              title="Profile"
-              onClick={() => { if (typeof window !== 'undefined') window.location.href = '/dashboard/my-profile'; }}
-            >
-              <User size={20} />
-            </button>
-            <button 
-              className="w-full flex justify-center p-2.5 rounded-xl text-slate-300 hover:bg-red-900/20 hover:text-red-400 transition-all border border-transparent hover:border-red-700/50"
-              title="Logout"
-              onClick={() => signOut()}
-            >
-              <LogOut size={20} />
-            </button>
-          </div>
-        )}
+          </DialogContent>
+        </Dialog>
       </div>
-    </aside>
+    </AppSidebar>
   );
-
-  return Aside;
 }

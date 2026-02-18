@@ -5,19 +5,19 @@ export interface ServerToClientEvents {
   'post:deleted': (data: PostDeletedEvent) => void;
   'post:liked': (data: PostLikedEvent) => void;
   'post:unliked': (data: PostUnlikedEvent) => void;
-  
+
   // Comment events
   'comment:created': (data: CommentCreatedEvent) => void;
   'comment:updated': (data: CommentUpdatedEvent) => void;
   'comment:deleted': (data: CommentDeletedEvent) => void;
   'comment:voted': (data: CommentVotedEvent) => void;
-  
+
   // Activity log events
   'log:created': (data: LogCreatedEvent) => void;
-  
+
   // Notification events
   'notification:new': (data: NotificationEvent) => void;
-  
+
   // Presence events
   'user:online': (data: UserPresenceEvent) => void;
   'user:offline': (data: UserPresenceEvent) => void;
@@ -27,7 +27,14 @@ export interface ServerToClientEvents {
   'message:received': (data: { fromUserId: string; preview?: string; at: string }) => void;
   'message:sent': (data: { id?: string; toUserId: string; content?: string; attachments?: string[]; at: string }) => void;
   'message:read:ack': (data: { byUserId: string; at: string; messageIds?: string[] }) => void;
-  
+
+  // Collaboration events
+  'collaboration:sync': (data: { documentId: string; state: string }) => void;
+  'collaboration:update': (data: { documentId: string; update: string; userId: string }) => void;
+  'collaboration:awareness': (data: { documentId: string; states: Record<string, any> }) => void;
+  'collaboration:user-joined': (data: { documentId: string; userId: string; username: string }) => void;
+  'collaboration:user-left': (data: { documentId: string; userId: string }) => void;
+
   // Error events
   'error': (data: ErrorEvent) => void;
 }
@@ -35,24 +42,24 @@ export interface ServerToClientEvents {
 export interface ClientToServerEvents {
   // Authentication
   'auth:join': (data: { userId: string; token: string }) => void;
-  
+
   // Subscribe to feeds
   'feed:subscribe': (data: SubscribeFeedData) => void;
   'feed:unsubscribe': (data: UnsubscribeFeedData) => void;
-  
+
   // Post actions
   'post:create': (data: CreatePostData) => void;
   'post:update': (data: UpdatePostData) => void;
   'post:delete': (data: DeletePostData) => void;
   'post:like': (data: LikePostData) => void;
   'post:unlike': (data: UnlikePostData) => void;
-  
+
   // Comment actions
   'comment:create': (data: CreateCommentData) => void;
   'comment:update': (data: UpdateCommentData) => void;
   'comment:delete': (data: DeleteCommentData) => void;
   'comment:vote': (data: VoteCommentData) => void;
-  
+
   // Typing indicators
   'typing:start': (data: TypingData) => void;
   'typing:stop': (data: TypingData) => void;
@@ -63,6 +70,16 @@ export interface ClientToServerEvents {
   'message:create': (data: { toUserId: string; content: string; attachments?: string[] }, ack?: (err: any, response?: any) => void) => void;
   'message:notify': (data: { toUserId: string; preview?: string }) => void;
   'message:read': (data: { fromUserId: string }) => void;
+
+  // Collaboration events
+  'collaboration:join': (data: { documentId: string; documentType: string }) => void;
+  'collaboration:leave': (data: { documentId: string }) => void;
+  'collaboration:update': (data: { documentId: string; update: string }) => void;
+  'collaboration:sync-request': (data: { documentId: string; stateVector?: string }) => void;
+  'collaboration:awareness-update': (data: { documentId: string; awareness: any }) => void;
+
+  // Heartbeat
+  'heartbeat': () => void;
 }
 
 export interface InterServerEvents {
@@ -72,6 +89,9 @@ export interface InterServerEvents {
 export interface SocketData {
   userId: string;
   username: string;
+  workspaceId: string | null;
+  workspaceRole?: 'OWNER' | 'ADMIN' | 'MEMBER' | 'GUEST' | null;
+  permissions?: string[];
   rooms: Set<string>;
 }
 
@@ -187,6 +207,8 @@ export interface NotificationEvent {
 export interface UserPresenceEvent {
   userId: string;
   username: string;
+  workspaceId: string;
+  status: 'online' | 'offline';
   timestamp: string;
 }
 
@@ -194,6 +216,7 @@ export interface TypingEvent {
   userId: string;
   postId?: string;
   commentId?: string;
+  channelId?: string;
 }
 
 export interface ErrorEvent {
@@ -268,6 +291,7 @@ export interface VoteCommentData {
 export interface TypingData {
   postId?: string;
   commentId?: string;
+  channelId?: string;
 }
 
 export enum PostTopic {

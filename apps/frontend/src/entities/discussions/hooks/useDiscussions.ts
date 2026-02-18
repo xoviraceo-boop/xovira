@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { trpc } from '@/lib/trpc';
 import { useSocket } from '@/components/providers/SocketProvider';
 import { useEffect, useRef, useCallback, useMemo } from 'react';
@@ -49,6 +49,7 @@ export function useDiscussions(
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       refetchOnMount: false,
+      placeholderData: keepPreviousData,
     }
   );
 
@@ -70,10 +71,10 @@ export function useDiscussions(
     teamId: src.teamId ?? src.team_id ?? undefined,
     author: src.author || src.user
       ? {
-          id: (src.author || src.user).id,
-          name: (src.author || src.user).name ?? null,
-          image: (src.author || src.user).image ?? (src.author || src.user).avatar ?? null,
-        }
+        id: (src.author || src.user).id,
+        name: (src.author || src.user).name ?? null,
+        image: (src.author || src.user).image ?? (src.author || src.user).avatar ?? null,
+      }
       : undefined,
     _count: src._count || { comments: src.commentCount ?? src.comment_count ?? 0 },
   }), []);
@@ -139,13 +140,13 @@ export function useDiscussions(
       updatePostCache((items) =>
         items.map((post) =>
           post.id === data.postId
-            ? { 
-                ...post, 
-                content: data.content, 
-                title: data.title || post.title,
-                topic: data.topic || post.topic,
-                isEdited: data.isEdited 
-              }
+            ? {
+              ...post,
+              content: data.content,
+              title: data.title || post.title,
+              topic: data.topic || post.topic,
+              isEdited: data.isEdited
+            }
             : post
         )
       );

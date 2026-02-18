@@ -1,8 +1,9 @@
 'use client'
 
 import { useCallback, useMemo, useState } from 'react'
-
+import { keepPreviousData } from '@tanstack/react-query'
 import { trpc } from '@/lib/trpc'
+import { sendChatMessage as sendChatMessageService } from '@/services/chat.service'
 import type { RenderedMessage } from '../components/MessageList'
 import type { ChatContextType } from '../utils/context'
 import { MessageRole } from '@xovira/database/src/generated/prisma/client'
@@ -17,12 +18,13 @@ export function useChats({ contextType, entityId, activeConversationId }: UseCha
   const utils = trpc.useUtils()
 
   const conversationsQuery = trpc.chat.list.useQuery(
-    { 
+    {
       contextType: contextType ?? 'project',
       entityId: entityId ?? '',
     },
     {
       enabled: Boolean(contextType && entityId),
+      placeholderData: keepPreviousData
     }
   )
 
@@ -39,6 +41,7 @@ export function useChats({ contextType, entityId, activeConversationId }: UseCha
       staleTime: 1000,
       // Light polling to keep chat feeling realtime for multi-user scenarios
       refetchInterval: 3000,
+      placeholderData: keepPreviousData
     }
   )
 
@@ -77,12 +80,8 @@ export function useChats({ contextType, entityId, activeConversationId }: UseCha
       })
 
       try {
-        const response = await fetch('/api/chat', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
+        const assistantMessage = await sendChatMessageService(
+          {
             conversationId,
             contextType,
             entityId,
@@ -93,28 +92,12 @@ export function useChats({ contextType, entityId, activeConversationId }: UseCha
               RPM: config?.maxRPM ?? 0,
               RPD: config?.maxRPD ?? 0,
             },
-          }),
-        })
+          },
+          {
+            onChunk: (chunk) => setPendingAssistantMessage(chunk),
+          }
+        )
 
-        if (!response.ok || !response.body) {
-          const errorText = await response.text()
-          throw new Error(errorText || 'Failed to send chat message')
-        }
-
-        const reader = response.body.getReader()
-        const decoder = new TextDecoder()
-        let assistantMessage = ''
-
-        while (true) {
-          const { value, done } = await reader.read()
-          if (done) break
-          assistantMessage += decoder.decode(value, { stream: true })
-          // Update streaming message in real-time
-          setPendingAssistantMessage(assistantMessage)
-        }
-
-        assistantMessage += decoder.decode()
-        
         // Optimistically add the final assistant message to cache
         const optimisticAssistantMessage: RenderedMessage = {
           id: `temp-assistant-${Date.now()}`,
@@ -177,7 +160,7 @@ export function useChats({ contextType, entityId, activeConversationId }: UseCha
         title: options?.title,
         systemPrompt: options?.systemPrompt,
       })
-      
+
       await utils.chat.list.invalidate({ contextType, entityId })
       return conversation
     },
@@ -198,14 +181,72 @@ export function useChats({ contextType, entityId, activeConversationId }: UseCha
   const renderedMessages = useMemo<RenderedMessage[]>(() => {
     if (!messagesQuery.data?.messages) return []
 
-    return messagesQuery.data.messages.map((message: any) => ({
-      id: message.id,
-      role: message.role,
-      content: message.content,
-      createdAt: message.createdAt,
-      feedback: message.feedback || null,
-    }))
+    return messagesQuery.data.messages.map((message: any, index: number) => {
+      // Extract follow-ups from metadata (only for assistant messages)
+      let followups: Array<{ id: string; label: string }> | undefined;
+
+      if (message.role === 'ASSISTANT' && message.metadata) {
+        const metadata = typeof message.metadata === 'object' ? message.metadata : {};
+        const followupsConsumed = metadata.followupsConsumed === true;
+
+        // Check if there are user messages after this assistant message
+        const allMessages = messagesQuery.data.messages;
+        const hasUserMessageAfter = allMessages.slice(index + 1).some((m: any) => m.role === 'USER');
+
+        // Only show follow-ups if not consumed AND no user message after
+        if (!followupsConsumed && !hasUserMessageAfter && metadata.followups && Array.isArray(metadata.followups)) {
+          followups = metadata.followups;
+        }
+      }
+
+      return {
+        id: message.id,
+        role: message.role,
+        content: message.content,
+        createdAt: message.createdAt,
+        feedback: message.feedback || null,
+        followups,
+      };
+    })
   }, [messagesQuery.data?.messages])
+
+  // Mutation for marking follow-ups as consumed
+  const markFollowupsConsumedMutation = trpc.chat.markFollowupsConsumed.useMutation()
+
+  // Handler for follow-up clicks
+  const handleFollowupClick = useCallback(
+    async (messageId: string, followup: { id: string; label: string }) => {
+      if (!activeConversationId) return;
+
+      // Mark follow-ups as consumed in backend
+      try {
+        await markFollowupsConsumedMutation.mutateAsync({ messageId });
+      } catch (error) {
+        console.error('Failed to mark follow-ups as consumed:', error);
+      }
+
+      // Send the follow-up label as a new message
+      await sendMessage(activeConversationId, followup.label);
+    },
+    [activeConversationId, markFollowupsConsumedMutation, sendMessage]
+  );
+
+  // Extract quick actions from latest assistant message metadata
+  const quickActions = useMemo(() => {
+    if (!messagesQuery.data?.messages) return [];
+
+    const assistantMessages = messagesQuery.data.messages.filter((m: any) => m.role === 'ASSISTANT');
+    const latestAssistant = assistantMessages[assistantMessages.length - 1];
+
+    if (latestAssistant && latestAssistant.metadata) {
+      const metadata = typeof latestAssistant.metadata === 'object' ? latestAssistant.metadata : {};
+      if (metadata.quickActions && Array.isArray(metadata.quickActions)) {
+        return metadata.quickActions;
+      }
+    }
+
+    return [];
+  }, [messagesQuery.data?.messages]);
 
   return {
     conversations: conversationsQuery.data ?? [],
@@ -219,6 +260,8 @@ export function useChats({ contextType, entityId, activeConversationId }: UseCha
     sendMessage,
     isSending,
     pendingAssistantMessage,
+    handleFollowupClick,
+    quickActions,
   }
 }
 

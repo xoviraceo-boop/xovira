@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { protectedProcedure, router } from "@/trpc/init";
 import { prisma } from "@/lib/prisma";
-import { backendApi } from "@/lib/agent";
+import { agentService } from "@/services/agent.service";
 import { randomUUID } from "crypto";
 
 // Default triggers for new agents
@@ -128,9 +128,9 @@ export const agentRouter = router({
       workspaceId: z.string().optional(),
       status: z.array(statusEnum).optional(),
       agentType: z.array(agentTypeEnum).optional(),
-        query: z.string().optional(),
-        page: z.number().int().min(1).optional().default(1),
-        pageSize: z.number().int().min(1).max(50).optional().default(12),
+      query: z.string().optional(),
+      page: z.number().int().min(1).optional().default(1),
+      pageSize: z.number().int().min(1).max(50).optional().default(12),
       includeRelations: z.boolean().optional(),
     }))
     .query(async ({ ctx, input }) => {
@@ -142,9 +142,9 @@ export const agentRouter = router({
       if (input.agentType?.length) where.agentType = { in: input.agentType };
 
       // Only show agents user has access to
-        where.OR = [
-          { createdBy: userId },
-        { 
+      where.OR = [
+        { createdBy: userId },
+        {
           collaborators: {
             some: { userId }
           }
@@ -165,17 +165,17 @@ export const agentRouter = router({
 
       const include = input.includeRelations
         ? {
-            user: { select: { id: true, name: true, email: true, image: true } },
-            workspace: { select: { id: true, name: true } },
-            aiModel: { select: { id: true, name: true } },
-            _count: {
-              select: {
-                executions: true,
-                tasks: true,
-                tools: true,
-              }
+          user: { select: { id: true, name: true, email: true, image: true } },
+          workspace: { select: { id: true, name: true } },
+          aiModel: { select: { id: true, name: true } },
+          _count: {
+            select: {
+              executions: true,
+              tasks: true,
+              tools: true,
             }
           }
+        }
         : undefined;
 
       const [total, items] = await Promise.all([
@@ -198,16 +198,19 @@ export const agentRouter = router({
     }),
 
   get: protectedProcedure
-    .input(z.object({ id: z.string() }))
+    .input(z.object({
+      id: z.string(),
+      conversationType: z.string().optional(),
+    }))
     .query(async ({ ctx, input }) => {
       const userId = ctx.session!.user!.id;
-      
+
       const agent = await prisma.aiAgent.findFirst({
         where: {
           id: input.id,
           OR: [
             { createdBy: userId },
-            { 
+            {
               collaborators: {
                 some: { userId }
               }
@@ -225,10 +228,10 @@ export const agentRouter = router({
           },
           conversations: {
             where: {
-              conversationType: 'AGENT_BUILDER'
+              conversationType: (input.conversationType || 'AGENT_BUILDER') as any
             },
             orderBy: { createdAt: 'desc' },
-            take: 1, // Get the most recent builder conversation
+            take: 1, // Get the most recent conversation of specified type
           },
           triggers: {
             orderBy: { priority: 'asc' },
@@ -304,7 +307,7 @@ export const agentRouter = router({
 
       // Get default system tools from database (only tools with isDefault: true)
       const systemTools = await prisma.systemTool.findMany({
-        where: { 
+        where: {
           isActive: true,
           isDefault: true, // Only get default tools
         },
@@ -404,16 +407,16 @@ export const agentRouter = router({
 
   update: protectedProcedure
     .input(z.object({
-        id: z.string(),
+      id: z.string(),
       workspaceId: z.string().optional(),
       name: z.string().min(1).max(255).optional(),
       description: z.string().optional().nullable(),
-        avatar: z.string().optional(),
+      avatar: z.string().optional(),
       agentType: agentTypeEnum.optional(),
       systemPrompt: z.string().min(1).optional(),
-        personality: z.any().optional(),
-        capabilities: z.array(z.string()).optional(),
-        constraints: z.array(z.string()).optional(),
+      personality: z.any().optional(),
+      capabilities: z.array(z.string()).optional(),
+      constraints: z.array(z.string()).optional(),
       modelId: z.string().optional().nullable(),
       temperature: z.number().min(0).max(2).optional(),
       maxTokens: z.number().int().min(100).max(32000).optional(),
@@ -437,8 +440,8 @@ export const agentRouter = router({
       triggerType: triggerTypeEnum.optional().nullable(),
       triggerConfig: z.any().optional().nullable(),
       schedule: z.string().optional().nullable(),
-        isScheduleActive: z.boolean().optional(),
-        isActive: z.boolean().optional(),
+      isScheduleActive: z.boolean().optional(),
+      isActive: z.boolean().optional(),
       visibility: visibilityEnum.optional(),
       tags: z.array(z.string()).optional(),
       status: statusEnum.optional(),
@@ -494,19 +497,19 @@ export const agentRouter = router({
 
   execute: protectedProcedure
     .input(z.object({
-        agentId: z.string(),
-        inputData: z.any().optional(),
-        executionContext: z.any().optional(),
+      agentId: z.string(),
+      inputData: z.any().optional(),
+      executionContext: z.any().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session!.user!.id;
-      
+
       const agent = await prisma.aiAgent.findFirst({
         where: {
           id: input.agentId,
           OR: [
             { createdBy: userId },
-            { 
+            {
               collaborators: {
                 some: { userId, canExecute: true }
               }
@@ -539,11 +542,11 @@ export const agentRouter = router({
 
       // Call backend API to trigger execution via secure client
       try {
-        const response = await backendApi.agents.execute({
+        const response = await agentService.agents.execute({
           executionId: execution.id,
-        agentId: input.agentId,
-        inputData: input.inputData,
-        executionContext: input.executionContext,
+          agentId: input.agentId,
+          inputData: input.inputData,
+          executionContext: input.executionContext,
         }, ctx.session);
 
         if (!response.ok) {
@@ -576,7 +579,7 @@ export const agentRouter = router({
     .query(async ({ ctx, input }) => {
       // Call backend API for execution history
       try {
-        const response = await backendApi.agents.getExecutions(
+        const response = await agentService.agents.getExecutions(
           input.agentId,
           {
             page: input.page,
@@ -595,13 +598,13 @@ export const agentRouter = router({
       } catch (error) {
         // Fallback to direct database query if backend is unavailable
         const userId = ctx.session!.user!.id;
-        
+
         const agent = await prisma.aiAgent.findFirst({
           where: {
             id: input.agentId,
             OR: [
               { createdBy: userId },
-              { 
+              {
                 collaborators: {
                   some: { userId }
                 }
@@ -642,8 +645,8 @@ export const agentRouter = router({
   chat: protectedProcedure
     .input(z.object({
       agentId: z.string().min(1),
-        message: z.string().min(1),
-        conversationId: z.string().optional(),
+      message: z.string().min(1),
+      conversationId: z.string().optional(),
       context: z.object({
         projects: z.array(z.string()).optional(),
         teams: z.array(z.string()).optional(),
@@ -652,15 +655,15 @@ export const agentRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session!.user!.id;
-      
+
       // Call backend service to process chat message
       try {
-        const response = await backendApi.agents.chat({
+        const response = await agentService.agents.chat({
           userId,
           agentId: input.agentId,
-        message: input.message,
-        conversationId: input.conversationId,
-        context: input.context,
+          message: input.message,
+          conversationId: input.conversationId,
+          context: input.context,
         }, ctx.session);
 
         if (!response.ok) {
@@ -685,10 +688,10 @@ export const agentRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session!.user!.id;
-      
+
       // Call backend service to approve/reject execution
       try {
-        const response = await backendApi.agents.approveExecution({
+        const response = await agentService.agents.approveExecution({
           executionId: input.executionId,
           userId,
           approved: input.approved,
@@ -715,7 +718,7 @@ export const agentRouter = router({
     }))
     .query(async ({ ctx, input }) => {
       const userId = ctx.session!.user!.id;
-      
+
       // Get execution with plan
       const execution = await prisma.agentExecution.findFirst({
         where: {
@@ -755,17 +758,17 @@ export const agentRouter = router({
 
   validate: protectedProcedure
     .input(z.object({
-        agentId: z.string(),
+      agentId: z.string(),
     }))
     .query(async ({ ctx, input }) => {
       const userId = ctx.session!.user!.id;
-      
+
       const agent = await prisma.aiAgent.findFirst({
         where: {
           id: input.agentId,
           OR: [
             { createdBy: userId },
-            { 
+            {
               collaborators: {
                 some: { userId }
               }
@@ -824,17 +827,17 @@ export const agentRouter = router({
 
   activate: protectedProcedure
     .input(z.object({
-        agentId: z.string(),
+      agentId: z.string(),
     }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session!.user!.id;
-      
+
       const agent = await prisma.aiAgent.findFirst({
         where: {
           id: input.agentId,
           OR: [
             { createdBy: userId },
-            { 
+            {
               collaborators: {
                 some: { userId, canExecute: true }
               }
@@ -881,13 +884,13 @@ export const agentRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session!.user!.id;
-      
+
       const agent = await prisma.aiAgent.findFirst({
         where: {
           id: input.agentId,
           OR: [
             { createdBy: userId },
-            { 
+            {
               collaborators: {
                 some: { userId, canExecute: true }
               }
@@ -918,11 +921,12 @@ export const agentRouter = router({
       .input(z.object({
         conversationId: z.string().optional(),
         agentId: z.string().optional(),
-        skipWelcome: z.boolean().optional(), 
+        skipWelcome: z.boolean().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const session = ctx.session;
-        const response = await backendApi.agents.builder.initialize(input, session);
+        // agentId is optional for builder initialization (can be 'new')
+        const response = await agentService.agents.builder.initialize(input, session);
         if (!response.ok) {
           const error = await response.json().catch(() => ({ error: 'Unknown error' }));
           throw new Error(error.error || 'Failed to initialize builder');
@@ -933,11 +937,12 @@ export const agentRouter = router({
     message: protectedProcedure
       .input(z.object({
         conversationId: z.string(),
+        agentId: z.string().min(1), // Required for parameterized route
         message: z.string().min(1),
       }))
       .mutation(async ({ ctx, input }) => {
         const session = ctx.session;
-        const response = await backendApi.agents.builder.message(input, session);
+        const response = await agentService.agents.builder.message(input, session);
         if (!response.ok) {
           const error = await response.json().catch(() => ({ error: 'Unknown error' }));
           throw new Error(error.error || 'Failed to process message');
@@ -948,11 +953,12 @@ export const agentRouter = router({
     updateDraft: protectedProcedure
       .input(z.object({
         conversationId: z.string(),
+        agentId: z.string().min(1), // Required for parameterized route
         draft: z.any(), // Partial<AgentDraft>
       }))
       .mutation(async ({ ctx, input }) => {
         const session = ctx.session;
-        const response = await backendApi.agents.builder.updateDraft(input, session);
+        const response = await agentService.agents.builder.updateDraft(input, session);
         if (!response.ok) {
           const error = await response.json().catch(() => ({ error: 'Unknown error' }));
           throw new Error(error.error || 'Failed to update draft');
@@ -963,10 +969,11 @@ export const agentRouter = router({
     launch: protectedProcedure
       .input(z.object({
         conversationId: z.string(),
+        agentId: z.string().min(1), // Required for parameterized route
       }))
       .mutation(async ({ ctx, input }) => {
         const session = ctx.session;
-        const response = await backendApi.agents.builder.launch(input, session);
+        const response = await agentService.agents.builder.launch(input, session);
         if (!response.ok) {
           const error = await response.json().catch(() => ({ error: 'Unknown error' }));
           throw new Error(error.error || 'Failed to launch agent');
@@ -980,27 +987,27 @@ export const agentRouter = router({
     initialize: protectedProcedure
       .input(z.object({
         conversationId: z.string().optional(),
-        agentId: z.string().optional(),
-        skipWelcome: z.boolean().optional(), 
+        agentId: z.string().min(1), // Required for Operator
+        skipWelcome: z.boolean().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const session = ctx.session;
-        const response = await backendApi.agents.operator.initialize(input, session);
+        const response = await agentService.agents.operator.initialize(input, session);
         if (!response.ok) {
           const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-          throw new Error(error.error || 'Failed to initialize builder');
+          throw new Error(error.error || 'Failed to initialize operator');
         }
         return response.json();
       }),
     message: protectedProcedure
       .input(z.object({
         conversationId: z.string(),
-        agentId: z.string(),
+        agentId: z.string().min(1),
         message: z.string().min(1),
       }))
       .mutation(async ({ ctx, input }) => {
         const session = ctx.session;
-        const response = await backendApi.agents.operator.message(input, session);
+        const response = await agentService.agents.operator.message(input, session);
         if (!response.ok) {
           const error = await response.json().catch(() => ({ error: 'Unknown error' }));
           throw new Error(error.error || 'Failed to process message');
@@ -1010,7 +1017,7 @@ export const agentRouter = router({
 
     chat: protectedProcedure
       .input(z.object({
-        agentId: z.string(),
+        agentId: z.string().min(1),
         message: z.string().min(1),
         workspaceId: z.string().optional(),
         conversationId: z.string().optional(),
@@ -1018,7 +1025,7 @@ export const agentRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         const session = ctx.session;
-        const response = await backendApi.agents.operator.chat(input, session);
+        const response = await agentService.agents.operator.chat(input, session);
         if (!response.ok) {
           const error = await response.json().catch(() => ({ error: 'Unknown error' }));
           throw new Error(error.error || 'Failed to process operator chat message');
@@ -1026,14 +1033,14 @@ export const agentRouter = router({
         return response.json();
       }),
 
-    apply: protectedProcedure
+    applyPatch: protectedProcedure
       .input(z.object({
-        agentId: z.string(),
+        agentId: z.string().min(1),
         patch: z.any(),
       }))
       .mutation(async ({ ctx, input }) => {
         const session = ctx.session;
-        const response = await backendApi.agents.operator.apply(input, session);
+        const response = await agentService.agents.operator.apply(input, session);
         if (!response.ok) {
           const error = await response.json().catch(() => ({ error: 'Unknown error' }));
           throw new Error(error.error || 'Failed to apply operator patch');
@@ -1043,13 +1050,13 @@ export const agentRouter = router({
 
     execute: protectedProcedure
       .input(z.object({
-        agentId: z.string(),
+        agentId: z.string().min(1),
         inputData: z.any().optional(),
         executionContext: z.any().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const session = ctx.session;
-        const response = await backendApi.agents.operator.execute(input, session);
+        const response = await agentService.agents.operator.execute(input, session);
         if (!response.ok) {
           const error = await response.json().catch(() => ({ error: 'Unknown error' }));
           throw new Error(error.error || 'Failed to trigger operator execution');
@@ -1057,32 +1064,33 @@ export const agentRouter = router({
         return response.json();
       }),
   }),
-  // Operator endpoints
+
+  // Executor endpoints
   executor: router({
     initialize: protectedProcedure
       .input(z.object({
         conversationId: z.string().optional(),
-        agentId: z.string().optional(),
-        skipWelcome: z.boolean().optional(), 
+        agentId: z.string().min(1), // Required for Executor
+        skipWelcome: z.boolean().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const session = ctx.session;
-        const response = await backendApi.agents.operator.initialize(input, session);
+        const response = await agentService.agents.executor.initialize(input, session);
         if (!response.ok) {
           const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-          throw new Error(error.error || 'Failed to initialize builder');
+          throw new Error(error.error || 'Failed to initialize executor');
         }
         return response.json();
       }),
     message: protectedProcedure
       .input(z.object({
         conversationId: z.string(),
-        agentId: z.string(),
+        agentId: z.string().min(1),
         message: z.string().min(1),
       }))
       .mutation(async ({ ctx, input }) => {
         const session = ctx.session;
-        const response = await backendApi.agents.operator.message(input, session);
+        const response = await agentService.agents.executor.message(input, session);
         if (!response.ok) {
           const error = await response.json().catch(() => ({ error: 'Unknown error' }));
           throw new Error(error.error || 'Failed to process message');
@@ -1092,52 +1100,91 @@ export const agentRouter = router({
 
     chat: protectedProcedure
       .input(z.object({
-        agentId: z.string(),
+        agentId: z.string().min(1),
         message: z.string().min(1),
-        workspaceId: z.string().optional(),
         conversationId: z.string().optional(),
-        context: z.any().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const session = ctx.session;
-        const response = await backendApi.agents.operator.chat(input, session);
+        const response = await agentService.agents.executor.chat(input, session);
         if (!response.ok) {
           const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-          throw new Error(error.error || 'Failed to process operator chat message');
-        }
-        return response.json();
-      }),
-
-    apply: protectedProcedure
-      .input(z.object({
-        agentId: z.string(),
-        patch: z.any(),
-      }))
-      .mutation(async ({ ctx, input }) => {
-        const session = ctx.session;
-        const response = await backendApi.agents.operator.apply(input, session);
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-          throw new Error(error.error || 'Failed to apply operator patch');
+          throw new Error(error.error || 'Failed to process executor chat message');
         }
         return response.json();
       }),
 
     execute: protectedProcedure
       .input(z.object({
-        agentId: z.string(),
+        agentId: z.string().min(1),
         inputData: z.any().optional(),
         executionContext: z.any().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const session = ctx.session;
-        const response = await backendApi.agents.operator.execute(input, session);
+        const response = await agentService.agents.executor.execute(input, session);
         if (!response.ok) {
           const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-          throw new Error(error.error || 'Failed to trigger operator execution');
+          throw new Error(error.error || 'Failed to trigger executor execution');
         }
         return response.json();
       }),
   }),
+
+  getRelations: protectedProcedure
+    .input(z.object({
+      agentId: z.string(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session!.user!.id;
+
+      // Verify access
+      const agent = await prisma.aiAgent.findFirst({
+        where: {
+          id: input.agentId,
+          OR: [
+            { createdBy: userId },
+            {
+              collaborators: {
+                some: { userId }
+              }
+            }
+          ]
+        },
+      });
+
+      if (!agent) {
+        throw new Error("Agent not found or permission denied");
+      }
+
+      const [subAgents, parentAgents, peers] = await Promise.all([
+        prisma.agentRelation.findMany({
+          where: { parentId: input.agentId, type: 'SUB_AGENT' },
+          include: { child: true },
+        }),
+        prisma.agentRelation.findMany({
+          where: { childId: input.agentId, type: 'SUB_AGENT' },
+          include: { parent: true },
+        }),
+        prisma.agentRelation.findMany({
+          where: {
+            OR: [
+              { parentId: input.agentId, type: 'PEER' },
+              { childId: input.agentId, type: 'PEER' }
+            ]
+          },
+          include: { parent: true, child: true },
+        }),
+      ]);
+
+      return {
+        subAgents: subAgents.map(r => ({ ...r.child, relationId: r.id })),
+        supervisors: parentAgents.map(r => ({ ...r.parent, relationId: r.id })),
+        peers: peers.map(r => {
+          const peer = r.parentId === input.agentId ? r.child : r.parent;
+          return { ...peer, relationId: r.id };
+        }),
+      };
+    }),
 });
 

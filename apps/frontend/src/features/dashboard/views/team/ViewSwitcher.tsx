@@ -1,50 +1,51 @@
+"use client";
 
-import { OverviewView } from './OverviewView';
-import { DiscussionsView } from './DiscussionsView';
-import { LogsView } from './LogsView';
-import { ActivitiesView } from './ActivitiesView';
-import { AppealView } from './AppealView';
-import { GovernanceView } from './GovernanceView';
-import { TasksView } from './TasksView';
-import { MembersView } from './MembersView';
-import { ChatView } from './ChatView';
-import { AnalyticsView } from './AnalyticsView';
+import { TeamOverviewTab } from "./TeamOverviewTab";
+import { TasksView } from "./TasksView";
+import { DiscussionsView } from "./DiscussionsView";
+import { ChatView } from "./ChatView";
+import { ActivitiesView } from "./ActivitiesView";
+import { MembersView } from "./MembersView";
+import { GovernanceView } from "./GovernanceView";
+import { AppealView } from "./AppealView";
+import { LogsView } from "./LogsView";
 
 interface ViewSwitcherProps {
-  activeTab: string;
-  team?: any;
+    activeTab: string;
+    team: any;
 }
 
-export default function ViewSwitcher({ activeTab, team }: ViewSwitcherProps) {
+export default function TeamViewSwitcher({ activeTab, team }: ViewSwitcherProps) {
+    if (!team) return null;
 
-  const renderView = () => {
-    switch (activeTab) {
-      case 'overview':
-        return <OverviewView team={team} />;
-      case 'discussions':
-        return <DiscussionsView teamId={team?.id} />;
-      case 'chat':
-        return <ChatView contextType="PROJECT" contextId={team?.id} contextName={team?.name} />;
-      case 'logs':
-        return <LogsView />;
-      case 'activities':
-        return <ActivitiesView teamId={team?.id} />;
-      case 'appeal':
-        return <AppealView />;
-      case 'governance':
-        return <GovernanceView />;
-      case 'tasks':
-        return <TasksView />;
-      case 'members':
-        return <MembersView />
-      default:
-        return <OverviewView team={team} />;
-    }
-  };
+    const renderView = () => {
+        switch (activeTab) {
+            case "overview":
+                return <TeamOverviewTab team={team} />;
+            case "tasks":
+                return <TasksView />;
+            case "discussions":
+                return <DiscussionsView teamId={team.id} />;
+            case "chat":
+                return <ChatView contextType="TEAM" contextId={team.id} contextName={team.name} />;
+            case "activities":
+                return <ActivitiesView teamId={team.id} />;
+            case "members":
+                return <MembersView teamId={team.id} />;
+            case "governance":
+                return <GovernanceView />;
+            case "appeal":
+                return <AppealView />;
+            case "logs":
+                return <LogsView />;
+            default:
+                return <TeamOverviewTab team={team} />;
+        }
+    };
 
- return (
-    <div className="flex-1 overflow-auto bg-slate-50">
-      {renderView()}
-    </div>
-  );
+    return (
+        <div className="h-full w-full overflow-hidden">
+            {renderView()}
+        </div>
+    );
 }

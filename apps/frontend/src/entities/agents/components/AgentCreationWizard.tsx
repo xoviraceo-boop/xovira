@@ -61,8 +61,8 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
 
   // Only fetch if agent data wasn't passed from parent
   const { data: agent, isLoading, refetch } = trpc.agent.get.useQuery(
-    { id: agentId },
-    { 
+    { id: agentId, conversationType: 'AGENT_BUILDER' },
+    {
       enabled: !!agentId && !initialAgent,
       initialData: initialAgent
     }
@@ -87,10 +87,10 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
   const progressSteps: ProgressStep[] = STEP_ORDER.map((step, index) => ({
     id: step,
     label: STEP_LABELS[step],
-    status: 
+    status:
       index < currentStepIndex ? 'completed' :
-      index === currentStepIndex ? 'in_progress' :
-      'pending',
+        index === currentStepIndex ? 'in_progress' :
+          'pending',
     description: creationPrompts[step].initial.substring(0, 60) + '...',
   }));
 
@@ -186,7 +186,7 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
 
   const handleStepComplete = useCallback((step: CreationStep, data: string) => {
     const validation = validateStepResponse(step, data);
-    
+
     if (!validation.valid) {
       toast.error(validation.message || 'Please provide more information');
       return false;

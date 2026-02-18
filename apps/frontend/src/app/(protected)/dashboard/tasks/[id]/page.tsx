@@ -18,11 +18,12 @@ async function getTask(id: string) {
 }
 
 type TaskDetailPageProps = {
-	params: { id: string };
+	params: Promise<{ id: string }>;
 };
 
 export default async function TaskDetailPage({ params }: TaskDetailPageProps) {
-	const task = await getTask(params.id);
+	const { id } = await params;
+	const task = await getTask(id);
 	if (!task) {
 		return notFound();
 	}

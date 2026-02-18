@@ -106,105 +106,107 @@ export default function NotificationBell() {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <Button
-        variant="outline"
+      <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2"
+        className={`flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 bg-zinc-50 text-zinc-500 transition-all hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-200 ${isOpen ? 'ring-2 ring-zinc-200 text-zinc-900' : ''
+          }`}
       >
-        <Bell className="h-5 w-5" />
+        <Bell className="h-4 w-4" />
         {unreadCount && unreadCount.count > 0 && (
-          <Badge 
-            variant="destructive" 
-            className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-          >
+          <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 ring-2 ring-white text-[10px] font-bold text-white">
             {unreadCount.count}
-          </Badge>
+          </span>
         )}
-      </Button>
+      </button>
 
       {isOpen && (
-        <Card className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-hidden z-50">
-          <CardContent className="p-0">
-            <div className="p-4 border-b">
-              <h3 className="font-semibold">Notifications</h3>
-              {unreadCount && unreadCount.count > 0 && (
-                <p className="text-sm text-muted-foreground">
-                  {unreadCount.count} unread
-                </p>
-              )}
-            </div>
-            
-            <div className="max-h-80 overflow-y-auto">
-              {isLoading ? (
-                <div className="p-4 text-center text-muted-foreground">
-                  Loading notifications...
-                </div>
-              ) : allNotifications.length === 0 ? (
-                <div className="p-4 text-center text-muted-foreground">
-                  No notifications yet
-                </div>
-              ) : (
-                <>
-                  {allNotifications.map((notification: any) => (
-                    <div
-                      key={notification.id}
-                      className={`p-4 border-b hover:bg-gray-50 ${
-                        !notification.isRead ? "bg-blue-50 border-l-4 border-l-blue-500" : ""
+        <div className="absolute right-0 mt-2 w-80 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-100 z-50">
+          <div className="flex items-center justify-between border-b border-zinc-100 bg-zinc-50/50 px-4 py-3">
+            <h3 className="text-sm font-semibold text-zinc-900">Notifications</h3>
+            {unreadCount && unreadCount.count > 0 && (
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                {unreadCount.count} unread
+              </span>
+            )}
+          </div>
+
+          <div className="max-h-[320px] overflow-y-auto">
+            {isLoading ? (
+              <div className="py-8 text-center text-sm text-zinc-500">
+                Loading...
+              </div>
+            ) : allNotifications.length === 0 ? (
+              <div className="py-8 text-center text-sm text-zinc-500">
+                No notifications yet
+              </div>
+            ) : (
+              <div className="divide-y divide-zinc-100">
+                {allNotifications.map((notification: any) => (
+                  <div
+                    key={notification.id}
+                    className={`group relative p-4 transition-colors hover:bg-zinc-50/80 ${!notification.isRead ? "bg-zinc-50/50" : "bg-white"
                       }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <h4 className={`font-medium text-sm ${
-                            !notification.isRead ? "text-gray-900" : "text-gray-700"
+                  >
+                    <div className="flex items-start gap-3">
+                      {!notification.isRead && (
+                        <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-600" />
+                      )}
+
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm ${!notification.isRead ? "font-medium text-zinc-900" : "font-normal text-zinc-600"
                           }`}>
-                            {notification.title}
-                          </h4>
-                          <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-                            {notification.content}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {new Date(notification.createdAt).toLocaleDateString()}
-                          </p>
-                        </div>
-                        
-                        <div className="flex items-center gap-1">
-                          {!notification.isRead && (
-                            <Button
-                              variant="outline"
-                              onClick={() => handleMarkAsRead(notification.id)}
-                              className="h-6 w-6 p-0"
-                            >
-                              <Eye className="h-3 w-3" />
-                            </Button>
-                          )}
-                          <Button
-                            variant="outline"
-                            onClick={() => handleDeleteNotification(notification.id)}
-                            className="h-6 w-6 p-0 text-gray-400 hover:text-red-500"
+                          {notification.title}
+                        </p>
+                        <p className="mt-0.5 text-xs text-zinc-500 line-clamp-2">
+                          {notification.content}
+                        </p>
+                        <p className="mt-1 text-[10px] text-zinc-400">
+                          {new Date(notification.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+
+                      <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                        {!notification.isRead && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMarkAsRead(notification.id);
+                            }}
+                            className="rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900"
+                            title="Mark as read"
                           >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
+                            <Eye className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteNotification(notification.id);
+                          }}
+                          className="rounded p-1 text-zinc-400 hover:bg-red-50 hover:text-red-600"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
                       </div>
                     </div>
-                  ))}
-                  
-                </>
-              )}
-            </div>
-            
-            <div className="p-4 border-t bg-gray-50">
-              <Button
-                variant="outline"
-                onClick={handleViewAll}
-                className="w-full flex items-center justify-center gap-2"
-              >
-                View All Notifications
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-zinc-100 bg-zinc-50 p-2">
+            <Button
+              variant="ghost"
+              onClick={handleViewAll}
+              className="w-full h-8 text-xs justify-center gap-2 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/50"
+            >
+              View All
+              <ArrowRight className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
       )}
     </div>
   );

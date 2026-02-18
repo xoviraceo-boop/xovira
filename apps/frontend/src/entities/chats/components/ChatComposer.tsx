@@ -18,15 +18,15 @@ interface ChatComposerProps {
   inputClassName?: string
 }
 
-export const ChatComposer = memo(function ChatComposer({ 
-  onSend, 
-  conversationId, 
-  isSending, 
+export const ChatComposer = memo(function ChatComposer({
+  onSend,
+  conversationId,
+  isSending,
   disabled,
   onContextClick,
   contextCount = 0,
   className,
-  inputClassName 
+  inputClassName
 }: ChatComposerProps) {
   const [value, setValue] = useState('')
   const [attachments, setAttachments] = useState<ParsedFile[]>([])
@@ -58,8 +58,10 @@ export const ChatComposer = memo(function ChatComposer({
           formData.append('conversationId', conversationId)
         }
 
-        const response = await fetch('/api/chat/upload', {
+        const BACKEND_URL = process.env.NEXT_PUBLIC_SERVER_URL || process.env.SERVER_URL || 'http://127.0.0.1:3002';
+        const response = await fetch(`${BACKEND_URL}/chat/upload`, {
           method: 'POST',
+          credentials: 'include',
           body: formData,
         })
 
@@ -96,12 +98,12 @@ export const ChatComposer = memo(function ChatComposer({
     const currentContexts = contexts.length > 0 ? contexts : undefined
     setAttachments([])
     setWebSearch(false)
-    
+
     // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto'
     }
-    
+
     await onSend(message, { attachments: currentAttachments, webSearch: currentWebSearch, contexts: currentContexts })
   }
 
@@ -116,8 +118,8 @@ export const ChatComposer = memo(function ChatComposer({
         'group relative w-full flex flex-col rounded-2xl border transition-all duration-300 ease-out',
         'bg-white/80 backdrop-blur-sm shadow-sm',
         className,
-        isFocused 
-          ? 'border-zinc-400 ring-4 ring-zinc-900/5 shadow-md' 
+        isFocused
+          ? 'border-zinc-400 ring-4 ring-zinc-900/5 shadow-md'
           : 'border-zinc-200'
       )}
     >
@@ -171,17 +173,17 @@ export const ChatComposer = memo(function ChatComposer({
       <div className="flex items-center justify-between px-3 pb-3">
         <div className="flex items-center gap-1">
           <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
-          
-          <ToolbarButton 
-            onClick={() => fileInputRef.current?.click()} 
+
+          <ToolbarButton
+            onClick={() => fileInputRef.current?.click()}
             active={false}
             tooltip="Attach files"
           >
             <Paperclip className="h-4 w-4" />
           </ToolbarButton>
 
-          <ToolbarButton 
-            onClick={onContextClick} 
+          <ToolbarButton
+            onClick={onContextClick}
             active={contextCount > 0}
             tooltip="Project Context"
           >
@@ -193,14 +195,14 @@ export const ChatComposer = memo(function ChatComposer({
             )}
           </ToolbarButton>
 
-          <ToolbarButton 
-            onClick={() => setWebSearch(!webSearch)} 
+          <ToolbarButton
+            onClick={() => setWebSearch(!webSearch)}
             active={webSearch}
             tooltip="Web Search"
           >
             <Search className="h-4 w-4" />
           </ToolbarButton>
-          
+
           <div className="ml-2 hidden items-center gap-1.5 px-2 py-1 text-[10px] font-medium text-zinc-400 sm:flex">
             <kbd className="flex h-5 items-center justify-center rounded border border-zinc-200 bg-white px-1 shadow-[0_1px_0_rgba(0,0,0,0.05)]">Shift</kbd>
             <span>+</span>
@@ -210,8 +212,8 @@ export const ChatComposer = memo(function ChatComposer({
         </div>
 
         {/* WORLD CLASS SEND BUTTON */}
-        <Button 
-          onClick={handleSubmit} 
+        <Button
+          onClick={handleSubmit}
           disabled={disabled || isSending || !value.trim()}
           className={cn(
             "relative max-w-24 h-9 rounded-lg px-4 font-semibold transition-all duration-200 overflow-hidden",
@@ -251,8 +253,8 @@ function ToolbarButton({ children, onClick, active, tooltip }: { children: React
       title={tooltip}
       className={cn(
         "relative h-8 w-8 rounded-lg p-0 transition-all duration-200",
-        active 
-          ? "bg-zinc-900 text-white hover:bg-zinc-800" 
+        active
+          ? "bg-zinc-900 text-white hover:bg-zinc-800"
           : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
       )}
     >

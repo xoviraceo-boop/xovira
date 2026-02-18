@@ -22,9 +22,34 @@ const startHeartbeat = (socketInstance: Socket) => {
   }, 30000);
 };
 
-export const initSocket = async () => {
-  // Return existing connected socket
-  if (socket?.connected) return socket;
+interface InitSocketScope {
+  workspaceId?: string | null;
+  projectId?: string | null;
+  teamId?: string | null;
+}
+
+export const initSocket = async (scope: InitSocketScope = {}) => {
+  const { workspaceId, projectId, teamId } = scope;
+
+  // Return existing connected socket if context matches
+  if (socket?.connected) {
+    const auth = (socket.auth as any) || {};
+    // Check if any context changed
+    const contextChanged =
+      auth.workspaceId !== (workspaceId || undefined) ||
+      auth.projectId !== (projectId || undefined) ||
+      auth.teamId !== (teamId || undefined);
+
+    if (contextChanged) {
+      console.log('🔄 Socket context changed, reconnecting socket...', scope);
+      stopHeartbeat();
+      socket.removeAllListeners();
+      socket.disconnect();
+      socket = null;
+    } else {
+      return socket;
+    }
+  }
 
   // Clean up existing socket if not connected
   if (socket) {
@@ -34,12 +59,20 @@ export const initSocket = async () => {
     socket = null;
   }
 
-  const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001';
+  const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://127.0.0.1:3002';
   const token = await fetchAuthToken();
 
+  // Build auth object with context
+  const auth: any = {
+    token,
+    workspaceId: workspaceId || undefined,
+    projectId: projectId || undefined,
+    teamId: teamId || undefined
+  };
+
   socket = io(SOCKET_URL, {
-    auth: { token },
-    transports: ['websocket', 'polling'], // Prefer websocket
+    auth,
+    transports: ['websocket'], // Prefer websocket
     reconnection: true,
     reconnectionDelay: 1000,
     reconnectionDelayMax: 5000,
@@ -50,7 +83,7 @@ export const initSocket = async () => {
   });
 
   socket.on('connect', () => {
-    console.log('✅ Socket connected');
+    console.log('✅ Socket connected', scope);
     startHeartbeat(socket!);
   });
 

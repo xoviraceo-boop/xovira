@@ -2,36 +2,40 @@
 import { useEffect, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import StepSwitcher from "./_components/StepSwitcher";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation"; // Remove useSearchParams usage
 
 export default function OnboardingPage() {
-  const { data } = trpc.onboarding.get.useQuery();
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const { data, isLoading } = trpc.onboarding.get.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+    retry: false
+  });
 
-  const initialStep = Number(searchParams.get("step")) || 0;
-  const [step, setStep] = useState<number>(initialStep);
+  // Optimistic State - Default to 0, update only when data loads
+  const [step, setStep] = useState<number>(0);
 
   useEffect(() => {
-    if (typeof data?.onboardingStep === "number") {
+    if (data?.onboardingStep !== undefined) {
       setStep(data.onboardingStep);
     }
-  }, [data?.onboardingStep]);
+  }, [data]);
 
-  useEffect(() => {
-    const currentStep = searchParams.get("step");
+  // Remove URL syncing effect to prevent lag/jitter
+  // Logic is now contained within React state + DB
 
-    if (currentStep !== String(step)) {
-      router.replace(`?step=${step}`, { scroll: false });
-    }
-  }, [step, router, searchParams]);
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full mx-auto py-8">
-      <h1 className="text-2xl font-semibold mb-6">
-        Welcome! Let's get you set up
-      </h1>
-      <StepSwitcher step={step} onStepChange={setStep} />
-    </div>
+    // No layout wrapper needed here as step switcher handles full screen bg
+    <StepSwitcher
+      step={step}
+      onStepChange={setStep}
+      initialData={data}
+    />
   );
 }

@@ -1,49 +1,54 @@
-import React from 'react';
-import { AnimatedBackground } from '@/components/layout/AnimatedBackground';
-import { Mail, Lock, User, Send, ChevronLeft } from 'lucide-react';
-import { Testimonials } from './Testimonials';
+"use client";
+import React from "react";
+import Link from "next/link";
 
 export const AuthLayout = ({ children }: { children: React.ReactNode }) => {
-    
-    // Consistent background styling for both mobile and desktop panels
-    const backgroundStyle = {
-        background: 'linear-gradient(145deg, rgba(30, 0, 60, 0.9), rgba(60, 20, 100, 0.9)), url(https://placehold.co/1000x1200/2C0054/8040A0?text=Capturing+Moments)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-    };
-
-    const ImagePanelContent = (
-        <>
-            <Testimonials />
-        </>
-    );
-
     return (
-        // Full screen wrapper: Centers content, provides a light background for padding
-        <div className="min-h-screen font-sans flex items-center justify-center relative p-0 sm:p-4">
-            <AnimatedBackground />
-            {/* Mobile Background: Fixed position, full-screen image layer for small screens */}
-            {/* This layer provides the background when the form card overlays the image on mobile */}
-            <div 
-                className="fixed inset-0 z-0 lg:hidden" // Fixed background on mobile, hidden on desktop
-                style={backgroundStyle}
-            />
-            
-            {/* Main Content Card: Centered and responsive, relative to be on top of the fixed background */}
-            <div className="relative z-20 w-full max-w-7xl h-full rounded-none py-10 lg:rounded-2xl shadow-none overflow-hidden transition-all duration-500 flex flex-col lg:flex-row min-h-screen lg:min-h-0">
-                
-                {/* 1. Desktop Left Panel (Image) */}
-                <div 
-                    className="hidden lg:block lg:w-1/2 p-10 relative overflow-hidden rounded-l-2xl"
-                    style={{...backgroundStyle, boxShadow: 'inset -2px 0 10px rgba(0, 0, 0, 0.3)'}}
-                >
-                    {ImagePanelContent}
+        <div className="flex min-h-screen bg-white">
+            {/* Sidebar: Brand / Art (Hidden on mobile) */}
+            <div className="hidden lg:flex w-1/2 bg-black text-white relative flex-col justify-between p-16 overflow-hidden">
+                {/* Abstract Premium Background Art */}
+                <div className="absolute inset-0 z-0">
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-gray-800 via-black to-black opacity-80"></div>
+                    <svg className="absolute top-0 right-0 w-[800px] h-[800px] text-gray-800/20 transform translate-x-1/3 -translate-y-1/3" viewBox="0 0 100 100" fill="currentColor">
+                        <circle cx="50" cy="50" r="50" />
+                    </svg>
+                    <svg className="absolute bottom-0 left-0 w-[600px] h-[600px] text-zinc-900/50 transform -translate-x-1/3 translate-y-1/3" viewBox="0 0 100 100" fill="currentColor">
+                        <circle cx="50" cy="50" r="50" />
+                    </svg>
                 </div>
-                
-                {/* 2. Form Panel (AuthContainer content) */}
-                <div className="w-full lg:w-1/2 flex items-center justify-center p-0 sm:p-10 z-20">
-                    {/* The children (LoginView/RegisterView) contains AuthContainer which is the white card */}
-                    {children} 
+
+                <div className="relative z-10">
+                    <div className="flex items-center gap-3 mb-12">
+                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg">
+                            <span className="text-black font-extrabold text-xl">X</span>
+                        </div>
+                        <span className="text-2xl font-bold tracking-tight">Xovira</span>
+                    </div>
+
+                    <div className="space-y-6 max-w-lg">
+                        <h1 className="text-5xl font-extrabold leading-tight tracking-tight">
+                            Build faster,<br />
+                            scale better.
+                        </h1>
+                        <p className="text-xl text-gray-400 font-light leading-relaxed">
+                            The enterprise-grade platform for modern engineering teams.
+                            Secure, reliable, and designed for speed.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="relative z-10 flex gap-6 text-sm font-medium text-gray-500">
+                    <span>© 2026 Xovira Inc.</span>
+                    <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+                    <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
+                </div>
+            </div>
+
+            {/* Main Content: Form */}
+            <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 bg-gray-50">
+                <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    {children}
                 </div>
             </div>
         </div>

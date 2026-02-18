@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+
+import { DASHBOARD_ROUTES, MARKETPLACE_ROUTES } from '@/constants/routes.config';
 import { useSession } from 'next-auth/react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/hooks/useReduxStore';
@@ -15,7 +17,7 @@ import { normalizeForComparison, deepEqual } from '@/utils/utilities/syncUtils';
 
 const METADATA_FIELDS = ['id', 'createdAt', 'updatedAt', 'cloudSyncedAt', 'ownerId'] as const;
 
-const checkForDataDifferences = function(local: any, cloud: any) {
+const checkForDataDifferences = function (local: any, cloud: any) {
   if (!local || !cloud) return false;
   var normalizedLocal = normalizeForComparison(METADATA_FIELDS, local);
   var normalizedCloud = normalizeForComparison(METADATA_FIELDS, cloud);
@@ -28,7 +30,7 @@ const cleanDataForMutation = (data: any) => {
   nullableFields.forEach(field => {
     if (cleaned[field] === null) delete cleaned[field];
   });
-  
+
   return cleaned;
 };
 
@@ -42,16 +44,16 @@ export default function TeamLayout({ children }: TeamLayoutProps) {
   const dispatch = useAppDispatch();
   const teamId = params?.id as string;
   const { data: session } = useSession();
-  
+
   // Use selector with proper memoization
   const localDraft = useAppSelector(
     useCallback((s: RootState) => s.teams.items[teamId], [teamId])
   );
-  
+
   const [isPublishing, setIsPublishing] = useState(false);
   const [showSyncWarning, setShowSyncWarning] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  
+
   // Track if we've done initial sync check to prevent duplicate warnings
   const hasCheckedInitialSync = useRef(false);
 
@@ -85,7 +87,7 @@ export default function TeamLayout({ children }: TeamLayoutProps) {
 
   const handleToggleStatus = async () => {
     if (!teamId) return;
-    
+
     setIsPublishing(true);
     try {
       if (isPublished) {
@@ -102,11 +104,11 @@ export default function TeamLayout({ children }: TeamLayoutProps) {
           status: 'PUBLISHED'
         });
       }
-      
+
       // Update local state
-      dispatch(upsertTeam({ 
-        id: teamId, 
-        data: { ...localDraft, status: isPublished ? 'DRAFT' : 'PUBLISHED' } 
+      dispatch(upsertTeam({
+        id: teamId,
+        data: { ...localDraft, status: isPublished ? 'DRAFT' : 'PUBLISHED' }
       }));
     } catch (error) {
       console.error('Failed to toggle status:', error);
@@ -151,13 +153,13 @@ export default function TeamLayout({ children }: TeamLayoutProps) {
   const checkSyncConflict = useCallback(async (): Promise<boolean> => {
     if (!isCloudLoading && cloudData && localDraft && teamId) {
       const hasLocalChanges = checkForDataDifferences(localDraft, cloudData);
-      
+
       if (hasLocalChanges) {
         console.log('Sync conflict detected');
         setShowSyncWarning(true);
         return true;
       }
-      
+
       setShowSyncWarning(false);
       return false;
     }
@@ -166,7 +168,7 @@ export default function TeamLayout({ children }: TeamLayoutProps) {
 
   const handleSyncAndSave = useCallback(async () => {
     if (!teamId || !localDraft) return;
-    
+
     setIsSyncing(true);
     try {
       const cleanedData = cleanDataForMutation(localDraft);
@@ -192,9 +194,9 @@ export default function TeamLayout({ children }: TeamLayoutProps) {
     setShowSyncWarning(false);
     hasCheckedInitialSync.current = true; // Reset check after skipping
   }, [cloudData, teamId, dispatch]);
-  
-   // Permission gate: show empty state if user is not allowed to view
-   if (!isCloudLoading && !cloudData) {
+
+  // Permission gate: show empty state if user is not allowed to view
+  if (!isCloudLoading && !cloudData) {
     return (
       <Shell>
         <div className="flex items-center justify-center h-64">
@@ -215,15 +217,15 @@ export default function TeamLayout({ children }: TeamLayoutProps) {
         onSkip={handleSkipSync}
         isLoading={isSyncing}
       />
-      
+
       <div className="flex justify-between">
-        <BackButton 
+        <BackButton
           onBeforeNavigate={checkSyncConflict}
-          fallbackPath="/dashboard/teams"
+          fallbackPath={DASHBOARD_ROUTES.TEAMS}
         >
           Back to Teams
         </BackButton>
-        
+
         <div className="w-64 bg-muted/50 border-r p-4">
           <div className="space-y-4">
             <h3 className="font-semibold">Team Actions</h3>
@@ -233,10 +235,10 @@ export default function TeamLayout({ children }: TeamLayoutProps) {
               variant={isPublished ? "outline" : "primary"}
               className="w-full"
             >
-              {isPublishing || publishMutation.isPending 
-                ? 'Updating...' 
-                : isPublished 
-                  ? 'Unpublish' 
+              {isPublishing || publishMutation.isPending
+                ? 'Updating...'
+                : isPublished
+                  ? 'Unpublish'
                   : 'Publish'
               }
             </Button>
@@ -246,7 +248,7 @@ export default function TeamLayout({ children }: TeamLayoutProps) {
           </div>
         </div>
       </div>
-      
+
       <div className="flex-1 overflow-auto">
         {children}
       </div>

@@ -1,22 +1,23 @@
 "use client";
 import React, { useState, useCallback, useMemo } from "react";
-import { Lock, Eye, EyeOff, Check } from "lucide-react";
+import { ArrowRight, Check, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { AuthContainer } from "../components/AuthContainer";
 import { AuthMessage } from "../components/AuthMessage";
-import { ConfirmPasswordReset } from "@/actions/auth";
+import { ConfirmPasswordReset } from "@/services/auth.service";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { AUTH_MESSAGES, getUserFriendlyMessage } from "../constants/authMessages";
+import { MessageType } from "../components/AuthMessage";
+import { AuthContainer } from "../components/AuthContainer";
 
 function passwordStrength(pw: string) {
   let score = 0;
   if (pw.length >= 8) score++;
   if (/[A-Z]/.test(pw)) score++;
-  if (/[a-z]/.test(pw)) score++;
   if (/[0-9]/.test(pw)) score++;
-  if (/[^A-Za-z0-9]/.test(pw)) score++;
-  return score; // 0..5
+  return score;
 }
 
 export const ResetPasswordView = () => {
@@ -26,15 +27,13 @@ export const ResetPasswordView = () => {
 
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState<MessageType>("error");
 
-  const labelClass = "block text-sm font-medium text-gray-700 mb-1";
-  const inputClass =
-    "w-full px-4 py-3 bg-white/70 border border-gray-300/50 rounded-lg text-gray-800 transition duration-200 " +
-    "focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 focus:bg-white shadow-sm outline-none";
+  // Enterprise Styling
+  const inputClass = "h-12 bg-white border-gray-300 focus:border-black focus:ring-1 focus:ring-black placeholder:text-gray-400 transition-all rounded-lg text-base";
+  const labelClass = "text-sm font-medium text-gray-700 mb-2 block";
 
   const strength = useMemo(() => passwordStrength(password), [password]);
   const passwordsMatch = password.length > 0 && password === confirm;
@@ -42,121 +41,112 @@ export const ResetPasswordView = () => {
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
+
       if (!token) {
-        setMessage("Invalid or missing token.");
+        setMessageType("error");
+        setMessage(AUTH_MESSAGES.ERROR.INVALID_TOKEN);
         return;
       }
+
       if (!passwordsMatch) {
-        setMessage("Passwords do not match.");
+        setMessageType("error");
+        setMessage(AUTH_MESSAGES.ERROR.PASSWORDS_NOT_MATCH);
         return;
       }
+
       setLoading(true);
       setMessage("");
+
       try {
-        const res = await ConfirmPasswordReset(token, password);
-        setMessage(res?.message || "Password updated successfully.");
-        setTimeout(() => router.push("/login"), 1200);
+        const result = await ConfirmPasswordReset(token, password);
+
+        if (result.success) {
+          setMessageType("success");
+          setMessage(AUTH_MESSAGES.SUCCESS.PASSWORD_RESET_SUCCESS);
+          setTimeout(() => window.location.href = "/login", 1500);
+        } else {
+          setMessageType("error");
+          setMessage(getUserFriendlyMessage(result.error?.code, AUTH_MESSAGES.ERROR.PASSWORD_RESET_FAILED));
+          setLoading(false);
+        }
       } catch (error: any) {
-        setMessage(error.message || "Failed to reset password.");
-      } finally {
+        setMessageType("error");
+        setMessage(AUTH_MESSAGES.ERROR.PASSWORD_RESET_FAILED);
         setLoading(false);
       }
     },
     [token, password, passwordsMatch]
   );
 
-  const strengthLabel = ["Very weak", "Weak", "Fair", "Good", "Strong", "Very strong"][strength];
-
   return (
-    <AuthContainer>
-      <div className="max-w-lg mx-auto">
-        <h2 className="text-3xl font-extrabold text-gray-800 mb-2 text-center">
-          Set a new password
-        </h2>
-        <p className="text-gray-500 mb-8 text-center">
-          Choose a strong password to secure your account.
-        </p>
+    <AuthContainer
+      title="Set new password"
+      subtitle="Your new password must be different from previous used passwords."
+    >
+      <AuthMessage message={message} type={messageType} />
 
-        <AuthMessage message={message} />
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="password" className={labelClass}>
-              New password
-            </Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="Create a password"
-                className={inputClass}
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div>
+          <Label htmlFor="password" className={labelClass}>New Password</Label>
+          <Input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className={inputClass}
+            placeholder="••••••••"
+          />
+          <div className="mt-2 flex gap-1.5 h-1">
+            {[1, 2, 3].map((level) => (
+              <div
+                key={level}
+                className={`flex-1 rounded-full transition-all duration-300 ${password.length === 0
+                  ? "bg-gray-100"
+                  : level <= strength
+                    ? (strength === 3 ? "bg-green-500" : strength === 2 ? "bg-amber-400" : "bg-red-400")
+                    : "bg-gray-100"
+                  }`}
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? (
-                  <EyeOff className="w-5 h-5" />
-                ) : (
-                  <Eye className="w-5 h-5" />
-                )}
-              </button>
-            </div>
-            <div className="mt-2 text-xs text-gray-500">
-              Strength: {strengthLabel}
-            </div>
+            ))}
           </div>
+          {password.length > 0 && (
+            <p className="text-xs text-gray-500 mt-1.5 text-right">
+              {strength === 3 ? "Strong" : strength === 2 ? "Medium" : "Weak"}
+            </p>
+          )}
+        </div>
 
-          <div>
-            <Label htmlFor="confirm" className={labelClass}>
-              Confirm password
-            </Label>
-            <div className="relative">
-              <Input
-                id="confirm"
-                type={showConfirm ? "text" : "password"}
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                required
-                placeholder="Re-enter password"
-                className={inputClass}
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirm(!showConfirm)}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                aria-label={showConfirm ? "Hide password" : "Show password"}
-              >
-                {showConfirm ? (
-                  <EyeOff className="w-5 h-5" />
-                ) : (
-                  <Eye className="w-5 h-5" />
-                )}
-              </button>
+        <div>
+          <Label htmlFor="confirm" className={labelClass}>Confirm Password</Label>
+          <Input
+            id="confirm"
+            type="password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            required
+            className={inputClass}
+            placeholder="••••••••"
+          />
+          {confirm.length > 0 && (
+            <div className={`mt-2 text-xs flex items-center gap-1.5 font-medium transition-colors ${passwordsMatch ? 'text-green-600' : 'text-red-500'}`}>
+              {passwordsMatch ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+              {passwordsMatch ? "Passwords match" : "Passwords do not match"}
             </div>
-            {passwordsMatch ? (
-              <div className="mt-2 text-xs text-green-600 flex items-center gap-1">
-                <Check className="w-4 h-4" /> Passwords match
-              </div>
-            ) : (
-              <div className="mt-2 text-xs text-gray-500">Passwords must match</div>
-            )}
-          </div>
+          )}
+        </div>
 
-          <Button type="submit" disabled={loading} icon={Lock}>
-            Reset password
-          </Button>
-        </form>
-      </div>
+        <Button
+          type="submit"
+          disabled={loading}
+          className="w-full h-12 bg-black hover:bg-zinc-800 text-white font-medium rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 text-base mt-2"
+        >
+          {loading ? "Updating..." : "Reset Password"}
+          {!loading && <ArrowRight className="ml-2 w-4 h-4" />}
+        </Button>
+      </form>
     </AuthContainer>
   );
 };
 
 export default ResetPasswordView;
-
-

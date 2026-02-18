@@ -14,14 +14,16 @@ import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import { MessageRole } from '@xovira/database/src/generated/prisma/client';
 import { AgentProfile } from '@/entities/agents/components/AgentProfile';
+import { ThinkingIndicator } from '@/entities/agents/components/ThinkingIndicator';
 import type { QuickAction, AgentDraft, UserContext, ConversationState } from '@/entities/agents/types';
+import { ResizableSplitLayout } from '@/components/layout/ResizableSplitLayout';
 
-interface BuilderViewProps {
+interface ChatViewProps {
   agentId?: string;
   agent?: any;
 }
 
-export const BuilderView: React.FC<BuilderViewProps> = ({
+export const ChatView: React.FC<ChatViewProps> = ({
   agentId,
   agent,
 }) => {
@@ -35,14 +37,14 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
   const [isInitializing, setIsInitializing] = useState(true);
   const [showAgentProfile, setShowAgentProfile] = useState(false);
   const resolvedAgentId = agentId ?? agent?.id;
-  
+
   // Track optimistic message IDs to remove them when confirmed
   const optimisticMessageIds = useRef<Set<string>>(new Set());
 
   // Fetch messages from database
   const { data: messagesData, refetch: refetchMessages, isLoading: isLoadingMessages } = trpc.chat.getMessages.useQuery(
     { conversationId: conversationId! },
-    { 
+    {
       enabled: !!conversationId,
       refetchOnWindowFocus: false,
       refetchOnMount: true,
@@ -51,31 +53,31 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
   );
 
   const { data: agentData, isLoading: isLoadingAgent, refetch: refetchAgent } = trpc.agent.get.useQuery(
-    { id: resolvedAgentId! },
+    { id: resolvedAgentId!, conversationType: 'AGENT_EXECUTOR' },
     {
       enabled: !!resolvedAgentId,
       initialData: agent,
     }
   );
 
-  const initializeMutation = trpc.agent.executor .initialize.useMutation({
+  const initializeMutation = trpc.agent.executor.initialize.useMutation({
     onSuccess: async (data) => {
       setConversationId(data.conversationId);
       setConversationState(data.conversationState);
       setUserContext(data.userContext);
       setAgentDraft(data.conversationState.agentDraft);
-      
+
       if (resolvedAgentId) {
         await refetchAgent();
       }
-      
+
       // Refetch messages to get latest from DB
       const result = await refetchMessages();
-      
+
       // Load follow-ups from message metadata (persisted) and from API response
       if (result.data?.messages) {
         const followupsMapFromDB = new Map<string, MessageFollowup[]>();
-        
+
         // First, load follow-ups from persisted metadata
         result.data.messages.forEach(msg => {
           const followupsFromMetadata = (msg as any).followups;
@@ -83,7 +85,7 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
             followupsMapFromDB.set(msg.id, followupsFromMetadata);
           }
         });
-        
+
         // Then, add follow-ups from API response if provided (for new welcome messages)
         if (data.followups?.length) {
           const assistantMessages = result.data.messages.filter(m => m.role === 'ASSISTANT');
@@ -92,7 +94,7 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
             followupsMapFromDB.set(latestAssistant.id, data.followups);
           }
         }
-        
+
         setFollowupsMap(followupsMapFromDB);
       }
 
@@ -104,7 +106,7 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
     },
   });
 
-  const launchMutation = trpc.agent.builder.launch.useMutation({
+  const launchMutation = trpc.agent.operator.launch.useMutation({
     onSuccess: async (data) => {
       toast.success('Agent launched successfully!');
       if (resolvedAgentId) {
@@ -117,50 +119,50 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
     },
   });
 
-  const messageMutation = trpc.agent.executor .message.useMutation({
+  const messageMutation = trpc.agent.executor.message.useMutation({
     onSuccess: async (data) => {
       setIsSending(false);
       setConversationState(data.conversationState);
       setAgentDraft(data.agentDraft);
-      
-      // Refetch agent data to get updated configuration from executor  updates
+
+      // Refetch agent data to get updated configuration from executor updates
       if (resolvedAgentId) {
         await refetchAgent();
       }
-      
+
       // Refetch messages to get the confirmed messages from DB
       const result = await refetchMessages();
-      
+
       // Clear optimistic messages since we now have confirmed DB messages
       if (result.data?.messages) {
         optimisticMessageIds.current.clear();
-        
+
         const allMessages = result.data.messages;
-        
+
         const dbMessages: RenderedMessage[] = allMessages.map((msg, index) => {
           // Get follow-ups from message data (persisted in metadata)
           const followupsFromMetadata = (msg as any).followups;
-          
+
           // Only show follow-ups if:
           // 1. The message has follow-ups in metadata
           // 2. The follow-ups haven't been consumed (check metadata.followupsConsumed)
           // 3. This is the LAST assistant message (no user messages after it)
           let followups: MessageFollowup[] | undefined = undefined;
-          
+
           if (msg.role === 'ASSISTANT') {
             // Check if follow-ups are consumed in metadata (persisted state)
             const metadata = (msg as any).metadata || {};
             const followupsConsumed = metadata.followupsConsumed === true;
-            
+
             // Check if there are any user messages after this assistant message
             const hasUserMessageAfter = allMessages.slice(index + 1).some(m => m.role === 'USER');
-            
+
             // ✅ CRITICAL: Only show follow-ups if not consumed AND no user message after AND has follow-ups in metadata
             if (!followupsConsumed && !hasUserMessageAfter && followupsFromMetadata && Array.isArray(followupsFromMetadata)) {
               followups = followupsFromMetadata;
             }
           }
-          
+
           return {
             id: msg.id,
             role: msg.role as MessageRole,
@@ -169,9 +171,9 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
             followups,
           };
         });
-        
+
         setMessages(dbMessages);
-        
+
         // ✅ Update followupsMap based on what's actually shown
         const newFollowupsMap = new Map<string, MessageFollowup[]>();
         dbMessages.forEach(msg => {
@@ -181,17 +183,17 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
         });
         setFollowupsMap(newFollowupsMap);
       }
-      
+
       // ✅ ONLY attach NEW followups from the API response (for the latest assistant message)
       if (data.followups?.length && result.data?.messages) {
         const assistantMessages = result.data.messages.filter(m => m.role === 'ASSISTANT');
         const latestAssistant = assistantMessages[assistantMessages.length - 1];
-        
+
         if (latestAssistant) {
           // Check if this message already has follow-ups marked as consumed
           const metadata = (latestAssistant as any).metadata || {};
           const followupsConsumed = metadata.followupsConsumed === true;
-          
+
           // Only add follow-ups if they haven't been consumed
           if (!followupsConsumed) {
             setFollowupsMap(prev => {
@@ -199,17 +201,17 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
               newMap.set(latestAssistant.id, data.followups!);
               return newMap;
             });
-            
+
             // Update messages to include followups immediately
-            setMessages(prev => prev.map(msg => 
-              msg.id === latestAssistant.id 
+            setMessages(prev => prev.map(msg =>
+              msg.id === latestAssistant.id
                 ? { ...msg, followups: data.followups }
                 : msg
             ));
           }
         }
       }
-      
+
       // Switch to profile view if agent is ready or active
       const isReady = data.agentDraft.status === 'ready';
       const isActive = agentData?.status === 'ACTIVE' && agentData?.isActive;
@@ -219,13 +221,13 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
     },
     onError: (error) => {
       setIsSending(false);
-      
+
       // Clear the optimistic message on error
       setMessages(prev => prev.filter(msg => !optimisticMessageIds.current.has(msg.id)));
       optimisticMessageIds.current.clear();
-      
+
       toast.error(error.message || 'Failed to process message');
-      
+
       // Add error message
       setMessages(prev => [...prev, {
         id: `error_${Date.now()}`,
@@ -240,31 +242,31 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
   useEffect(() => {
     if (messagesData?.messages && conversationId && !isSending) {
       const allMessages = messagesData.messages;
-      
+
       const dbMessages: RenderedMessage[] = allMessages.map((msg, index) => {
         // Get follow-ups from message data (persisted in metadata)
         const followupsFromMetadata = (msg as any).followups;
-        
+
         // Only show follow-ups if:
         // 1. The message has follow-ups in metadata
         // 2. The follow-ups haven't been consumed (check metadata.followupsConsumed)
         // 3. This is the LAST assistant message (no user messages after it)
         let followups: MessageFollowup[] | undefined = undefined;
-        
+
         if (msg.role === 'ASSISTANT') {
           // Check if follow-ups are consumed in metadata (persisted state)
           const metadata = (msg as any).metadata || {};
           const followupsConsumed = metadata.followupsConsumed === true;
-          
+
           // Check if there are any user messages after this assistant message
           const hasUserMessageAfter = allMessages.slice(index + 1).some(m => m.role === 'USER');
-          
+
           // ✅ CRITICAL: Only show follow-ups if not consumed AND no user message after AND has follow-ups in metadata
           if (!followupsConsumed && !hasUserMessageAfter && followupsFromMetadata && Array.isArray(followupsFromMetadata)) {
             followups = followupsFromMetadata;
           }
         }
-        
+
         return {
           id: msg.id,
           role: msg.role as MessageRole,
@@ -273,12 +275,12 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
           followups,
         };
       });
-      
+
       if (dbMessages.length > 0) {
         setMessages(dbMessages);
         // Clear optimistic messages since we have DB messages
         optimisticMessageIds.current.clear();
-        
+
         // ✅ Update followupsMap to only include follow-ups that are actually shown
         const newFollowupsMap = new Map<string, MessageFollowup[]>();
         dbMessages.forEach(msg => {
@@ -300,7 +302,7 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
 
   // Initialize conversation - use ref to prevent multiple calls
   const hasInitialized = useRef(false);
-  
+
   useEffect(() => {
     if (conversationId || initializeMutation.isPending || hasInitialized.current) return;
 
@@ -340,15 +342,15 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
     setFollowupsMap(new Map());
 
     const assistantMessages = messages.filter(msg => msg.role === 'ASSISTANT');
-    
-    const consumePromises = assistantMessages.map(msg => 
+
+    const consumePromises = assistantMessages.map(msg =>
       markFollowupsConsumedMutation.mutateAsync({ messageId: msg.id }).catch(err => {
         console.error('Failed to mark follow-ups as consumed:', err);
       })
     );
-    
+
     await Promise.all(consumePromises);
-    
+
     const optimisticId = `optimistic_${Date.now()}`;
     const userMessage: RenderedMessage = {
       id: optimisticId,
@@ -356,9 +358,9 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
       content: message,
       createdAt: new Date(),
     };
-    
+
     optimisticMessageIds.current.add(optimisticId);
-    
+
     setMessages(prev => [...prev, userMessage]);
     setIsSending(true);
     messageMutation.mutate({ conversationId, agentId: resolvedAgentId, message });
@@ -367,24 +369,24 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
   // ✅ Update handleFollowupClick to wait for mutation
   const handleFollowupClick = useCallback(async (messageId: string, followup: MessageFollowup) => {
     // ✅ IMMEDIATELY remove follow-ups from UI (optimistic update)
-    setMessages(prev => prev.map(msg => 
+    setMessages(prev => prev.map(msg =>
       msg.id === messageId ? { ...msg, followups: undefined } : msg
     ));
-    
+
     // Remove from state map
     setFollowupsMap(prev => {
       const newMap = new Map(prev);
       newMap.delete(messageId);
       return newMap;
     });
-    
+
     // ✅ Wait for mutation to complete before sending message
     try {
       await markFollowupsConsumedMutation.mutateAsync({ messageId });
     } catch (error) {
       console.error('Failed to mark follow-ups as consumed:', error);
     }
-    
+
     // Send the follow-up message
     handleSendMessage(followup.label);
   }, [handleSendMessage, markFollowupsConsumedMutation]);
@@ -397,43 +399,8 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
     if (action.label) handleSendMessage(action.label);
   }, [handleSendMessage, launchMutation, conversationId, agentDraft]);
 
-  // Resize functionality - must be before early return to follow Rules of Hooks
-  const [profileWidth, setProfileWidth] = useState(480); // Initial width: 480px (w-96 = 384px, increased)
-  const [isResizing, setIsResizing] = useState(false);
-  const resizeRef = useRef<HTMLDivElement>(null);
-
-  // Handle resize
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return;
-      
-      const containerWidth = window.innerWidth;
-      const minProfileWidth = 400; // Minimum width
-      const maxProfileWidth = containerWidth * 0.7; // Maximum 70% of container
-      
-      const newWidth = containerWidth - e.clientX;
-      const clampedWidth = Math.max(minProfileWidth, Math.min(maxProfileWidth, newWidth));
-      setProfileWidth(clampedWidth);
-    };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-    };
-
-    if (isResizing) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
-    }
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-  }, [isResizing]);
+  // Resize functionality replaced by ResizableSplitLayout
+  const [profileWidth, setProfileWidth] = useState(480);
 
   if (isInitializing) {
     return (
@@ -456,99 +423,90 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
   return (
     <div className="flex h-full">
       {/* Chat Interface */}
-      <div 
-        className="flex flex-col px-6 overflow-hidden transition-all"
-        style={{ width: `calc(100% - ${profileWidth}px)` }}
-      >
-        <Card className="flex h-full flex-col overflow-hidden border-0 bg-white shadow-none lg:rounded-2xl lg:border lg:shadow-2xl">
-          <ChatHeader title="Create AI Agent" />
-          
-          <div className="relative flex-1 overflow-hidden">
-            <ChatMessageList
-              messages={messagesWithFollowups}
-              pendingAssistantMessage={isSending ? 'Thinking...' : null}
-              onFollowupClick={handleFollowupClick}
-              onActionClick={handleActionClick}
+      <ResizableSplitLayout
+        MainContent={
+          <div className="flex flex-col h-full bg-slate-50">
+            <Card className="flex h-full flex-col overflow-hidden border-0 bg-white shadow-none lg:rounded-2xl lg:border lg:shadow-2xl">
+              <ChatHeader title="Chat with Agent" />
+
+              <div className="relative flex-1 overflow-hidden">
+                <ChatMessageList
+                  messages={messagesWithFollowups}
+                  pendingAssistantMessage={
+                    isSending ? <ThinkingIndicator stage={conversationState?.stage || 'executing'} /> : null
+                  }
+                  onFollowupClick={handleFollowupClick}
+                  onActionClick={handleActionClick}
+                />
+              </div>
+
+              <div className="border-t p-4">
+                <ChatComposer
+                  onSend={handleSendMessage}
+                  isSending={isSending}
+                  disabled={isSending || !conversationId}
+                />
+              </div>
+            </Card>
+          </div>
+        }
+        SidePanelContent={
+          <div className="h-full border-l bg-gradient-to-b from-background to-muted/20 overflow-hidden">
+            <AgentProfile
+              agent={{
+                id: agentData.id,
+                name: agentData.name || agentDraft?.name || 'Unnamed Agent',
+                description: agentData.description ?? agentDraft?.description ?? null,
+                avatar: agentData.avatar ?? agentDraft?.avatar ?? null,
+                status: (agentData.status === 'ACTIVE' ? 'ACTIVE' : agentData.status === 'DRAFT' ? 'DRAFT' : agentData.status === 'BUILDING' ? 'BUILDING' : agentData.status === 'RECONFIGURING' ? 'RECONFIGURING' : agentData.status === 'EXECUTING' ? 'EXECUTING' : 'INACTIVE') as "ACTIVE" | "DRAFT" | "INACTIVE" | "BUILDING" | "RECONFIGURING" | "EXECUTING",
+                isActive: agentData.isActive ?? false,
+                agentType: agentData.agentType ?? agentDraft?.agentType ?? null,
+                systemPrompt: agentData.systemPrompt ?? agentDraft?.systemPrompt ?? null,
+                capabilities: agentData.capabilities ?? agentDraft?.capabilities ?? null,
+                constraints: agentData.constraints ?? agentDraft?.constraints ?? null,
+                createdAt: agentData.createdAt ?? new Date(),
+                updatedAt: agentData.updatedAt ?? new Date(),
+                metadata: (agentData.metadata as any) ?? {},
+                triggers: (agentData.triggers || []).map(t => ({
+                  id: t.id,
+                  triggerType: t.triggerType,
+                  triggerConfig: t.triggerConfig as any,
+                  name: t.name,
+                  description: t.description,
+                  isActive: t.isActive,
+                  priority: t.priority,
+                  tags: t.tags,
+                })),
+                tools: (agentData.tools || []).map(t => ({
+                  id: t.id,
+                  name: t.name,
+                  description: t.description,
+                  category: t.category,
+                  toolType: t.toolType,
+                  isActive: t.isActive,
+                })),
+                schedules: (agentData.schedules || []).map(s => ({
+                  id: s.id,
+                  name: s.name,
+                  description: s.description,
+                  repeatTime: s.repeatTime,
+                  startTime: s.startTime,
+                  endTime: s.endTime,
+                  timezone: s.timezone,
+                  instructions: s.instructions,
+                  isActive: s.isActive,
+                  priority: s.priority,
+                })),
+              }}
+              conversationType="AGENT_EXECUTOR"
+              isReconfiguring={agentData.status === 'RECONFIGURING' || (agentData.status === 'ACTIVE' && conversationState?.stage && ['review', 'testing'].includes(conversationState.stage))}
+              onEdit={() => toast.info('Edit agent configuration...')}
+              onConfigure={() => setShowAgentProfile(false)}
             />
           </div>
-
-          <div className="border-t p-4">
-            <ChatComposer
-              onSend={handleSendMessage}
-              isSending={isSending}
-              disabled={isSending || !conversationId}
-            />
-          </div>
-        </Card>
-      </div>
-
-      {/* Resize Handle */}
-      <div
-        ref={resizeRef}
-        onMouseDown={(e) => {
-          e.preventDefault();
-          setIsResizing(true);
-        }}
-        className="w-1 bg-border hover:bg-primary/50 cursor-col-resize transition-colors flex-shrink-0"
-        style={{ minWidth: '4px' }}
+        }
+        isPanelOpen={true}
       />
-
-      {/* Preview Panel */}
-      <div 
-        className="border-l bg-gradient-to-b from-background to-muted/20 flex-shrink-0 overflow-hidden"
-        style={{ width: `${profileWidth}px`, minWidth: '400px' }}
-      >
-          <AgentProfile
-            agent={{
-              id: agentData.id,
-              name: agentData.name || agentDraft?.name || 'Unnamed Agent',
-              description: agentData.description ?? agentDraft?.description ?? null,
-              avatar: agentData.avatar ?? agentDraft?.avatar ?? null,
-              status: (agentData.status === 'ACTIVE' ? 'ACTIVE' : agentData.status === 'DRAFT' ? 'DRAFT' : agentData.status === 'BUILDING' ? 'BUILDING' : agentData.status === 'RECONFIGURING' ? 'RECONFIGURING' : agentData.status === 'EXECUTING' ? 'EXECUTING' : 'INACTIVE') as "ACTIVE" | "DRAFT" | "INACTIVE" | "BUILDING" | "RECONFIGURING" | "EXECUTING",
-              isActive: agentData.isActive ?? false,
-              agentType: agentData.agentType ?? agentDraft?.agentType ?? null,
-              systemPrompt: agentData.systemPrompt ?? agentDraft?.systemPrompt ?? null,
-              capabilities: agentData.capabilities ?? agentDraft?.capabilities ?? null,
-              constraints: agentData.constraints ?? agentDraft?.constraints ?? null,
-              createdAt: agentData.createdAt ?? new Date(),
-              updatedAt: agentData.updatedAt ?? new Date(),
-              metadata: (agentData.metadata as any) ?? {},
-              triggers: (agentData.triggers || []).map(t => ({
-                id: t.id,
-                triggerType: t.triggerType,
-                triggerConfig: t.triggerConfig as any,
-                name: t.name,
-                description: t.description,
-                isActive: t.isActive,
-                priority: t.priority,
-                tags: t.tags,
-              })),
-              tools: (agentData.tools || []).map(t => ({
-                id: t.id,
-                name: t.name,
-                description: t.description,
-                category: t.category,
-                toolType: t.toolType,
-                isActive: t.isActive,
-              })),
-              schedules: (agentData.schedules || []).map(s => ({
-                id: s.id,
-                name: s.name,
-                description: s.description,
-                repeatTime: s.repeatTime,
-                startTime: s.startTime,
-                endTime: s.endTime,
-                timezone: s.timezone,
-                instructions: s.instructions,
-                isActive: s.isActive,
-                priority: s.priority,
-              })),
-            }}
-            isReconfiguring={agentData.status === 'RECONFIGURING' || (agentData.status === 'ACTIVE' && conversationState?.stage && ['review', 'testing'].includes(conversationState.stage))}
-            onEdit={() => toast.info('Edit agent configuration...')}
-            onConfigure={() => setShowAgentProfile(false)}
-          />
-      </div>
     </div>
   );
 };

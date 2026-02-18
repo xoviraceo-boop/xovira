@@ -13,8 +13,8 @@ interface AgentCreationViewProps {
   agent?: any; // Pass agent data to avoid redundant query
 }
 
-export const AgentCreationView: React.FC<AgentCreationViewProps> = ({ 
-  workspaceId, 
+export const AgentCreationView: React.FC<AgentCreationViewProps> = ({
+  workspaceId,
   agentId,
   agent: initialAgent
 }) => {
@@ -22,8 +22,8 @@ export const AgentCreationView: React.FC<AgentCreationViewProps> = ({
 
   // Only fetch if agent data wasn't passed from parent
   const { data: agent, isLoading: loadingAgent } = trpc.agent.get.useQuery(
-    { id: agentId },
-    { 
+    { id: agentId, conversationType: 'AGENT_BUILDER' },
+    {
       enabled: !!agentId && !initialAgent,
       initialData: initialAgent
     }

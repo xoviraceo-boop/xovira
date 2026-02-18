@@ -5,6 +5,8 @@ import PublicProposalCard from "@/entities/proposals/components/PublicProposalCa
 import CardSkeleton from "@/components/ui/card.skeleton";
 import { usePrefetchedProposals } from "@/features/marketplace/hooks/usePrefetchedProposals";
 import React, { useState, useCallback } from "react";
+
+import { DASHBOARD_ROUTES, MARKETPLACE_ROUTES } from '@/constants/routes.config';
 import { SORT_OPTIONS } from "@/features/marketplace/constants";
 
 export default function MarketplacePage() {
@@ -32,7 +34,7 @@ export default function MarketplacePage() {
             searchValue={query}
             onSearchChange={setQuery}
             onSearchSubmit={handleSearchSubmit}
-            navigateTo={"/marketplace/proposals/search/results"}
+            navigateTo={MARKETPLACE_ROUTES.PROPOSALS_SEARCH}
           />
 
           <Content

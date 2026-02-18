@@ -1,16 +1,20 @@
 "use client";
 import Link from "next/link";
+import { CommandTrigger } from "@/entities/command/CommandInterface";
+import { useInterfaceSettings } from "@/hooks/useInterfaceSettings";
 import Button from "@/components/ui/button";
 import { useSession, signOut } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
 import NotificationBell from "@/entities/notifications/components/NotificationBell";
 import MessageBell from "@/entities/messages/components/MessageBell";
+import { cn } from "@/lib/utils";
 
 export default function Header() {
   const { data: session } = useSession();
+  const { showMessageIcon, showAgentIcon, t } = useInterfaceSettings();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
-    
+
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
       if (!menuRef.current) return;
@@ -21,87 +25,90 @@ export default function Header() {
   }, []);
 
   return (
-    <header className="w-full z-100 border-b border-cyan-100 bg-gradient-to-r from-white via-cyan-50/30 to-white backdrop-blur-sm sticky top-0 z-50 shadow-sm">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        <Link href="/" className="font-bold text-xl bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent hover:from-cyan-700 hover:to-blue-700 transition-all">
+    <header className="sticky top-0 z-50 w-full border-b border-zinc-200 bg-white/80 backdrop-blur-md">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <Link
+          href="/"
+          className="text-lg font-semibold tracking-tight text-zinc-900 transition-colors hover:text-zinc-700"
+        >
           xovira
         </Link>
-        <nav className="flex items-center gap-4 sm:gap-6">
-          <Link 
-            href="/explore" 
-            className="text-sm font-medium text-slate-600 hover:text-cyan-600 transition-colors relative group"
-          >
-            Explore
-            <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-cyan-500 to-blue-500 group-hover:w-full transition-all duration-300"></span>
-          </Link>
+        <nav className="flex items-center gap-4">
           {session?.user ? (
             <>
-              <MessageBell />
-              <NotificationBell />
-              <div className="relative" ref={menuRef}>
+              <div className="flex items-center gap-1 text-zinc-500">
+                {showMessageIcon && <MessageBell />}
+                <NotificationBell />
+                {showAgentIcon && <CommandTrigger />}
+              </div>
+
+              <div className="relative ml-2" ref={menuRef}>
                 <button
-                  className="flex items-center gap-2 rounded-full border-2 border-cyan-100 hover:border-cyan-300 px-2 py-1 transition-all hover:shadow-md bg-white"
+                  className={cn(
+                    "flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-zinc-200 bg-zinc-50 transition-all hover:ring-2 hover:ring-zinc-100 focus:outline-none",
+                    open && "ring-2 ring-zinc-200"
+                  )}
                   onClick={() => setOpen((v) => !v)}
                   aria-haspopup="menu"
                   aria-expanded={open}
                 >
-                  <div className="h-8 w-8 overflow-hidden rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 text-xs font-semibold flex items-center justify-center text-white shadow-md">
-                    {session.user.image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={session.user.image} alt="avatar" className="h-full w-full object-cover" />
-                    ) : (
-                      (session.user.name || session.user.email || "").slice(0,2).toUpperCase()
-                    )}
-                  </div>
+                  {session.user.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={session.user.image} alt="avatar" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="text-xs font-medium text-zinc-600">
+                      {(session.user.name || session.user.email || "U").slice(0, 2).toUpperCase()}
+                    </span>
+                  )}
                 </button>
+
                 {open && (
-                  <div className="absolute right-0 mt-3 w-56 rounded-xl border border-cyan-100 bg-white shadow-xl z-50 overflow-hidden">
-                    <div className="p-3 border-b border-cyan-50 bg-gradient-to-br from-cyan-50/50 to-transparent">
-                      <p className="text-sm font-semibold text-slate-800 truncate">{session.user.name}</p>
-                      <p className="text-xs text-slate-500 truncate">{session.user.email}</p>
+                  <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-100">
+                    <div className="border-b border-zinc-100 px-4 py-3 bg-zinc-50/50">
+                      <p className="truncate text-sm font-medium text-zinc-900">{session.user.name}</p>
+                      <p className="truncate text-xs text-zinc-500">{session.user.email}</p>
                     </div>
-                    <Link 
-                      href="/dashboard/my-profile" 
-                      className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-cyan-50 hover:text-cyan-700 transition-colors font-medium" 
-                      onClick={() => setOpen(false)}
-                    >
-                      View profile
-                    </Link>
-                    <Link 
-                      href="/dashboard/settings" 
-                      className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-cyan-50 hover:text-cyan-700 transition-colors font-medium" 
-                      onClick={() => setOpen(false)}
-                    >
-                      Settings
-                    </Link>
-                    <Link 
-                      href="/help" 
-                      className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-cyan-50 hover:text-cyan-700 transition-colors font-medium" 
-                      onClick={() => setOpen(false)}
-                    >
-                      Help
-                    </Link>
-                    <Link 
-                      href="/privacy" 
-                      className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-cyan-50 hover:text-cyan-700 transition-colors font-medium" 
-                      onClick={() => setOpen(false)}
-                    >
-                      Privacy
-                    </Link>
-                    <button 
-                      className="block w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 transition-colors font-medium border-t border-cyan-50" 
-                      onClick={() => { setOpen(false); signOut(); }}
-                    >
-                      Logout
-                    </button>
+
+                    <div className="p-1">
+                      <Link
+                        href="/dashboard/my-profile"
+                        className="block rounded-md px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+                        onClick={() => setOpen(false)}
+                      >
+                        {t("header.profile")}
+                      </Link>
+                      <Link
+                        href="/dashboard/settings"
+                        className="block rounded-md px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+                        onClick={() => setOpen(false)}
+                      >
+                        {t("header.settings")}
+                      </Link>
+                      <Link
+                        href="/help"
+                        className="block rounded-md px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+                        onClick={() => setOpen(false)}
+                      >
+                        {t("header.help")}
+                      </Link>
+                    </div>
+
+                    <div className="border-t border-zinc-100 p-1">
+                      <button
+                        className="block w-full rounded-md px-3 py-2 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+                        onClick={() => { setOpen(false); signOut(); }}
+                      >
+                        {t("header.logout")}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
             </>
           ) : (
             <Link href="/login">
-              <Button className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white px-6 py-2 rounded-full shadow-md hover:shadow-lg transition-all">
-                Login
+              <Button className="h-9 rounded-full bg-zinc-900 px-4 text-sm font-medium text-white shadow-sm hover:bg-zinc-800">
+                {t("header.login")}
               </Button>
             </Link>
           )}

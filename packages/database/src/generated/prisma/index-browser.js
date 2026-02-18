@@ -164,6 +164,10 @@ exports.Prisma.UserScalarFieldEnum = {
   isVerified: 'isVerified',
   onboardingCompleted: 'onboardingCompleted',
   onboardingStep: 'onboardingStep',
+  role: 'role',
+  usagePurpose: 'usagePurpose',
+  managementGoals: 'managementGoals',
+  referralSource: 'referralSource',
   credibilityScore: 'credibilityScore',
   verificationLevel: 'verificationLevel',
   isKycVerified: 'isKycVerified',
@@ -172,6 +176,39 @@ exports.Prisma.UserScalarFieldEnum = {
   updatedAt: 'updatedAt',
   lastActiveAt: 'lastActiveAt',
   embeddingUpdatedAt: 'embeddingUpdatedAt'
+};
+
+exports.Prisma.OrganizationScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  slug: 'slug',
+  ownerId: 'ownerId',
+  logo: 'logo',
+  domain: 'domain',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  description: 'description',
+  website: 'website',
+  socialLinks: 'socialLinks'
+};
+
+exports.Prisma.OrganizationMemberScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  userId: 'userId',
+  role: 'role',
+  joinedAt: 'joinedAt'
+};
+
+exports.Prisma.DepartmentScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  name: 'name',
+  description: 'description',
+  headId: 'headId',
+  color: 'color',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 };
 
 exports.Prisma.WorkspaceScalarFieldEnum = {
@@ -185,6 +222,7 @@ exports.Prisma.WorkspaceScalarFieldEnum = {
   archivedAt: 'archivedAt',
   avatar: 'avatar',
   color: 'color',
+  organizationId: 'organizationId',
   embeddingUpdatedAt: 'embeddingUpdatedAt',
   isArchived: 'isArchived',
   memberLimit: 'memberLimit',
@@ -209,7 +247,8 @@ exports.Prisma.WorkspaceMemberScalarFieldEnum = {
   notificationSettings: 'notificationSettings',
   permissions: 'permissions',
   status: 'status',
-  role: 'role'
+  role: 'role',
+  customRoleId: 'customRoleId'
 };
 
 exports.Prisma.WorkspaceInvitationScalarFieldEnum = {
@@ -229,17 +268,15 @@ exports.Prisma.SpaceScalarFieldEnum = {
   workspaceId: 'workspaceId',
   name: 'name',
   description: 'description',
-  triggerType: 'triggerType',
-  triggerConfig: 'triggerConfig',
-  conditions: 'conditions',
-  actions: 'actions',
   isActive: 'isActive',
-  runCount: 'runCount',
-  lastRanAt: 'lastRanAt',
   createdBy: 'createdBy',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
-  embeddingUpdatedAt: 'embeddingUpdatedAt'
+  embeddingUpdatedAt: 'embeddingUpdatedAt',
+  icon: 'icon',
+  color: 'color',
+  visibility: 'visibility',
+  settings: 'settings'
 };
 
 exports.Prisma.WorkspaceIntegrationScalarFieldEnum = {
@@ -277,17 +314,50 @@ exports.Prisma.TaskScalarFieldEnum = {
   visibility: 'visibility',
   isPublic: 'isPublic',
   proposalId: 'proposalId',
+  priority: 'priority',
+  taskTypeId: 'taskTypeId',
+  startDate: 'startDate',
+  dueDate: 'dueDate',
+  timeEstimate: 'timeEstimate',
+  isStarred: 'isStarred',
+  tags: 'tags',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
+  position: 'position',
+  order: 'order',
   listId: 'listId',
   statusId: 'statusId',
   spaceId: 'spaceId',
-  parent_id: 'parent_id'
+  parentId: 'parentId'
 };
 
-exports.Prisma.StatusScalarFieldEnum = {
+exports.Prisma.TaskTypeScalarFieldEnum = {
+  id: 'id',
+  workspaceId: 'workspaceId',
+  spaceId: 'spaceId',
+  projectId: 'projectId',
+  teamId: 'teamId',
+  folderId: 'folderId',
+  listId: 'listId',
+  name: 'name',
+  description: 'description',
+  icon: 'icon',
+  color: 'color',
+  isDefault: 'isDefault',
+  isActive: 'isActive',
+  position: 'position',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.TaskStatusScalarFieldEnum = {
   id: 'id',
   listId: 'listId',
+  workspaceId: 'workspaceId',
+  spaceId: 'spaceId',
+  projectId: 'projectId',
+  teamId: 'teamId',
+  folderId: 'folderId',
   name: 'name',
   color: 'color',
   position: 'position',
@@ -307,6 +377,7 @@ exports.Prisma.TaskAssigneeScalarFieldEnum = {
   id: 'id',
   taskId: 'taskId',
   userId: 'userId',
+  teamId: 'teamId',
   agentId: 'agentId',
   assigned_at: 'assigned_at',
   assigned_by: 'assigned_by'
@@ -377,6 +448,11 @@ exports.Prisma.TimeEntryScalarFieldEnum = {
 exports.Prisma.CustomFieldScalarFieldEnum = {
   id: 'id',
   workspaceId: 'workspaceId',
+  spaceId: 'spaceId',
+  projectId: 'projectId',
+  teamId: 'teamId',
+  folderId: 'folderId',
+  listId: 'listId',
   name: 'name',
   type: 'type',
   config: 'config',
@@ -404,13 +480,16 @@ exports.Prisma.SpaceMemberScalarFieldEnum = {
   userId: 'userId',
   role: 'role',
   permissions: 'permissions',
-  addedAt: 'addedAt'
+  addedAt: 'addedAt',
+  isHidden: 'isHidden'
 };
 
 exports.Prisma.FolderScalarFieldEnum = {
   id: 'id',
   workspaceId: 'workspaceId',
   spaceId: 'spaceId',
+  projectId: 'projectId',
+  teamId: 'teamId',
   parentId: 'parentId',
   name: 'name',
   description: 'description',
@@ -447,19 +526,38 @@ exports.Prisma.ListScalarFieldEnum = {
 exports.Prisma.ViewScalarFieldEnum = {
   id: 'id',
   listId: 'listId',
+  folderId: 'folderId',
   workspaceId: 'workspaceId',
+  spaceId: 'spaceId',
+  projectId: 'projectId',
+  teamId: 'teamId',
   createdBy: 'createdBy',
   name: 'name',
   type: 'type',
+  description: 'description',
+  config: 'config',
   filters: 'filters',
   grouping: 'grouping',
   sorting: 'sorting',
   columns: 'columns',
   isDefault: 'isDefault',
   isShared: 'isShared',
+  isPrivate: 'isPrivate',
+  isPinned: 'isPinned',
+  isLocked: 'isLocked',
+  isAutosave: 'isAutosave',
   position: 'position',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ViewShareScalarFieldEnum = {
+  id: 'id',
+  viewId: 'viewId',
+  userId: 'userId',
+  teamId: 'teamId',
+  permission: 'permission',
+  createdAt: 'createdAt'
 };
 
 exports.Prisma.DashboardScalarFieldEnum = {
@@ -767,9 +865,53 @@ exports.Prisma.MemberProfileScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.MarketplaceServiceScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  description: 'description',
+  provider: 'provider',
+  price: 'price',
+  currency: 'currency',
+  category: 'category',
+  icon: 'icon',
+  isActive: 'isActive'
+};
+
+exports.Prisma.MarketplaceOrderScalarFieldEnum = {
+  id: 'id',
+  serviceId: 'serviceId',
+  projectId: 'projectId',
+  buyerId: 'buyerId',
+  status: 'status',
+  amount: 'amount',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.CapTableEntryScalarFieldEnum = {
+  id: 'id',
+  projectId: 'projectId',
+  holderName: 'holderName',
+  type: 'type',
+  shares: 'shares',
+  class: 'class',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.InvestorUpdateScalarFieldEnum = {
+  id: 'id',
+  projectId: 'projectId',
+  month: 'month',
+  content: 'content',
+  sentiment: 'sentiment',
+  status: 'status',
+  sentAt: 'sentAt'
+};
+
 exports.Prisma.ProjectScalarFieldEnum = {
   id: 'id',
   workspaceId: 'workspaceId',
+  organizationId: 'organizationId',
+  departmentId: 'departmentId',
   ownerId: 'ownerId',
   previousOwnerId: 'previousOwnerId',
   name: 'name',
@@ -790,6 +932,7 @@ exports.Prisma.ProjectScalarFieldEnum = {
   isHiring: 'isHiring',
   status: 'status',
   isActive: 'isActive',
+  visibility: 'visibility',
   isPublic: 'isPublic',
   isFeatured: 'isFeatured',
   location: 'location',
@@ -952,6 +1095,8 @@ exports.Prisma.ActivityLogScalarFieldEnum = {
 exports.Prisma.TeamScalarFieldEnum = {
   id: 'id',
   workspaceId: 'workspaceId',
+  organizationId: 'organizationId',
+  departmentId: 'departmentId',
   ownerId: 'ownerId',
   name: 'name',
   description: 'description',
@@ -960,6 +1105,7 @@ exports.Prisma.TeamScalarFieldEnum = {
   industry: 'industry',
   skills: 'skills',
   status: 'status',
+  visibility: 'visibility',
   isActive: 'isActive',
   isHiring: 'isHiring',
   size: 'size',
@@ -1153,8 +1299,17 @@ exports.Prisma.ConnectionScalarFieldEnum = {
   acceptedAt: 'acceptedAt'
 };
 
+exports.Prisma.ConversationScalarFieldEnum = {
+  id: 'id',
+  participantIds: 'participantIds',
+  messageSequence: 'messageSequence',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.MessageScalarFieldEnum = {
   id: 'id',
+  conversationId: 'conversationId',
   senderId: 'senderId',
   receiverId: 'receiverId',
   content: 'content',
@@ -1163,7 +1318,17 @@ exports.Prisma.MessageScalarFieldEnum = {
   attachments: 'attachments',
   replyToId: 'replyToId',
   reactions: 'reactions',
+  sequenceNumber: 'sequenceNumber',
+  deliveryStatus: 'deliveryStatus',
   createdAt: 'createdAt'
+};
+
+exports.Prisma.MessageDeliveryScalarFieldEnum = {
+  id: 'id',
+  messageId: 'messageId',
+  userId: 'userId',
+  status: 'status',
+  timestamp: 'timestamp'
 };
 
 exports.Prisma.ProjectLikeScalarFieldEnum = {
@@ -1203,12 +1368,16 @@ exports.Prisma.NotificationScalarFieldEnum = {
   userId: 'userId',
   type: 'type',
   title: 'title',
-  content: 'content',
-  relatedId: 'relatedId',
-  relatedType: 'relatedType',
-  isRead: 'isRead',
+  message: 'message',
+  actorIds: 'actorIds',
+  entityType: 'entityType',
+  entityId: 'entityId',
+  metadata: 'metadata',
+  read: 'read',
   readAt: 'readAt',
-  createdAt: 'createdAt'
+  aggregateKey: 'aggregateKey',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 };
 
 exports.Prisma.UserSettingsScalarFieldEnum = {
@@ -1971,6 +2140,9 @@ exports.Prisma.AiConversationScalarFieldEnum = {
   channelId: 'channelId',
   spaceId: 'spaceId',
   workspaceId: 'workspaceId',
+  taskId: 'taskId',
+  listId: 'listId',
+  folderId: 'folderId',
   agentId: 'agentId',
   metadata: 'metadata'
 };
@@ -2488,6 +2660,8 @@ exports.Prisma.AgentAuditLogScalarFieldEnum = {
 exports.Prisma.AiAgentScalarFieldEnum = {
   id: 'id',
   workspaceId: 'workspaceId',
+  organizationId: 'organizationId',
+  departmentId: 'departmentId',
   spaceId: 'spaceId',
   projectId: 'projectId',
   teamId: 'teamId',
@@ -2572,6 +2746,146 @@ exports.Prisma.SystemToolScalarFieldEnum = {
   lastUsedAt: 'lastUsedAt'
 };
 
+exports.Prisma.AgentSkillScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  displayName: 'displayName',
+  description: 'description',
+  category: 'category',
+  icon: 'icon',
+  isActive: 'isActive',
+  isBuiltIn: 'isBuiltIn',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.AgentToSkillScalarFieldEnum = {
+  id: 'id',
+  agentId: 'agentId',
+  skillId: 'skillId',
+  isEnabled: 'isEnabled',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.SkillToToolScalarFieldEnum = {
+  id: 'id',
+  skillId: 'skillId',
+  toolId: 'toolId',
+  isDefault: 'isDefault'
+};
+
+exports.Prisma.AgentRelationScalarFieldEnum = {
+  id: 'id',
+  parentId: 'parentId',
+  childId: 'childId',
+  type: 'type',
+  routerConfig: 'routerConfig',
+  shareMemory: 'shareMemory',
+  permissions: 'permissions',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.AgentTemplateScalarFieldEnum = {
+  id: 'id',
+  workspaceId: 'workspaceId',
+  createdBy: 'createdBy',
+  name: 'name',
+  description: 'description',
+  role: 'role',
+  objective: 'objective',
+  categories: 'categories',
+  capabilities: 'capabilities',
+  instructions: 'instructions',
+  triggers: 'triggers',
+  isPublic: 'isPublic',
+  isSystem: 'isSystem',
+  usageCount: 'usageCount',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  embeddingUpdatedAt: 'embeddingUpdatedAt'
+};
+
+exports.Prisma.WorkspaceGuestScalarFieldEnum = {
+  id: 'id',
+  workspaceId: 'workspaceId',
+  userId: 'userId',
+  guestType: 'guestType',
+  invitedById: 'invitedById',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.LocationPermissionScalarFieldEnum = {
+  id: 'id',
+  locationType: 'locationType',
+  locationId: 'locationId',
+  userId: 'userId',
+  teamId: 'teamId',
+  permission: 'permission',
+  grantedById: 'grantedById',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.TaskPermissionScalarFieldEnum = {
+  id: 'id',
+  taskId: 'taskId',
+  userId: 'userId',
+  teamId: 'teamId',
+  permission: 'permission',
+  grantedById: 'grantedById',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.CustomRoleScalarFieldEnum = {
+  id: 'id',
+  workspaceId: 'workspaceId',
+  name: 'name',
+  baseRole: 'baseRole',
+  permissions: 'permissions',
+  createdById: 'createdById',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.PermissionInvitationScalarFieldEnum = {
+  id: 'id',
+  workspaceId: 'workspaceId',
+  invitedById: 'invitedById',
+  email: 'email',
+  invitedUserId: 'invitedUserId',
+  inviteType: 'inviteType',
+  role: 'role',
+  targetType: 'targetType',
+  targetId: 'targetId',
+  permission: 'permission',
+  token: 'token',
+  expiresAt: 'expiresAt',
+  status: 'status',
+  acceptedAt: 'acceptedAt',
+  cancelledById: 'cancelledById',
+  cancelledAt: 'cancelledAt',
+  metadata: 'metadata',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.PublicLinkScalarFieldEnum = {
+  id: 'id',
+  workspaceId: 'workspaceId',
+  locationType: 'locationType',
+  locationId: 'locationId',
+  token: 'token',
+  permission: 'permission',
+  createdById: 'createdById',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  expiresAt: 'expiresAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -2628,35 +2942,17 @@ exports.WorkspaceRole = exports.$Enums.WorkspaceRole = {
   OWNER: 'OWNER',
   ADMIN: 'ADMIN',
   MEMBER: 'MEMBER',
+  LIMITED_MEMBER: 'LIMITED_MEMBER',
+  LIMITED_MEMBER_VIEW_ONLY: 'LIMITED_MEMBER_VIEW_ONLY',
   GUEST: 'GUEST'
 };
 
-exports.AutomationTriggerType = exports.$Enums.AutomationTriggerType = {
-  TASK_OR_SUBTASK_CREATED: 'TASK_OR_SUBTASK_CREATED',
-  TASK_STATUS_CHANGED: 'TASK_STATUS_CHANGED',
-  TASK_ASSIGNEE_ADDED: 'TASK_ASSIGNEE_ADDED',
-  TASK_ASSIGNEE_REMOVED: 'TASK_ASSIGNEE_REMOVED',
-  TASK_DUE_DATE_ARRIVES: 'TASK_DUE_DATE_ARRIVES',
-  TASK_DUE_DATE_CHANGED: 'TASK_DUE_DATE_CHANGED',
-  TASK_START_DATE_ARRIVES: 'TASK_START_DATE_ARRIVES',
-  TASK_START_DATE_CHANGED: 'TASK_START_DATE_CHANGED',
-  TASK_PRIORITY_CHANGED: 'TASK_PRIORITY_CHANGED',
-  TASK_NAME_CHANGED: 'TASK_NAME_CHANGED',
-  TASK_TYPE_CHANGED: 'TASK_TYPE_CHANGED',
-  TASK_LINKED: 'TASK_LINKED',
-  TASK_TIME_TRACKED: 'TASK_TIME_TRACKED',
-  TASK_UNBLOCKED: 'TASK_UNBLOCKED',
-  CUSTOM_FIELD_CHANGED: 'CUSTOM_FIELD_CHANGED',
-  TAG_ADDED: 'TAG_ADDED',
-  TAG_REMOVED: 'TAG_REMOVED',
-  CHECKLISTS_RESOLVED: 'CHECKLISTS_RESOLVED',
-  SUBTASKS_RESOLVED: 'SUBTASKS_RESOLVED',
-  EXISTING_TASK_ADDED_TO_LOCATION: 'EXISTING_TASK_ADDED_TO_LOCATION',
-  MOVE_TO_LIST: 'MOVE_TO_LIST',
-  DATE_BEFORE_AFTER: 'DATE_BEFORE_AFTER',
-  EVERY_SCHEDULED_TIME: 'EVERY_SCHEDULED_TIME',
-  CHAT_MESSAGE_POSTED: 'CHAT_MESSAGE_POSTED',
-  WEBHOOK: 'WEBHOOK'
+exports.Visibility = exports.$Enums.Visibility = {
+  PRIVATE: 'PRIVATE',
+  OWNERS_ONLY: 'OWNERS_ONLY',
+  OWNERS_ADMINS: 'OWNERS_ADMINS',
+  MEMBERS: 'MEMBERS',
+  PUBLIC: 'PUBLIC'
 };
 
 exports.IntegrationProvider = exports.$Enums.IntegrationProvider = {
@@ -2681,13 +2977,11 @@ exports.AutomationStatus = exports.$Enums.AutomationStatus = {
   PARTIAL: 'PARTIAL'
 };
 
-exports.Visibility = exports.$Enums.Visibility = {
-  PUBLIC: 'PUBLIC',
-  PRIVATE: 'PRIVATE',
-  WORKSPACE: 'WORKSPACE',
-  TEAM: 'TEAM',
-  PROJECT: 'PROJECT',
-  MEMBERS_ONLY: 'MEMBERS_ONLY'
+exports.TaskPriority = exports.$Enums.TaskPriority = {
+  URGENT: 'URGENT',
+  HIGH: 'HIGH',
+  NORMAL: 'NORMAL',
+  LOW: 'LOW'
 };
 
 exports.StatusType = exports.$Enums.StatusType = {
@@ -2732,6 +3026,7 @@ exports.CustomFieldScope = exports.$Enums.CustomFieldScope = {
 exports.SpaceRole = exports.$Enums.SpaceRole = {
   ADMIN: 'ADMIN',
   MEMBER: 'MEMBER',
+  COMMENTER: 'COMMENTER',
   VIEWER: 'VIEWER'
 };
 
@@ -2745,7 +3040,40 @@ exports.ViewType = exports.$Enums.ViewType = {
   WORKLOAD: 'WORKLOAD',
   MAP: 'MAP',
   MIND_MAP: 'MIND_MAP',
-  ACTIVITY: 'ACTIVITY'
+  ACTIVITY: 'ACTIVITY',
+  OVERVIEW: 'OVERVIEW',
+  DASHBOARD: 'DASHBOARD',
+  POSTS: 'POSTS',
+  DISCUSSIONS: 'DISCUSSIONS',
+  PROJECTS: 'PROJECTS',
+  TEAMS: 'TEAMS',
+  DOCS: 'DOCS',
+  TASKS: 'TASKS',
+  CHANNELS: 'CHANNELS',
+  PROPOSALS: 'PROPOSALS',
+  TOOLS: 'TOOLS',
+  MATERIALS: 'MATERIALS',
+  DOC: 'DOC',
+  FORM: 'FORM',
+  WHITEBOARD: 'WHITEBOARD',
+  EMBED: 'EMBED',
+  SPREADSHEET: 'SPREADSHEET',
+  FILE: 'FILE',
+  VIDEO: 'VIDEO',
+  DESIGN: 'DESIGN',
+  LOGS: 'LOGS',
+  APPEAL: 'APPEAL',
+  GOVERNANCE: 'GOVERNANCE',
+  ANALYTICS: 'ANALYTICS',
+  WAR_ROOM: 'WAR_ROOM',
+  MARKETPLACE: 'MARKETPLACE',
+  MEMBERS: 'MEMBERS'
+};
+
+exports.ShareAccessLevel = exports.$Enums.ShareAccessLevel = {
+  VIEW: 'VIEW',
+  COMMENT: 'COMMENT',
+  FULL: 'FULL'
 };
 
 exports.WidgetType = exports.$Enums.WidgetType = {
@@ -2787,7 +3115,8 @@ exports.TemplateType = exports.$Enums.TemplateType = {
   FOLDER: 'FOLDER',
   SPACE: 'SPACE',
   DOCUMENT: 'DOCUMENT',
-  DASHBOARD: 'DASHBOARD'
+  DASHBOARD: 'DASHBOARD',
+  VIEW: 'VIEW'
 };
 
 exports.ChannelType = exports.$Enums.ChannelType = {
@@ -2810,7 +3139,8 @@ exports.ActivityAction = exports.$Enums.ActivityAction = {
   RESTORED: 'RESTORED',
   SHARED: 'SHARED',
   COMMENTED: 'COMMENTED',
-  MENTIONED: 'MENTIONED'
+  MENTIONED: 'MENTIONED',
+  PLAN_HEALED: 'PLAN_HEALED'
 };
 
 exports.TaskAction = exports.$Enums.TaskAction = {
@@ -2828,6 +3158,35 @@ exports.TaskAction = exports.$Enums.TaskAction = {
   COMMENTED: 'COMMENTED',
   ATTACHED: 'ATTACHED',
   MOVED: 'MOVED'
+};
+
+exports.AutomationTriggerType = exports.$Enums.AutomationTriggerType = {
+  TASK_OR_SUBTASK_CREATED: 'TASK_OR_SUBTASK_CREATED',
+  TASK_STATUS_CHANGED: 'TASK_STATUS_CHANGED',
+  TASK_ASSIGNEE_ADDED: 'TASK_ASSIGNEE_ADDED',
+  TASK_ASSIGNEE_REMOVED: 'TASK_ASSIGNEE_REMOVED',
+  TASK_ASSIGNEE_CHANGED: 'TASK_ASSIGNEE_CHANGED',
+  TASK_DUE_DATE_ARRIVES: 'TASK_DUE_DATE_ARRIVES',
+  TASK_DUE_DATE_CHANGED: 'TASK_DUE_DATE_CHANGED',
+  TASK_START_DATE_ARRIVES: 'TASK_START_DATE_ARRIVES',
+  TASK_START_DATE_CHANGED: 'TASK_START_DATE_CHANGED',
+  TASK_PRIORITY_CHANGED: 'TASK_PRIORITY_CHANGED',
+  TASK_NAME_CHANGED: 'TASK_NAME_CHANGED',
+  TASK_TYPE_CHANGED: 'TASK_TYPE_CHANGED',
+  TASK_LINKED: 'TASK_LINKED',
+  TASK_TIME_TRACKED: 'TASK_TIME_TRACKED',
+  TASK_UNBLOCKED: 'TASK_UNBLOCKED',
+  CUSTOM_FIELD_CHANGED: 'CUSTOM_FIELD_CHANGED',
+  TAG_ADDED: 'TAG_ADDED',
+  TAG_REMOVED: 'TAG_REMOVED',
+  CHECKLISTS_RESOLVED: 'CHECKLISTS_RESOLVED',
+  SUBTASKS_RESOLVED: 'SUBTASKS_RESOLVED',
+  EXISTING_TASK_ADDED_TO_LOCATION: 'EXISTING_TASK_ADDED_TO_LOCATION',
+  MOVE_TO_LIST: 'MOVE_TO_LIST',
+  DATE_BEFORE_AFTER: 'DATE_BEFORE_AFTER',
+  EVERY_SCHEDULED_TIME: 'EVERY_SCHEDULED_TIME',
+  CHAT_MESSAGE_POSTED: 'CHAT_MESSAGE_POSTED',
+  WEBHOOK: 'WEBHOOK'
 };
 
 exports.InvestorType = exports.$Enums.InvestorType = {
@@ -2990,7 +3349,8 @@ exports.LogAction = exports.$Enums.LogAction = {
   SECURITY_LOGIN_FAILED: 'SECURITY_LOGIN_FAILED',
   SECURITY_PASSWORD_CHANGE: 'SECURITY_PASSWORD_CHANGE',
   SECURITY_2FA_ENABLE: 'SECURITY_2FA_ENABLE',
-  SECURITY_SUSPICIOUS_ACTIVITY: 'SECURITY_SUSPICIOUS_ACTIVITY'
+  SECURITY_SUSPICIOUS_ACTIVITY: 'SECURITY_SUSPICIOUS_ACTIVITY',
+  PLAN_HEALED: 'PLAN_HEALED'
 };
 
 exports.LogCategory = exports.$Enums.LogCategory = {
@@ -3127,6 +3487,14 @@ exports.ConnectionStatus = exports.$Enums.ConnectionStatus = {
 };
 
 exports.NotificationType = exports.$Enums.NotificationType = {
+  POST_CREATED: 'POST_CREATED',
+  POST_LIKED: 'POST_LIKED',
+  POST_COMMENTED: 'POST_COMMENTED',
+  POST_SHARED: 'POST_SHARED',
+  COMMENT_LIKED: 'COMMENT_LIKED',
+  COMMENT_REPLIED: 'COMMENT_REPLIED',
+  USER_FOLLOWED: 'USER_FOLLOWED',
+  MENTION: 'MENTION',
   REQUEST_RECEIVED: 'REQUEST_RECEIVED',
   REQUEST_STATUS: 'REQUEST_STATUS',
   INVITATION_RECEIVED: 'INVITATION_RECEIVED',
@@ -3150,7 +3518,10 @@ exports.NotificationType = exports.$Enums.NotificationType = {
   USAGE_APPROACHING_LIMIT: 'USAGE_APPROACHING_LIMIT',
   PACKAGE_EXPIRED: 'PACKAGE_EXPIRED',
   SUBSCRIPTION_EXPIRED: 'SUBSCRIPTION_EXPIRED',
-  MATCH_FOUND: 'MATCH_FOUND'
+  MATCH_FOUND: 'MATCH_FOUND',
+  OWNERSHIP_TRANSFER: 'OWNERSHIP_TRANSFER',
+  PERMISSION_GRANTED: 'PERMISSION_GRANTED',
+  PERMISSION_REVOKED: 'PERMISSION_REVOKED'
 };
 
 exports.ProfileVisibility = exports.$Enums.ProfileVisibility = {
@@ -3542,7 +3913,8 @@ exports.ConversationType = exports.$Enums.ConversationType = {
   MENTORSHIP: 'MENTORSHIP',
   AGENT_BUILDER: 'AGENT_BUILDER',
   AGENT_EXECUTOR: 'AGENT_EXECUTOR',
-  AGENT_OPERATOR: 'AGENT_OPERATOR'
+  AGENT_OPERATOR: 'AGENT_OPERATOR',
+  WAR_ROOM: 'WAR_ROOM'
 };
 
 exports.MessageRole = exports.$Enums.MessageRole = {
@@ -3607,12 +3979,6 @@ exports.FeedbackType = exports.$Enums.FeedbackType = {
   IRRELEVANT: 'IRRELEVANT',
   TOO_LONG: 'TOO_LONG',
   TOO_SHORT: 'TOO_SHORT'
-};
-
-exports.ShareAccessLevel = exports.$Enums.ShareAccessLevel = {
-  VIEW: 'VIEW',
-  COMMENT: 'COMMENT',
-  FULL: 'FULL'
 };
 
 exports.AiActionType = exports.$Enums.AiActionType = {
@@ -3749,13 +4115,6 @@ exports.AgentTaskType = exports.$Enums.AgentTaskType = {
   CUSTOM: 'CUSTOM'
 };
 
-exports.TaskPriority = exports.$Enums.TaskPriority = {
-  URGENT: 'URGENT',
-  HIGH: 'HIGH',
-  NORMAL: 'NORMAL',
-  LOW: 'LOW'
-};
-
 exports.AgentTaskStatus = exports.$Enums.AgentTaskStatus = {
   PENDING: 'PENDING',
   QUEUED: 'QUEUED',
@@ -3841,10 +4200,33 @@ exports.AgentStatus = exports.$Enums.AgentStatus = {
   ERROR: 'ERROR'
 };
 
+exports.AgentRelationType = exports.$Enums.AgentRelationType = {
+  SUB_AGENT: 'SUB_AGENT',
+  PEER: 'PEER',
+  SUPERVISOR: 'SUPERVISOR',
+  CRITIC: 'CRITIC'
+};
+
+exports.GuestType = exports.$Enums.GuestType = {
+  PERMISSION_CONTROLLED: 'PERMISSION_CONTROLLED',
+  VIEW_ONLY: 'VIEW_ONLY',
+  FREE_FOREVER: 'FREE_FOREVER'
+};
+
+exports.PermissionLevel = exports.$Enums.PermissionLevel = {
+  VIEW: 'VIEW',
+  COMMENT: 'COMMENT',
+  EDIT: 'EDIT',
+  FULL: 'FULL'
+};
+
 exports.Prisma.ModelName = {
   Account: 'Account',
   Session: 'Session',
   User: 'User',
+  Organization: 'Organization',
+  OrganizationMember: 'OrganizationMember',
+  Department: 'Department',
   Workspace: 'Workspace',
   WorkspaceMember: 'WorkspaceMember',
   WorkspaceInvitation: 'WorkspaceInvitation',
@@ -3852,7 +4234,8 @@ exports.Prisma.ModelName = {
   WorkspaceIntegration: 'WorkspaceIntegration',
   AutomationLog: 'AutomationLog',
   Task: 'Task',
-  Status: 'Status',
+  TaskType: 'TaskType',
+  TaskStatus: 'TaskStatus',
   TaskDependency: 'TaskDependency',
   TaskAssignee: 'TaskAssignee',
   TaskWatcher: 'TaskWatcher',
@@ -3867,6 +4250,7 @@ exports.Prisma.ModelName = {
   Folder: 'Folder',
   List: 'List',
   View: 'View',
+  ViewShare: 'ViewShare',
   Dashboard: 'Dashboard',
   DashboardWidget: 'DashboardWidget',
   Goal: 'Goal',
@@ -3888,6 +4272,10 @@ exports.Prisma.ModelName = {
   FounderProfile: 'FounderProfile',
   InvestorProfile: 'InvestorProfile',
   MemberProfile: 'MemberProfile',
+  MarketplaceService: 'MarketplaceService',
+  MarketplaceOrder: 'MarketplaceOrder',
+  CapTableEntry: 'CapTableEntry',
+  InvestorUpdate: 'InvestorUpdate',
   Project: 'Project',
   ProjectMember: 'ProjectMember',
   ProjectOwnershipTransfer: 'ProjectOwnershipTransfer',
@@ -3914,7 +4302,9 @@ exports.Prisma.ModelName = {
   Interest: 'Interest',
   UserInterest: 'UserInterest',
   Connection: 'Connection',
+  Conversation: 'Conversation',
   Message: 'Message',
+  MessageDelivery: 'MessageDelivery',
   ProjectLike: 'ProjectLike',
   ProjectComment: 'ProjectComment',
   ProposalComment: 'ProposalComment',
@@ -3991,7 +4381,18 @@ exports.Prisma.ModelName = {
   AgentVersion: 'AgentVersion',
   AgentAuditLog: 'AgentAuditLog',
   AiAgent: 'AiAgent',
-  SystemTool: 'SystemTool'
+  SystemTool: 'SystemTool',
+  AgentSkill: 'AgentSkill',
+  AgentToSkill: 'AgentToSkill',
+  SkillToTool: 'SkillToTool',
+  AgentRelation: 'AgentRelation',
+  AgentTemplate: 'AgentTemplate',
+  WorkspaceGuest: 'WorkspaceGuest',
+  LocationPermission: 'LocationPermission',
+  TaskPermission: 'TaskPermission',
+  CustomRole: 'CustomRole',
+  PermissionInvitation: 'PermissionInvitation',
+  PublicLink: 'PublicLink'
 };
 
 /**

@@ -1,7 +1,7 @@
 // hooks/useActivityLogs.ts
 'use client';
 
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { trpc } from '@/lib/trpc';
 import { useSocket } from '@/components/providers/SocketProvider';
 import { useEffect, useRef, useCallback } from 'react';
@@ -36,9 +36,10 @@ export function useActivityLogs(params: UseActivityLogsParams) {
   const queryKey = ['logs.list', queryParams];
 
   // Fetch logs via tRPC
-  const { data: logsResp, isLoading } = trpc.logs.list.useQuery(queryParams, { 
+  const { data: logsResp, isLoading } = trpc.logs.list.useQuery(queryParams, {
     enabled: isConnected,
     staleTime: 30000, // Cache for 30 seconds
+    placeholderData: keepPreviousData,
   });
 
   // Memoized filter check function
@@ -62,14 +63,14 @@ export function useActivityLogs(params: UseActivityLogsParams) {
     queryClient.setQueryData(queryKey, (old: any) => {
       if (!old) return old;
       const items = (old?.items ?? []) as ActivityLog[];
-      
+
       // Prevent duplicates
       if (items.some(l => l.id === log.id)) return old;
-      
+
       // Add new log at the beginning and limit to pageSize
-      return { 
-        ...old, 
-        items: [log, ...items].slice(0, queryParams.pageSize) 
+      return {
+        ...old,
+        items: [log, ...items].slice(0, queryParams.pageSize)
       };
     });
   }, [queryClient, queryKey, matchesFilters, queryParams.pageSize]);

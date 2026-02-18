@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { keepPreviousData } from "@tanstack/react-query";
 
 export type ProjectScope = "all" | "owned" | "participated";
 
@@ -9,7 +10,7 @@ export function useProjectList() {
   const pageSize = 12;
   const [query, setQuery] = useState("");
   const [scope, setScope] = useState<ProjectScope>("owned");
-  const [filters, setFilters] = useState<{ industries: string[]; status?: "DRAFT"|"PUBLISHED"|"ARCHIVED"|"" }>({ industries: [], status: "" as any });
+  const [filters, setFilters] = useState<{ industries: string[]; status?: "DRAFT" | "PUBLISHED" | "ARCHIVED" | "" }>({ industries: [], status: "" as any });
 
   const listInput = useMemo(
     () => ({
@@ -23,7 +24,10 @@ export function useProjectList() {
     [page, pageSize, query, scope, filters]
   );
 
-  const { data, isLoading, isFetching } = trpc.project.list.useQuery(listInput as any, { staleTime: 30_000 });
+  const { data, isLoading, isFetching } = trpc.project.list.useQuery(listInput as any, {
+    staleTime: 30_000,
+    placeholderData: keepPreviousData
+  });
   const utils = trpc.useUtils();
 
   useEffect(() => { setPage(1); }, [query, scope, filters]);

@@ -1,8 +1,8 @@
 'use client';
 import React, { useCallback } from 'react';
-import axios from 'axios';
 import { getStripe } from '@/lib/stripe/client';
 import { Button } from '@/components/ui/button';
+import { billingService } from '@/services/billing.service';
 
 interface StripeButtonProps {
   event: { type: string };
@@ -23,11 +23,24 @@ const StripeButton: React.FC<StripeButtonProps> = ({
     try {
       const stripe = await getStripe();
       if (!stripe) throw new Error('Stripe not initialized');
-      const endpoint =
-        event.type === "BILLING.PAYMENT.SUBSCRIPTION"
-          ? '/api/billing/stripe/subscribe'
-          : '/api/billing/stripe/checkout';
-      const { data } = await axios.post(endpoint, { event, params });
+
+      const isSubscription = event.type === "BILLING.PAYMENT.SUBSCRIPTION";
+      const response = isSubscription
+        ? await billingService.stripe.createSubscription({
+          userId: params.userId,
+          planId: params.planId || params.priceId,
+          successUrl: params.successUrl,
+          cancelUrl: params.cancelUrl,
+          trialPeriodDays: params.trial_period_days,
+        })
+        : await billingService.stripe.createCheckout({
+          userId: params.userId,
+          packageId: params.packageId || params.priceId,
+          successUrl: params.successUrl,
+          cancelUrl: params.cancelUrl,
+        });
+
+      const data = await response.json();
       if (!data?.result?.url) {
         throw new Error('Invalid checkout session response');
       }

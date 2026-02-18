@@ -1,4 +1,4 @@
-import { 
+import {
   LayoutDashboard,
   MessageSquare,
   FileText,
@@ -8,36 +8,38 @@ import {
   CheckSquare,
   Users,
   ChevronLeft,
-  ChevronRight,
-  Bot
+  Bot,
+  Swords,
+  Briefcase
 } from 'lucide-react';
 
 export const actions = [
-    {
-      title: "Create Proposal",
-      description: "Draft and publish to marketplace",
-      href: "#proposals",
-      buttonText: "New Proposal",
-      variant: "primary" as const
-    },
-    {
-      title: "Create Project",
-      description: "Spin up a new initiative",
-      href: "#projects",
-      buttonText: "New Project",
-      variant: "outline" as const
-    },
-    {
-      title: "Create Team",
-      description: "Assemble collaborators",
-      href: "#teams",
-      buttonText: "New Team",
-      variant: "outline" as const
-    }
-  ];
+  {
+    title: "Create Proposal",
+    description: "Draft and publish to marketplace",
+    href: "#proposals",
+    buttonText: "New Proposal",
+    variant: "primary" as const
+  },
+  {
+    title: "Create Project",
+    description: "Spin up a new initiative",
+    href: "#projects",
+    buttonText: "New Project",
+    variant: "outline" as const
+  },
+  {
+    title: "Create Team",
+    description: "Assemble collaborators",
+    href: "#teams",
+    buttonText: "New Team",
+    variant: "outline" as const
+  }
+];
 
 export const projectMenuItems = [
   { label: "Overview", value: "overview", icon: LayoutDashboard },
+  { label: "Analytics", value: "analytics", icon: Activity },
   { label: "Discussions", value: "discussions", icon: MessageSquare },
   { label: "AI Chat", value: "chat", icon: Bot },
   { label: "Logs", value: "logs", icon: FileText },
@@ -46,10 +48,13 @@ export const projectMenuItems = [
   { label: "Governance", value: "governance", icon: Scale },
   { label: "Tasks", value: "tasks", icon: CheckSquare },
   { label: "Members", value: "members", icon: Users },
+  { label: "War Room", value: "war_room", icon: Swords },
+  { label: "Marketplace", value: "marketplace", icon: Briefcase },
 ] as const;
 
 export const agentMenuItems = [
   { label: "Overview", value: "overview", icon: LayoutDashboard },
+  { label: "Team", value: "team", icon: Users },
   { label: "Builder", value: "builder", icon: Users },
   { label: "Automation", value: "automation", icon: Users },
   { label: "Chat", value: "chat", icon: Bot },

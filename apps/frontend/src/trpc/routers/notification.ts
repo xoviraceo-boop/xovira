@@ -13,10 +13,10 @@ export const notificationRouter = router({
 		}))
 		.query(async ({ ctx, input }: { ctx: { session: any }; input: { page: number; pageSize: number; unreadOnly: boolean } }) => {
 			const userId = ctx.session!.user!.id;
-			
+
 			const where: any = { userId };
 			if (input.unreadOnly) {
-				where.isRead = false;
+				where.read = false;
 			}
 
 			const skip = (input.page - 1) * input.pageSize;
@@ -43,10 +43,10 @@ export const notificationRouter = router({
 		}))
 		.query(async ({ ctx, input }: { ctx: { session: any }; input: { pageSize: number; unreadOnly: boolean } }) => {
 			const userId = ctx.session!.user!.id;
-			
+
 			const where: any = { userId };
 			if (input.unreadOnly) {
-				where.isRead = false;
+				where.read = false;
 			}
 
 			const take = input.pageSize;
@@ -60,10 +60,10 @@ export const notificationRouter = router({
 				}),
 			]);
 
-			return { 
-				notifications, 
-				total, 
-				page: 1, 
+			return {
+				notifications,
+				total,
+				page: 1,
 				pageSize: input.pageSize,
 				hasNextPage: notifications.length === input.pageSize && notifications.length < total
 			};
@@ -74,14 +74,14 @@ export const notificationRouter = router({
 		.input(z.object({ notificationId: z.string() }))
 		.mutation(async ({ ctx, input }: { ctx: { session: any }; input: { notificationId: string } }) => {
 			const userId = ctx.session!.user!.id;
-			
+
 			const notification = await prisma.notification.update({
 				where: {
 					id: input.notificationId,
 					userId,
 				},
 				data: {
-					isRead: true,
+					read: true,
 					readAt: new Date(),
 				},
 			});
@@ -127,14 +127,14 @@ export const notificationRouter = router({
 	markAllAsRead: protectedProcedure
 		.mutation(async ({ ctx }: { ctx: { session: any } }) => {
 			const userId = ctx.session!.user!.id;
-			
+
 			await prisma.notification.updateMany({
 				where: {
 					userId,
-					isRead: false,
+					read: false,
 				},
 				data: {
-					isRead: true,
+					read: true,
 					readAt: new Date(),
 				},
 			});
@@ -146,11 +146,11 @@ export const notificationRouter = router({
 	getUnreadCount: protectedProcedure
 		.query(async ({ ctx }: { ctx: { session: any } }) => {
 			const userId = ctx.session!.user!.id;
-			
+
 			const count = await prisma.notification.count({
 				where: {
 					userId,
-					isRead: false,
+					read: false,
 				},
 			});
 
@@ -162,7 +162,7 @@ export const notificationRouter = router({
 		.input(z.object({ notificationId: z.string() }))
 		.mutation(async ({ ctx, input }: { ctx: { session: any }; input: { notificationId: string } }) => {
 			const userId = ctx.session!.user!.id;
-			
+
 			await prisma.notification.delete({
 				where: {
 					id: input.notificationId,
@@ -173,85 +173,85 @@ export const notificationRouter = router({
 			return { success: true };
 		}),
 
-  // Create notifications for all project members (and owner), excluding the actor
-  createForProjectMembers: protectedProcedure
-    .input(z.object({
-      projectId: z.string(),
-      title: z.string().min(1),
-      content: z.string().min(1),
-      relatedId: z.string().optional(),
-      relatedType: z.enum(["POST","PROJECT","PROPOSAL","TEAM"]).default("POST"),
-    }))
-    .mutation(async ({ ctx, input }: { ctx: { session: any }; input: { projectId: string; title: string; content: string; relatedId?: string; relatedType: "POST"|"PROJECT"|"PROPOSAL"|"TEAM" } }) => {
-      const actorId = ctx.session!.user!.id;
+	// Create notifications for all project members (and owner), excluding the actor
+	createForProjectMembers: protectedProcedure
+		.input(z.object({
+			projectId: z.string(),
+			title: z.string().min(1),
+			content: z.string().min(1),
+			relatedId: z.string().optional(),
+			relatedType: z.enum(["POST", "PROJECT", "PROPOSAL", "TEAM"]).default("POST"),
+		}))
+		.mutation(async ({ ctx, input }: { ctx: { session: any }; input: { projectId: string; title: string; content: string; relatedId?: string; relatedType: "POST" | "PROJECT" | "PROPOSAL" | "TEAM" } }) => {
+			const actorId = ctx.session!.user!.id;
 
-      const project = await prisma.project.findUnique({
-        where: { id: input.projectId },
-        include: {
-          members: { select: { userId: true } },
-        },
-      });
+			const project = await prisma.project.findUnique({
+				where: { id: input.projectId },
+				include: {
+					members: { select: { userId: true } },
+				},
+			});
 
-      if (!project) throw new Error("Project not found");
+			if (!project) throw new Error("Project not found");
 
-      const recipientIds = new Set<string>();
-      if (project.ownerId && project.ownerId !== actorId) recipientIds.add(project.ownerId);
-      for (const m of project.members) {
-        if (m.userId && m.userId !== actorId) recipientIds.add(m.userId);
-      }
+			const recipientIds = new Set<string>();
+			if (project.ownerId && project.ownerId !== actorId) recipientIds.add(project.ownerId);
+			for (const m of project.members) {
+				if (m.userId && m.userId !== actorId) recipientIds.add(m.userId);
+			}
 
-      if (recipientIds.size === 0) return { created: 0, userIds: [] as string[] } as const;
+			if (recipientIds.size === 0) return { created: 0, userIds: [] as string[] } as const;
 
-      await prisma.notification.createMany({
-        data: Array.from(recipientIds).map((userId) => ({
-          userId,
-          type: NotificationType.PROJECT_UPDATE,
-          title: input.title,
-          content: input.content,
-          relatedId: input.relatedId,
-          relatedType: input.relatedType,
-        })),
-        skipDuplicates: true,
-      });
+			await prisma.notification.createMany({
+				data: Array.from(recipientIds).map((userId) => ({
+					userId,
+					type: NotificationType.PROJECT_UPDATE,
+					title: input.title,
+					content: input.content,
+					relatedId: input.relatedId,
+					relatedType: input.relatedType,
+				})),
+				skipDuplicates: true,
+			});
 
-      return { created: recipientIds.size, userIds: Array.from(recipientIds) } as const;
-    }),
+			return { created: recipientIds.size, userIds: Array.from(recipientIds) } as const;
+		}),
 
-  // Create notifications for specific userIds (mentions)
-  createForUserIds: protectedProcedure
-    .input(z.object({
-      userIds: z.array(z.string()).min(1),
-      title: z.string().min(1),
-      content: z.string().min(1),
-      relatedId: z.string().optional(),
-      relatedType: z.enum(["POST","PROJECT","PROPOSAL","TEAM","COMMENT"]).default("POST"),
-    }))
-    .mutation(async ({ ctx, input }: { ctx: { session: any }; input: { userIds: string[]; title: string; content: string; relatedId?: string; relatedType: "POST"|"PROJECT"|"PROPOSAL"|"TEAM"|"COMMENT" } }) => {
-      const actorId = ctx.session!.user!.id;
-      const recipients = Array.from(new Set(input.userIds.filter((id) => id !== actorId)));
-      if (recipients.length === 0) return { created: 0, userIds: [] as string[] } as const;
+	// Create notifications for specific userIds (mentions)
+	createForUserIds: protectedProcedure
+		.input(z.object({
+			userIds: z.array(z.string()).min(1),
+			title: z.string().min(1),
+			content: z.string().min(1),
+			relatedId: z.string().optional(),
+			relatedType: z.enum(["POST", "PROJECT", "PROPOSAL", "TEAM", "COMMENT"]).default("POST"),
+		}))
+		.mutation(async ({ ctx, input }: { ctx: { session: any }; input: { userIds: string[]; title: string; content: string; relatedId?: string; relatedType: "POST" | "PROJECT" | "PROPOSAL" | "TEAM" | "COMMENT" } }) => {
+			const actorId = ctx.session!.user!.id;
+			const recipients = Array.from(new Set(input.userIds.filter((id) => id !== actorId)));
+			if (recipients.length === 0) return { created: 0, userIds: [] as string[] } as const;
 
-      await prisma.notification.createMany({
-        data: recipients.map((userId) => ({
-          userId,
-          type: NotificationType.MESSAGE_RECEIVED,
-          title: input.title,
-          content: input.content,
-          relatedId: input.relatedId,
-          relatedType: input.relatedType,
-        })),
-        skipDuplicates: true,
-      });
+			await prisma.notification.createMany({
+				data: recipients.map((userId) => ({
+					userId,
+					type: NotificationType.MESSAGE_RECEIVED,
+					title: input.title,
+					content: input.content,
+					relatedId: input.relatedId,
+					relatedType: input.relatedType,
+				})),
+				skipDuplicates: true,
+			});
 
-      return { created: recipients.length, userIds: recipients } as const;
-    }),
+			return { created: recipients.length, userIds: recipients } as const;
+		}),
 
 	// Get notification by ID
 	getNotification: protectedProcedure
 		.input(z.object({ notificationId: z.string() }))
 		.query(async ({ ctx, input }: { ctx: { session: any }; input: { notificationId: string } }) => {
 			const userId = ctx.session!.user!.id;
-			
+
 			return prisma.notification.findFirst({
 				where: {
 					id: input.notificationId,

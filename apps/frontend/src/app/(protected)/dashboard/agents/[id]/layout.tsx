@@ -2,7 +2,7 @@
 "use client";
 
 import { createContext, useContext, useMemo } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { trpc } from '@/lib/trpc';
 import Layout from '@/features/dashboard/layouts/agent';
@@ -35,11 +35,21 @@ interface AgentLayoutProps {
 
 export default function AgentLayout({ children }: AgentLayoutProps) {
   const params = useParams();
+  const searchParams = useSearchParams();
   const { data: session } = useSession();
   const agentId = params.id as string;
+  const activeTab = searchParams.get('tab') || 'overview';
+
+  const conversationType = useMemo(() => {
+    switch (activeTab) {
+      case 'builder': return 'AGENT_OPERATOR';
+      case 'chat': return 'AGENT_EXECUTOR';
+      default: return 'AGENT_BUILDER';
+    }
+  }, [activeTab]);
 
   const { data: agent, isLoading, refetch } = trpc.agent.get.useQuery(
-    { id: agentId },
+    { id: agentId, conversationType },
     { enabled: !!agentId }
   );
 
@@ -59,7 +69,7 @@ export default function AgentLayout({ children }: AgentLayoutProps) {
 
   const handleTogglePublish = async () => {
     if (!agent) return;
-    
+
     const newStatus = agent.status === 'ACTIVE' ? 'DRAFT' : 'ACTIVE';
     updateAgent.mutate({
       id: agent.id,
@@ -71,13 +81,13 @@ export default function AgentLayout({ children }: AgentLayoutProps) {
   const contextValue: AgentContextValue = {
     agentData: agent,
     isLoading,
-      isPublished,
-      currentStatus,
+    isPublished,
+    currentStatus,
     isPublishing: updateAgent.isPending,
     localDraft: null,
-      refetch,
-      handleTogglePublish,
-      isOwner,
+    refetch,
+    handleTogglePublish,
+    isOwner,
   };
 
   return (

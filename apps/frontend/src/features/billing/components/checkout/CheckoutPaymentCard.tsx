@@ -4,8 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import PaypalButton from "@/features/billing/components/paypal/PaypalButton";
 import StripeButton from "@/features/billing/components/stripe/StripeButton";
-import { PaypalService } from "@/features/billing/services/paypal.service";
-import { StripeService } from "@/features/billing/services/stripe.service";
+import { PaypalService } from "@/services/paypal.service";
 import { useSession } from "next-auth/react";
 import { useMemo, useCallback } from "react";
 
@@ -20,10 +19,6 @@ export default function CheckoutPaymentCard({ pkg, onError }: CheckoutPaymentCar
   // Initialize services with proper user ID
   const paypalService = useMemo(
     () => new PaypalService(session?.user?.id || ''),
-    [session?.user?.id]
-  );
-  const stripeService = useMemo(
-    () => new StripeService(session?.user?.id || ''),
     [session?.user?.id]
   );
 
@@ -59,7 +54,7 @@ export default function CheckoutPaymentCard({ pkg, onError }: CheckoutPaymentCar
               One-time purchase
             </Badge>
           </div>
-          
+
           <StripeButton
             event={{ type: "BILLING.PAYMENT.ORDER" }}
             params={{
@@ -97,7 +92,7 @@ export default function CheckoutPaymentCard({ pkg, onError }: CheckoutPaymentCar
               One-time purchase
             </Badge>
           </div>
-          
+
           <PaypalButton
             event={{ type: "BILLING.PAYMENT.ORDER" }}
             createAction={async (_, actions) => {

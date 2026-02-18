@@ -43,7 +43,7 @@ export interface RenderedMessage {
 
 interface ChatMessageListProps {
   messages: RenderedMessage[]
-  pendingAssistantMessage?: string | null
+  pendingAssistantMessage?: string | React.ReactNode | null
   onFollowupClick?: (messageId: string, followup: MessageFollowup) => void
   onActionClick?: (messageId: string, action: MessageAction) => void
   onFeedbackChange?: (messageId: string, isHelpful: boolean | null) => void
@@ -318,9 +318,16 @@ export const ChatMessageList = memo(function ChatMessageList({
   const bottomRef = useRef<HTMLDivElement | null>(null)
 
   // Memoize rendered messages to prevent recalculation
+  const isPendingReactNode = pendingAssistantMessage !== null && pendingAssistantMessage !== undefined && typeof pendingAssistantMessage === 'object'
+
   const renderedMessages = useMemo(() => {
     // If pendingAssistantMessage is null, no pending message
     if (pendingAssistantMessage === null) {
+      return messages
+    }
+
+    // If pendingAssistantMessage is a React node (e.g. ChatThinkingIndicator), don't add to messages; render separately
+    if (isPendingReactNode) {
       return messages
     }
 
@@ -329,8 +336,8 @@ export const ChatMessageList = memo(function ChatMessageList({
       return messages
     }
 
-    // If pendingAssistantMessage has content, show streaming message
-    const content = pendingAssistantMessage ?? ''
+    // If pendingAssistantMessage has string content, show streaming message
+    const content = String(pendingAssistantMessage)
 
     return [
       ...messages,
@@ -342,9 +349,10 @@ export const ChatMessageList = memo(function ChatMessageList({
         parts: [{ type: 'text', text: content } satisfies MessagePart],
       },
     ]
-  }, [messages, pendingAssistantMessage])
+  }, [messages, pendingAssistantMessage, isPendingReactNode])
 
-  const showTypingIndicator = pendingAssistantMessage === ''
+  const showTypingIndicator = !isPendingReactNode && pendingAssistantMessage === ''
+  const showPendingReactNode = isPendingReactNode && !!pendingAssistantMessage
 
   // Auto-scroll only when new messages are added or streaming
   useEffect(() => {
@@ -390,7 +398,7 @@ export const ChatMessageList = memo(function ChatMessageList({
       <div ref={scrollRef} className="flex flex-col gap-3 px-4 py-4 sm:gap-4 sm:px-6 sm:py-6 md:px-8">
         {renderedMessages.map((message, index) => {
           const isUser = message.role === MessageRole.USER
-          const isLast = index === renderedMessages.length - 1 && !showTypingIndicator
+          const isLast = index === renderedMessages.length - 1 && !showTypingIndicator && !showPendingReactNode
 
           return (
             <MessageItem
@@ -406,8 +414,9 @@ export const ChatMessageList = memo(function ChatMessageList({
         })}
 
         {showTypingIndicator && <TypingIndicatorMessage />}
+        {showPendingReactNode && <div className="py-2">{pendingAssistantMessage as React.ReactNode}</div>}
 
-        {renderedMessages.length === 0 && !showTypingIndicator && (
+        {renderedMessages.length === 0 && !showTypingIndicator && !showPendingReactNode && (
           <div className="flex flex-col items-center justify-center gap-2 py-12 text-center text-sm text-muted-foreground sm:py-16">
             <div className="rounded-full bg-slate-100 p-4 sm:p-6">
               <span className="text-3xl sm:text-4xl">💬</span>

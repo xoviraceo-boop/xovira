@@ -21,7 +21,10 @@
     "prepare": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "luxon": "^3.5.0",
+    "@xovira/database": "workspace:*",
+    "@types/luxon": "^3.4.0"
   },
   "devDependencies": {
     "rimraf": "^6.1.0"

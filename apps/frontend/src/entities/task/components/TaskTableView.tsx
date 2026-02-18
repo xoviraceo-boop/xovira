@@ -8,10 +8,11 @@ import { Input } from '@/components/ui/input'
 import { ArrowUpDown, ArrowUp, ArrowDown, Filter, X, UserIcon, Bot } from 'lucide-react'
 import { TaskContextType } from './TaskView'
 import { trpc } from '@/lib/trpc'
-import { CreateTaskModal } from './TaskCreationModal'
+import { TaskCreationModal } from './TaskCreationModal'
 import { Badge } from '@/components/ui/badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
+import { TaskTypeIcon } from './TaskTypeIcon'
 
 type Option = { id: string; name: string }
 
@@ -86,7 +87,7 @@ export function TaskTableView({
       filtered = filtered.filter((t: any) => t.list?.id === filters.list)
     }
     if (filters.status) {
-      filtered = filtered.filter((t: any) => (t.status || 'OPEN') === filters.status)
+      filtered = filtered.filter((t: any) => (t.status?.name || t.statusId || t.status || 'OPEN') === filters.status)
     }
 
     // Apply sorting
@@ -116,8 +117,8 @@ export function TaskTableView({
           bVal = b.list?.name || ''
           break
         case 'status':
-          aVal = a.status || 'OPEN'
-          bVal = b.status || 'OPEN'
+          aVal = a.status?.name || a.statusId || a.status || 'OPEN'
+          bVal = b.status?.name || b.statusId || b.status || 'OPEN'
           break
         case 'updatedAt':
           aVal = new Date(a.updatedAt || 0).getTime()
@@ -194,7 +195,7 @@ export function TaskTableView({
             </Button>
           )}
         </div>
-        <CreateTaskModal
+        <TaskCreationModal
           context={context}
           contextId={contextId}
           workspaceId={workspaceId}
@@ -440,8 +441,16 @@ export function TaskTableView({
               </TableRow>
             ) : (
               filteredAndSortedTasks.map((task: any) => (
-                  <TableRow key={task.id} className="hover:bg-gray-50/50">
-                    <TableCell className="font-medium">{task.title}</TableCell>
+                <TableRow key={task.id} className="hover:bg-gray-50/50">
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      <TaskTypeIcon
+                        type={task.taskTypeId || task.taskType?.id || task.taskType}
+                        className="h-4 w-4"
+                      />
+                      {task.title}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {task.assignees && task.assignees.length > 0 ? (
@@ -472,27 +481,27 @@ export function TaskTableView({
                       )}
                     </div>
                   </TableCell>
-                    <TableCell>{task.project?.name || '-'}</TableCell>
-                    <TableCell>{task.team?.name || '-'}</TableCell>
-                    <TableCell>{task.list?.name || '-'}</TableCell>
-                    <TableCell>
-                      <Badge
-                        className={cn(
-                          'text-xs',
-                        statusColors[task.status || 'OPEN'] || 'bg-muted text-muted-foreground'
-                        )}
-                      >
-                      {task.status || 'OPEN'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {new Date(task.updatedAt).toLocaleDateString(undefined, {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}
-                    </TableCell>
-                  </TableRow>
+                  <TableCell>{task.project?.name || '-'}</TableCell>
+                  <TableCell>{task.team?.name || '-'}</TableCell>
+                  <TableCell>{task.list?.name || '-'}</TableCell>
+                  <TableCell>
+                    <Badge
+                      className={cn(
+                        'text-xs',
+                        statusColors[task.status?.name || task.statusId || task.status || 'OPEN'] || 'bg-muted text-muted-foreground'
+                      )}
+                    >
+                      {task.status?.name || task.statusId || task.status || 'OPEN'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {new Date(task.updatedAt).toLocaleDateString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                  </TableCell>
+                </TableRow>
               ))
             )}
           </TableBody>

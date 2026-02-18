@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { API_AUTH_PREFIX, AUTH_ROUTES, PROTECTED_ROUTES } from "./constants/routes";
+import { API_AUTH_PREFIX, AUTH_ROUTES, PROTECTED_ROUTES } from "./constants/routes.config";
+
 
 export async function middleware(request: NextRequest) {
   const url = request.nextUrl;
@@ -11,27 +12,27 @@ export async function middleware(request: NextRequest) {
   const isStatic = pathname.startsWith("/_next") || /\.(?:svg|png|jpg|jpeg|gif|webp|ico)$/.test(pathname);
   const isAccessingApiAuthRoute = pathname.startsWith(API_AUTH_PREFIX);
   const isApiRoute = pathname.startsWith("/api");
-  
+
   if (isAccessingApiAuthRoute || isStatic || isApiRoute) {
     return NextResponse.next();
   }
 
-  const isAccessingPublicRoute = pathname === "/";
   const isAccessingAuthRoute = AUTH_ROUTES.some(route => pathname.startsWith(route));
   const isOnboarding = pathname.startsWith("/onboarding");
-  const isProtectedRoute = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
+  const isInviteAccept = pathname.startsWith("/invite/accept");
+  const isProtectedRoute = pathname === "/" || PROTECTED_ROUTES.filter(route => route !== "/").some(route => pathname.startsWith(route));
 
   const token = await getToken({ req: request, secret: process.env.AUTH_SECRET, secureCookie: process.env.APP_ENV === 'production' });
   const isAuthenticated = !!token;
 
-  // Allow public route access for everyone
-  if (isAccessingPublicRoute) {
+  // Allow public access to invitation acceptance page
+  if (isInviteAccept) {
     return NextResponse.next();
   }
 
   // Redirect authenticated users away from auth routes
   if (isAuthenticated && isAccessingAuthRoute) {
-    return NextResponse.redirect(new URL("/home", url));
+    return NextResponse.redirect(new URL("/", url));
   }
 
   // Redirect unauthenticated users to login
@@ -47,7 +48,7 @@ export async function middleware(request: NextRequest) {
     }
 
     if (onboardingCompleted && isOnboarding) {
-      return NextResponse.redirect(new URL("/home", url));
+      return NextResponse.redirect(new URL("/", url));
     }
   }
 

@@ -1,10 +1,12 @@
 import { OverviewView } from './OverviewView';
-import { BuilderView } from './BuilderView';
+import { OperatorView } from './OperatorView';
 import { AutomationView } from './AutomationView';
 import { ChatView } from './ChatView';
 import { ActivitiesView } from './ActivitiesView';
 import { TasksView } from './TasksView';
 import { LogsView } from './LogsView';
+
+import { TeamView } from './TeamView';
 
 interface ViewSwitcherProps {
   activeTab: string;
@@ -17,8 +19,10 @@ export default function ViewSwitcher({ activeTab, agent }: ViewSwitcherProps) {
     switch (activeTab) {
       case 'overview':
         return <OverviewView agent={agent} />;
+      case 'team':
+        return <TeamView agent={agent} />;
       case 'builder':
-        return <BuilderView agent={agent} />;
+        return <OperatorView agent={agent} />;
       case 'automation':
         return <AutomationView agent={agent} />;
       case 'chat':

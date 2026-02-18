@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Heart, MessageSquare, Eye, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { UserProfileHoverCard } from "@/entities/users/components/UserProfileHoverCard";
 
 export default function PublicProfileCard({ profile }: { profile: any }) {
   const router = useRouter();
@@ -38,9 +39,11 @@ export default function PublicProfileCard({ profile }: { profile: any }) {
       <div className="relative z-10">
         <CardHeader className="p-4 sm:p-6 pb-3 sm:pb-4">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 text-white flex items-center justify-center font-semibold">
-              {(profile.firstName || profile.username || 'U').charAt(0).toUpperCase()}
-            </div>
+            <UserProfileHoverCard userId={profile.id}>
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 text-white flex items-center justify-center font-semibold cursor-pointer">
+                {(profile.firstName || profile.username || 'U').charAt(0).toUpperCase()}
+              </div>
+            </UserProfileHoverCard>
             <div className="min-w-0">
               <CardTitle className="text-base sm:text-lg font-bold text-slate-900 leading-tight">
                 {profile.firstName || profile.username} {profile.lastName || ''}

@@ -1,59 +1,82 @@
 "use client";
 import React, { useState, useCallback } from "react";
-import { Mail, Lock, Send, Eye, EyeOff } from "lucide-react";
+import NextImage from "next/image";
+import { Mail, ArrowRight, Github, Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { AuthMessage, MessageType } from "../components/AuthMessage";
+import { SignInWithGoogle, SignInWithCredentials, SignInWithMagicLink } from "@/services/auth.service";
 import { AuthContainer } from "../components/AuthContainer";
-import { AuthMessage } from "../components/AuthMessage";
-import { useSession } from "next-auth/react";
-import { SignInWithGoogle, SignInWithCredentials, SignInWithMagicLink } from "@/actions/auth";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
+import { AUTH_MESSAGES, getUserFriendlyMessage } from "../constants/authMessages";
+import { validateCallbackUrl } from "../helpers/authHelpers";
 
 export const LoginView = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const rawCallbackUrl = searchParams?.get('callbackUrl');
+  const callbackUrl = validateCallbackUrl(rawCallbackUrl);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [magicEmail, setMagicEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-  const [loginMethod, setLoginMethod] = useState("password");
+  const [messageType, setMessageType] = useState<MessageType>("error");
   const [showPassword, setShowPassword] = useState(false);
+  const [loginMethod, setLoginMethod] = useState<"password" | "magiclink">("password");
 
-  const labelClass = "block text-sm font-medium text-gray-700 mb-1";
-  const inputClass =
-    "w-full px-4 py-3 bg-white/70 border border-gray-300/50 rounded-lg text-gray-800 transition duration-200 " +
-    "focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 focus:bg-white shadow-sm outline-none";
+  // Enterprise Styling
+  const inputClass = "h-12 bg-white border-gray-300 focus:border-black focus:ring-1 focus:ring-black placeholder:text-gray-400 transition-all rounded-lg text-base";
+  const labelClass = "text-sm font-medium text-gray-700 mb-2 block";
+
+  const clearMessage = useCallback(() => {
+    setMessage("");
+  }, []);
 
   const handleCredentials = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       setLoading(true);
       setMessage("");
+
       try {
-        await SignInWithCredentials(email, password);
-        setMessage("Success! Redirecting...");
-        router.refresh();
+        const result = await SignInWithCredentials(email, password, callbackUrl);
+        if (result.success) {
+          setMessageType("success");
+          setMessage(AUTH_MESSAGES.SUCCESS.LOGIN);
+          // FORCE HARD NAVIGATE to fix session latency
+          setTimeout(() => {
+            window.location.href = callbackUrl;
+          }, 500);
+        } else {
+          setMessageType("error");
+          setMessage(getUserFriendlyMessage(result.error?.code));
+          setLoading(false);
+        }
       } catch (error: any) {
-        setMessage(error.message || "Invalid credentials. Please try again.");
+        setMessageType("error");
+        setMessage(AUTH_MESSAGES.ERROR.INVALID_CREDENTIALS);
+        setLoading(false);
       }
-      setLoading(false);
     },
-    [email, password]
+    [email, password, callbackUrl]
   );
 
   const handleGoogle = useCallback(async () => {
     setLoading(true);
     setMessage("");
     try {
-      await SignInWithGoogle();
-      setMessage("Success! Google login complete.");
-      router.refresh();
+      await SignInWithGoogle(callbackUrl);
+      // Google redirects automatically
     } catch (error: any) {
-      setMessage(error.message || "Google sign-in failed. Please try again.");
+      setMessageType("error");
+      setMessage(AUTH_MESSAGES.ERROR.GOOGLE_CONNECT_FAILED);
+      setLoading(false);
     }
-    setLoading(false);
-  }, []);
+  }, [callbackUrl]);
 
   const handleMagic = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
@@ -61,94 +84,124 @@ export const LoginView = () => {
       setLoading(true);
       setMessage("");
       try {
-        const result = await SignInWithMagicLink(magicEmail);
+        const result = await SignInWithMagicLink(magicEmail, callbackUrl);
         if (result?.success) {
-          setMessage("Check your email for the magic link!");
+          setMessageType("success");
+          setMessage(AUTH_MESSAGES.SUCCESS.MAGIC_LINK_SENT);
+          // Force hard navigate to ensure cookies are set
+          // Preserve callbackUrl so user returns to invitation page after clicking magic link
+          setTimeout(() => {
+            const verifyUrl = `/auth/verify-request?type=magiclink&email=${encodeURIComponent(magicEmail)}`;
+            const urlWithCallback = callbackUrl !== '/'
+              ? `${verifyUrl}&callbackUrl=${encodeURIComponent(callbackUrl)}`
+              : verifyUrl;
+            window.location.href = urlWithCallback;
+          }, 500);
         } else {
-          setMessage(result?.error || "Failed to send magic link.");
+          setMessageType("error");
+          setMessage(AUTH_MESSAGES.ERROR.MAGIC_LINK_FAILED);
         }
       } catch (error: any) {
-        setMessage("Failed to send magic link. Please try again.");
+        setMessageType("error");
+        setMessage(AUTH_MESSAGES.ERROR.GENERIC);
       }
       setLoading(false);
     },
-    [magicEmail]
+    [magicEmail, callbackUrl]
   );
 
   return (
-    <AuthContainer>
-      <div className="max-w-lg mx-auto">
-        <h2 className="text-3xl font-extrabold text-gray-800 mb-2 text-center">
-          Welcome back to{" "}
-          <span className="text-cyan-600">ViewCreator</span>
-        </h2>
-        <p className="text-gray-500 mb-8 text-center">
-          Access your account to keep building standout visuals.
-        </p>
+    <AuthContainer
+      title="Welcome to Xovira"
+      subtitle={
+        <span className="flex items-center gap-1">
+          New to Xovira?
+          <Link href="/register" className="font-medium text-black hover:underline transition-all">
+            Create an account
+          </Link>
+        </span> as any
+      }
+    >
 
-        <AuthMessage message={message} />
+      <AuthMessage message={message} type={messageType} onDismiss={clearMessage} />
 
-        <div className="space-y-4">
-          <Button
-            variant="google"
-            onClick={handleGoogle}
-            disabled={loading}
-            icon={Mail}
-          >
-            Continue with Google
-          </Button>
+      <div className="space-y-4 mb-5">
+        <Button
+          variant="outline"
+          onClick={handleGoogle}
+          disabled={loading}
+          className="w-full h-12 justify-center px-4 bg-white text-gray-700 font-medium hover:bg-gray-50 border border-gray-200 shadow-sm transition-all"
+        >
+          <NextImage
+            src="/images/google-logo.png"
+            alt="Google"
+            width={20}
+            height={20}
+            className="mr-3"
+          />
+          <span className="text-base">Continue with Google</span>
+        </Button>
+      </div>
+
+      <div className="relative my-5">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-gray-200" />
         </div>
-
-        <div className="flex justify-center my-6">
-          <div className="p-1 bg-gray-100 rounded-xl flex shadow-inner">
-            <button
-              type="button"
-              onClick={() => setLoginMethod("password")}
-              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors duration-200 ${
-                loginMethod === "password"
-                  ? "bg-white shadow text-indigo-600"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              Sign in with Password
-            </button>
-            <button
-              type="button"
-              onClick={() => setLoginMethod("magiclink")}
-              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors duration-200 ${
-                loginMethod === "magiclink"
-                  ? "bg-white shadow text-indigo-600"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              Sign in with Magic Link
-            </button>
-          </div>
+        <div className="relative flex justify-center">
+          <span className="bg-white px-4 text-xs font-semibold text-gray-500 uppercase tracking-widest">
+            Or continue with
+          </span>
         </div>
+      </div>
 
+      {/* Toggle */}
+      <div className="flex p-1.5 bg-gray-50 rounded-xl mb-5 border border-gray-100">
+        <button
+          onClick={() => setLoginMethod("password")}
+          className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${loginMethod === "password" ? "bg-white shadow-[0_2px_10px_rgba(0,0,0,0.03)] text-black border border-gray-100" : "text-gray-500 hover:text-gray-900"
+            }`}
+        >
+          Password
+        </button>
+        <button
+          onClick={() => setLoginMethod("magiclink")}
+          className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${loginMethod === "magiclink" ? "bg-white shadow-[0_2px_10px_rgba(0,0,0,0.03)] text-black border border-gray-100" : "text-gray-500 hover:text-gray-900"
+            }`}
+        >
+          Magic Link
+        </button>
+      </div>
+
+      <AnimatePresence mode="wait">
         {loginMethod === "password" ? (
-          <form
+          <motion.form
+            key="password"
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 10 }}
+            transition={{ duration: 0.2 }}
             onSubmit={handleCredentials}
-            className="space-y-4 transition-opacity duration-300"
+            className="space-y-4"
           >
             <div>
-              <Label htmlFor="email" className={labelClass}>
-                Email Address
-              </Label>
+              <Label className={labelClass} htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                placeholder="Enter your email address"
                 className={inputClass}
+                placeholder="name@example.com"
               />
             </div>
             <div>
-              <Label htmlFor="password" className={labelClass}>
-                Password
-              </Label>
+              <div className="flex justify-between items-center">
+                <Label className="text-sm font-medium text-gray-700" htmlFor="password">Password</Label>
+                <Link href="/forgot-password" className="text-xs text-gray-500 hover:text-black hover:underline">
+                  Forgot?
+                </Link>
+              </div>
               <div className="relative">
                 <Input
                   id="password"
@@ -156,78 +209,66 @@ export const LoginView = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  placeholder="Enter your password"
-                  className={inputClass}
+                  className={`${inputClass} pr-10`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
                 >
                   {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
+                    <EyeOff className="h-5 w-5" />
                   ) : (
-                    <Eye className="w-5 h-5" />
+                    <Eye className="h-5 w-5" />
                   )}
                 </button>
               </div>
-              <a
-                href="/forgot-password"
-                className="block text-right text-sm text-indigo-600 hover:text-indigo-500 mt-2"
-              >
-                Forgot password?
-              </a>
             </div>
-
-            <Button type="submit" disabled={loading} icon={Send}>
-              Sign In
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full h-12 bg-black hover:bg-zinc-800 text-white font-medium rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 text-base mt-3"
+            >
+              {loading ? "Signing in..." : "Sign in"}
+              {!loading && <ArrowRight className="ml-2 w-4 h-4" />}
             </Button>
-          </form>
+          </motion.form>
         ) : (
-          <form
+          <motion.form
+            key="magic"
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -10 }}
+            transition={{ duration: 0.2 }}
             onSubmit={handleMagic}
-            className="space-y-4 transition-opacity duration-300"
+            className="space-y-4"
           >
-            <p className="text-sm text-gray-500 mb-4">
-              Enter your email and we'll send you a secure passwordless
-              sign-in link.
-            </p>
             <div>
-              <Label htmlFor="magic" className={labelClass}>
-                Email for magic link
-              </Label>
+              <Label className={labelClass} htmlFor="magic">Email Address</Label>
               <Input
                 id="magic"
                 type="email"
                 value={magicEmail}
                 onChange={(e) => setMagicEmail(e.target.value)}
                 required
-                placeholder="Email address"
                 className={inputClass}
+                placeholder="name@example.com"
               />
+              <p className="mt-2 text-xs text-gray-500">
+                We'll send you a magic link for a password-free sign in.
+              </p>
             </div>
             <Button
               type="submit"
-              variant="primary"
               disabled={loading}
-              icon={Mail}
+              className="w-full h-12 bg-black hover:bg-zinc-800 text-white font-medium rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 text-base mt-4"
             >
-              Send magic link
+              {loading ? "Sending..." : "Send Magic Link"}
+              {!loading && <ArrowRight className="ml-2 w-4 h-4" />}
             </Button>
-          </form>
+          </motion.form>
         )}
-
-        <div className="mt-6 text-center text-sm text-gray-600 border-t pt-6 border-gray-100">
-          New to our platform?
-          <button
-            onClick={() => router.push("/register")}
-            className="ml-1 font-semibold text-indigo-600 hover:text-indigo-700 transition duration-150"
-          >
-            Create Account
-          </button>
-        </div>
-      </div>
+      </AnimatePresence>
     </AuthContainer>
   );
 };

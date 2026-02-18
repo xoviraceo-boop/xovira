@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import Link from "next/link";
 import {
 	LayoutDashboard,
 	FolderKanban,
@@ -9,10 +9,14 @@ import {
 	ChevronLeft,
 	ChevronRight,
 	Menu,
+	Users,
+	Briefcase,
+	User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-export type WorkspaceView = "overview" | "spaces" | "chats" | "ai-chat";
+export type WorkspaceView = "overview" | "personal" | "spaces" | "projects" | "teams" | "chats" | "ai-chat";
 
 interface NavigationSidebarProps {
 	workspaceId: string;
@@ -28,12 +32,16 @@ const navigationItems: Array<{
 	id: WorkspaceView;
 	label: string;
 	icon: React.ComponentType<{ className?: string; size?: number }>;
+	href?: string;
 }> = [
-	{ id: "overview", label: "Overview", icon: LayoutDashboard },
-	{ id: "spaces", label: "Spaces", icon: FolderKanban },
-	{ id: "chats", label: "Chats", icon: MessageSquare },
-	{ id: "ai-chat", label: "AI Chat", icon: Sparkles },
-];
+		{ id: "overview", label: "Overview", icon: LayoutDashboard },
+		{ id: "personal", label: "Personal", icon: User },
+		{ id: "spaces", label: "Spaces", icon: FolderKanban },
+		{ id: "projects", label: "Projects", icon: Briefcase },
+		{ id: "teams", label: "Teams", icon: Users },
+		{ id: "chats", label: "Chats", icon: MessageSquare },
+		{ id: "ai-chat", label: "AI Chat", icon: Sparkles },
+	];
 
 export default function NavigationSidebar({
 	workspaceId,
@@ -47,66 +55,79 @@ export default function NavigationSidebar({
 	return (
 		<aside
 			className={cn(
-				"relative flex flex-col border-r border-slate-200 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 text-white transition-all duration-300 shadow-xl",
+				"relative flex flex-col border-r border-zinc-200 bg-white transition-all duration-300 ease-in-out shadow-lg",
 				collapsed ? "w-16" : "w-72",
-				mode === "overlay" ? "h-full" : "min-h-screen"
+				mode === "overlay" ? "h-full fixed inset-y-0 left-0 z-40" : "h-screen"
 			)}
 		>
-			<div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-sky-500 via-cyan-400 to-blue-500 opacity-60" />
-
 			{/* Header */}
-			<div className="flex items-center justify-between border-b border-white/10 px-4 py-4 backdrop-blur">
-				{!collapsed && <h2 className="text-lg font-semibold">Workspace</h2>}
-				<div className="flex items-center gap-2">
+			<div className="flex h-14 items-center justify-between border-b border-zinc-200 px-3 py-2">
+				{!collapsed && <h2 className="text-sm font-semibold text-zinc-900">Workspace</h2>}
+				<div className="flex items-center gap-2 ml-auto">
 					{mode === "overlay" && (
 						<button
 							aria-label="Close sidebar"
 							onClick={onClose}
-							className="rounded-lg border border-white/20 p-2 transition-colors hover:bg-white/10"
+							className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
 						>
-							<Menu size={18} />
+							<Menu size={16} />
 						</button>
 					)}
 					{onToggleCollapse && (
 						<button
 							aria-label="Toggle sidebar"
 							onClick={onToggleCollapse}
-							className="rounded-lg border border-white/20 p-2 transition-colors hover:bg-white/10"
+							className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 transition-colors"
 						>
-							{collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+							{collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
 						</button>
 					)}
 				</div>
 			</div>
 
 			{/* Navigation */}
-			<nav className="flex-1 overflow-y-auto px-4 py-4">
+			<ScrollArea className="flex-1 px-3 py-4">
 				<div className="space-y-1">
 					{navigationItems.map((item) => {
 						const Icon = item.icon;
 						const isActive = activeView === item.id;
+
+						const commonClassName = cn(
+							"group flex w-full items-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-all duration-200 outline-none",
+							isActive
+								? "bg-primary/10 text-primary"
+								: "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900",
+							collapsed && "justify-center px-2"
+						);
+
+						if (item.href) {
+							return (
+								<Link
+									key={item.id}
+									href={item.href}
+									className={commonClassName}
+									title={collapsed ? item.label : undefined}
+								>
+									<Icon size={18} className={cn("shrink-0", isActive ? "text-primary" : "text-zinc-400 group-hover:text-zinc-900")} />
+									{!collapsed && <span>{item.label}</span>}
+								</Link>
+							);
+						}
+
 						return (
 							<button
 								key={item.id}
-								onClick={() => onViewChange(item.id)}
-								className={cn(
-									"flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
-									"hover:bg-white/10",
-									isActive
-										? "bg-white/15 text-white shadow-sm"
-										: "text-white/80",
-									collapsed && "justify-center"
-								)}
+								onClick={() => onViewChange(item.id as WorkspaceView)}
+								className={commonClassName}
 								title={collapsed ? item.label : undefined}
 							>
-								<Icon size={20} className="shrink-0" />
+								<Icon size={18} className={cn("shrink-0", isActive ? "text-primary" : "text-zinc-400 group-hover:text-zinc-900")} />
 								{!collapsed && <span>{item.label}</span>}
 							</button>
 						);
 					})}
 				</div>
-			</nav>
+			</ScrollArea>
 		</aside>
 	);
 }
-

@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
+import jwt, { TokenExpiredError } from "jsonwebtoken";
 import { prisma } from "@/lib/prisma";
+import {
+  createErrorResponse,
+  AUTH_ERROR_CODES,
+  ERROR_CODE_TO_STATUS
+} from "@/features/auth/types/apiResponse";
 
 const JWT_SECRET = process.env.AUTH_SECRET!;
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -9,30 +14,60 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const token = searchParams.get("token");
 
+  // Validate token presence
   if (!token) {
-    return NextResponse.json({ message: "Missing token" }, { status: 400 });
+    return NextResponse.redirect(
+      `${APP_URL}/auth/error?error=TOKEN_INVALID`
+    );
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { email: string; password: string };
-
-    const existing = await prisma.user.findUnique({ where: { email: decoded.email } });
-    if (existing) {
-      return NextResponse.redirect(`${APP_URL}/login?alreadyVerified=true`);
+    // Verify token
+    let decoded: { email: string; password: string };
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as { email: string; password: string };
+    } catch (jwtError) {
+      if (jwtError instanceof TokenExpiredError) {
+        return NextResponse.redirect(
+          `${APP_URL}/auth/error?error=TOKEN_EXPIRED`
+        );
+      }
+      return NextResponse.redirect(
+        `${APP_URL}/auth/error?error=TOKEN_INVALID`
+      );
     }
 
+    // Check if user already exists
+    const existing = await prisma.user.findUnique({
+      where: { email: decoded.email }
+    });
+
+    if (existing) {
+      // User already verified, redirect to login with message
+      return NextResponse.redirect(
+        `${APP_URL}/login?verified=already`
+      );
+    }
+
+    // Create new user
     await prisma.user.create({
       data: {
         email: decoded.email,
         password: decoded.password,
-        onboardingStep: 1,
+        onboardingStep: 0,
         onboardingCompleted: false,
       },
     });
-    return NextResponse.redirect(`${APP_URL}/login`);
-  } catch (err) {
-    console.error("Verification error:", err);
-    return NextResponse.json({ message: "Invalid or expired token" }, { status: 400 });
+
+    // Redirect to login with success message
+    return NextResponse.redirect(
+      `${APP_URL}/login?verified=success`
+    );
+
+  } catch (error) {
+    console.error("Verification error:", error);
+    return NextResponse.redirect(
+      `${APP_URL}/auth/error?error=INTERNAL_ERROR`
+    );
   }
 }
-

@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { CreateTaskModal } from './TaskCreationModal'
+import { TaskCreationModal } from './TaskCreationModal'
 import { TaskContextType } from './TaskView'
 import { trpc } from '@/lib/trpc'
 import { GitBranch } from 'lucide-react'
@@ -111,7 +111,7 @@ export function ListTaskView({ context, contextId, workspaceId }: ListTaskViewPr
     const tasks = tasksData.items
     const parentTasks = tasks.filter((t: any) => !t.parentId)
     const subtasksByParent = new Map<string, any[]>()
-    
+
     tasks.forEach((task: any) => {
       if (task.parentId) {
         if (!subtasksByParent.has(task.parentId)) {
@@ -145,7 +145,7 @@ export function ListTaskView({ context, contextId, workspaceId }: ListTaskViewPr
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Tasks</h2>
-        <CreateTaskModal
+        <TaskCreationModal
           context={context}
           contextId={contextId}
           workspaceId={effectiveWorkspaceId}

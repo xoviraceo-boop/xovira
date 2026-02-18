@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { PlusIcon, User, Calendar, Folder, Users } from 'lucide-react'
 import { TaskContextType } from './TaskView'
 import { trpc } from '@/lib/trpc'
-import { CreateTaskModal } from './TaskCreationModal'
+import { TaskCreationModal } from './TaskCreationModal'
 import { TaskCard } from './TaskCard'
 import { cn } from '@/lib/utils'
 
@@ -74,7 +74,7 @@ export function TaskOverviewView({
     return (
       <div className="flex flex-col items-center justify-center py-12 space-y-4">
         <div className="text-sm text-muted-foreground">No tasks found</div>
-        <CreateTaskModal
+        <TaskCreationModal
           context={context}
           contextId={contextId}
           workspaceId={workspaceId}
@@ -114,7 +114,7 @@ export function TaskOverviewView({
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <span>Tasks in this group</span>
                     </div>
-                    <CreateTaskModal
+                    <TaskCreationModal
                       context={context}
                       contextId={contextId}
                       workspaceId={workspaceId}
